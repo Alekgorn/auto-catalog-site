@@ -59,7 +59,7 @@ const Contacts = () => {
     'w-full border-b border-border bg-transparent py-3 font-head text-lg font-medium tracking-tight outline-none transition-colors placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted-foreground focus:border-primary';
 
   return (
-    <section id="contacts" className="section-pad anchor-offset bg-card">
+    <section id="contacts" className="section-pad anchor-offset bg-surface">
       <div className="rule" />
       <SectionHead
         index="06"

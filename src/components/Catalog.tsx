@@ -159,7 +159,9 @@ const Catalog = ({ vehicle, onReset }: Props) => {
 
       <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-12">
         <aside className="hidden lg:col-span-3 lg:block">
-          <div className="sticky top-[150px] py-6">{filtersNode}</div>
+          <div className="sticky top-[150px] my-6 bg-surface p-5 shadow-panel">
+            {filtersNode}
+          </div>
         </aside>
 
         <div className="lg:col-span-9">
@@ -236,7 +238,7 @@ const Catalog = ({ vehicle, onReset }: Props) => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-12 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 py-12 sm:grid-cols-2 xl:grid-cols-3">
               {list.map((p) => (
                 <ProductCard key={p.id} product={p} vehicle={vehicle} />
               ))}
@@ -252,7 +254,7 @@ const Catalog = ({ vehicle, onReset }: Props) => {
             onClick={() => setMobileOpen(false)}
             className="flex-1 bg-foreground/40"
           />
-          <div className="w-[85%] max-w-sm overflow-y-auto border-l border-foreground bg-background px-6 py-5">
+          <div className="w-[85%] max-w-sm overflow-y-auto border-l border-border bg-surface px-6 py-5">
             <button
               onClick={() => setMobileOpen(false)}
               className="mb-2 flex w-full items-center justify-between font-head text-lg font-bold uppercase"

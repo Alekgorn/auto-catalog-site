@@ -28,7 +28,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
     .filter((r) => r.value);
 
   return (
-    <article className="group flex flex-col border-t border-foreground pt-5 transition-colors">
+    <article className="group flex flex-col bg-surface p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
       <div className="flex items-start justify-between gap-4">
         <span className="eyebrow">
           {product.category} · {productSku(product)}
@@ -42,7 +42,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
 
       <Link
         to={`/product/${product.id}`}
-        className="relative mt-4 block overflow-hidden bg-card"
+        className="relative mt-4 block overflow-hidden bg-surface-muted"
       >
         <img
           src={productImages(product)[0]}

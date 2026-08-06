@@ -115,7 +115,7 @@ const SearchSelect = ({
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-2 border border-foreground bg-background shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 border border-foreground bg-surface shadow-card-hover">
           <ul
             id={`${id}-list`}
             ref={listRef}

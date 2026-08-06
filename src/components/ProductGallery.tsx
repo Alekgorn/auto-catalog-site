@@ -10,7 +10,7 @@ const ProductGallery = ({ images, alt }: Props) => {
 
   return (
     <div>
-      <div className="border border-foreground bg-card">
+      <div className="border border-border bg-surface shadow-card">
         <img
           src={images[active]}
           alt={`${alt} — фото ${active + 1}`}
@@ -25,7 +25,7 @@ const ProductGallery = ({ images, alt }: Props) => {
               key={src + i}
               onClick={() => setActive(i)}
               aria-label={`Фото ${i + 1}`}
-              className={`border bg-card transition-colors ${
+              className={`border bg-surface transition-colors ${
                 i === active ? 'border-primary' : 'border-border hover:border-foreground'
               }`}
             >

@@ -64,7 +64,7 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
 
   return (
     <div ref={boxRef} className="relative w-full">
-      <form onSubmit={submit} className="flex items-center gap-3 border border-foreground bg-background px-4 py-3 transition-colors focus-within:border-primary">
+      <form onSubmit={submit} className="flex items-center gap-3 border border-foreground bg-surface px-4 py-3 transition-colors focus-within:border-primary">
         <Icon name="Search" size={18} className="flex-none text-muted-foreground" />
         <input
           ref={inputRef}
@@ -96,7 +96,7 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
       </form>
 
       {open && query.trim().length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 border border-foreground bg-background shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 border border-foreground bg-surface shadow-card-hover">
           {results.length === 0 ? (
             <div className="px-5 py-6 text-center">
               <div className="text-[0.9rem]">Ничего не нашлось</div>
@@ -115,13 +115,13 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
                       goTo(p.id);
                     }}
                     className={`flex w-full items-center gap-4 border-b border-border px-4 py-3 text-left transition-colors ${
-                      i === highlight ? 'bg-card' : ''
+                      i === highlight ? 'bg-surface-muted' : ''
                     }`}
                   >
                     <img
                       src={productImages(p)[0]}
                       alt=""
-                      className="h-12 w-12 flex-none bg-card object-cover"
+                      className="h-12 w-12 flex-none bg-surface-muted object-cover"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-head text-[0.95rem] font-medium">

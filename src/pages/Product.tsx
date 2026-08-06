@@ -485,7 +485,7 @@ const Product = () => {
                 Похожее оборудование
               </h2>
             </div>
-            <div className="grid grid-cols-1 gap-x-6 gap-y-12 pb-16 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 pb-16 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
                 <ProductCard key={p.id} product={p} vehicle={vehicle} />
               ))}

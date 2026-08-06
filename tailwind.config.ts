@@ -22,6 +22,12 @@ export default {
 				head: ['Rubik', 'sans-serif'],
 				body: ['Inter', 'sans-serif']
 			},
+			boxShadow: {
+				card: '0 1px 2px rgba(17, 17, 17, 0.04), 0 4px 16px rgba(17, 17, 17, 0.06)',
+				'card-hover':
+					'0 2px 4px rgba(17, 17, 17, 0.06), 0 12px 32px rgba(17, 17, 17, 0.10)',
+				panel: '0 1px 2px rgba(17, 17, 17, 0.04), 0 2px 10px rgba(17, 17, 17, 0.05)'
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -44,6 +50,10 @@ export default {
 					DEFAULT: 'hsl(var(--success))',
 					foreground: 'hsl(var(--success-foreground))',
 					soft: 'hsl(var(--success-soft))'
+				},
+				surface: {
+					DEFAULT: 'hsl(var(--surface))',
+					muted: 'hsl(var(--surface-muted))'
 				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',

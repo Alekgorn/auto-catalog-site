@@ -42,7 +42,7 @@ const Guides = () => {
           <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-12 pb-20 sm:grid-cols-2 lg:grid-cols-3">
             {guides.map((g) => (
               <article key={g.slug} className="group flex flex-col border-t border-foreground pt-5">
-                <Link to={`/guides/${g.slug}`} className="block overflow-hidden bg-card">
+                <Link to={`/guides/${g.slug}`} className="block overflow-hidden bg-surface-muted">
                   {g.cover ? (
                     <img
                       src={g.cover}
