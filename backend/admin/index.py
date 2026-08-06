@@ -515,7 +515,7 @@ def replace_brands(conn, brands: list) -> int:
     cur.execute(f"DELETE FROM {schema()}.brands")
     saved = 0
     for i, b in enumerate(brands):
-        name = str(b.get('name', '')).strip()
+        name = str(b.get('name', '')).strip()[:64]
         if not name:
             continue
         models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
@@ -531,29 +531,54 @@ def replace_brands(conn, brands: list) -> int:
     return saved
 
 
+def make_slug(name: str, taken: set) -> str:
+    """Короткий код товара из названия. Длинные названия обрезаем по словам."""
+    full = slugify(name)
+    base = full
+    if len(base) > 52:
+        cut = base[:52]
+        # обрезаем по последнему целому слову, чтобы код оставался читаемым
+        base = cut.rsplit('-', 1)[0] if '-' in cut[30:] else cut
+    base = base.rstrip('-') or 'tovar'
+    slug = base
+    n = 2
+    while slug in taken:
+        suffix = f'-{n}'
+        slug = base[: 56 - len(suffix)].rstrip('-') + suffix
+        n += 1
+    taken.add(slug)
+    return slug
+
+
 def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
     cur = conn.cursor()
     created = 0
     updated = 0
 
+    skipped: list = []
+
+    cur.execute(f"SELECT slug FROM {schema()}.products")
+    taken = {row[0] for row in cur.fetchall()}
+
     for i, p in enumerate(in_products):
-        name = str(p.get('name', '')).strip()
+        name = str(p.get('name', '')).strip()[:255]
         if not name:
             continue
-        slug = str(p.get('slug', '')).strip() or slugify(name)
+        slug = str(p.get('slug', '')).strip()[:64] or make_slug(name, taken)
+        sku = str(p.get('sku', '')).strip()[:64] or slug.upper()[:64]
         fields = {
             'slug': q(slug),
-            'sku': q(str(p.get('sku', '')).strip() or slug.upper()),
+            'sku': q(sku),
             'name': q(name),
-            'category': q(str(p.get('category', '')).strip() or 'Другое'),
+            'category': q(str(p.get('category', '')).strip()[:64] or 'Другое'),
             'price': qint(p.get('price'), 0),
             'old_price': qint(p.get('oldPrice')),
-            'mount': q(str(p.get('mount', ''))),
-            'install': q(str(p.get('install', ''))),
-            'warranty': q(str(p.get('warranty', ''))),
+            'mount': q(str(p.get('mount', ''))[:255]),
+            'install': q(str(p.get('install', ''))[:64]),
+            'warranty': q(str(p.get('warranty', ''))[:64]),
             'year_from': qint(p.get('yearFrom'), 2010),
             'year_to': qint(p.get('yearTo'), 2026),
-            'badge': q(p.get('badge') or None),
+            'badge': q((str(p.get('badge'))[:32] if p.get('badge') else None)),
             'images': qjson(p.get('images') or []),
             'description': qjson(p.get('description') or []),
             'specs': qjson(p.get('specs') or []),
@@ -563,26 +588,32 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'popularity': qint(p.get('popularity'), 0),
             'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
         }
-        cur.execute(f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}")
-        found = cur.fetchone()
-        if found:
-            if mode == 'skip':
-                continue
-            sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
-            cur.execute(
-                f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
-                f"WHERE id = {found[0]}"
-            )
-            updated += 1
-        else:
-            cur.execute(
-                f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
-                f"VALUES ({', '.join(fields.values())})"
-            )
-            created += 1
+        try:
+            cur.execute(f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}")
+            found = cur.fetchone()
+            if found:
+                if mode == 'skip':
+                    continue
+                sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+                cur.execute(
+                    f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
+                    f"WHERE id = {found[0]}"
+                )
+                updated += 1
+            else:
+                cur.execute(
+                    f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
+                    f"VALUES ({', '.join(fields.values())})"
+                )
+                created += 1
+        except Exception as exc:
+            # Одна кривая строка не должна ронять всю загрузку
+            conn.rollback()
+            cur = conn.cursor()
+            skipped.append(f'строка {i + 2} ({name[:40]}): {str(exc).strip()[:90]}')
 
     for i, b in enumerate(in_brands):
-        bname = str(b.get('name', '')).strip()
+        bname = str(b.get('name', '')).strip()[:64]
         if not bname:
             continue
         models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
@@ -594,7 +625,11 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
 
     conn.commit()
     cur.close()
-    return {'created': created, 'updated': updated}
+    result = {'created': created, 'updated': updated}
+    if skipped:
+        result['skipped'] = len(skipped)
+        result['problems'] = skipped[:10]
+    return result
 
 
 def handler(event: dict, context) -> dict:

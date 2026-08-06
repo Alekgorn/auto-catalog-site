@@ -89,8 +89,10 @@ const SettingsPanel = ({ onImported }: Props) => {
         return;
       }
       toast({
-        title: 'Каталог обновлён',
-        description: `Добавлено: ${data.created}, обновлено: ${data.updated}`,
+        title: data.skipped ? 'Загружено с замечаниями' : 'Каталог обновлён',
+        description: data.skipped
+          ? `Добавлено: ${data.created}, обновлено: ${data.updated}. Пропущено строк: ${data.skipped} — проверьте их в файле.`
+          : `Добавлено: ${data.created}, обновлено: ${data.updated}`,
       });
       onImported();
     } catch {
