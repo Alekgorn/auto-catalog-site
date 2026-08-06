@@ -156,7 +156,7 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
                 className={field}
-                placeholder="Установка фаркопа на Lada Vesta SW Cross"
+                placeholder="Подключение CAN-адаптера на Lada Vesta SW Cross"
               />
             </div>
             <div className="sm:col-span-2">

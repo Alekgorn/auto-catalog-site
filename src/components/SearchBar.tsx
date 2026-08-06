@@ -77,7 +77,7 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Фаркоп Kia Sportage или артикул"
+          placeholder="Магнитола Kia Rio, камера или артикул"
           className="w-full min-w-0 border-0 bg-transparent text-[0.95rem] outline-none placeholder:text-muted-foreground"
         />
         {query && (
@@ -101,7 +101,7 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
             <div className="px-5 py-6 text-center">
               <div className="text-[0.9rem]">Ничего не нашлось</div>
               <p className="mt-2 text-[0.82rem] text-muted-foreground">
-                Попробуйте иначе: «фаркоп», «багажник Creta» или артикул с коробки.
+                Попробуйте иначе: «магнитола», «камера Creta» или артикул с коробки.
               </p>
             </div>
           ) : (

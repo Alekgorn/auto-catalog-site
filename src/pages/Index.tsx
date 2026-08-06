@@ -4,8 +4,6 @@ import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import Catalog from '@/components/Catalog';
 import Selection from '@/components/Selection';
-import Prices from '@/components/Prices';
-import Install from '@/components/Install';
 import Faq from '@/components/Faq';
 import Contacts from '@/components/Contacts';
 import Footer from '@/components/Footer';
@@ -54,7 +52,7 @@ const Index = () => {
   }, [location.hash]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+  const [activeProduct] = useState<Product | null>(null);
 
   const applyVehicle = () => {
     setVehicle({ brand, model, year: Number(year) });
@@ -70,11 +68,6 @@ const Index = () => {
   const pickBrand = (b: string) => {
     setBrand(b);
     setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
-  };
-
-  const openRequest = (p: Product | null) => {
-    setActiveProduct(p);
-    setDialogOpen(true);
   };
 
   const selectorProps = {
@@ -94,8 +87,6 @@ const Index = () => {
         <Hero {...selectorProps} />
         <Catalog vehicle={vehicle} onReset={() => setVehicle(null)} />
         <Selection {...selectorProps} onPickBrand={pickBrand} />
-        <Prices onRequest={() => openRequest(null)} />
-        <Install />
         <Faq />
         <Contacts />
       </main>

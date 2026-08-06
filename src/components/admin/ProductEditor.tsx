@@ -185,7 +185,7 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                   onChange={(e) => set('category', e.target.value)}
                   list="cat-list"
                   className={field}
-                  placeholder="Например: Фаркопы"
+                  placeholder="Например: Android-магнитолы"
                 />
                 <datalist id="cat-list">
                   {categories.map((c) => (

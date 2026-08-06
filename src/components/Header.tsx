@@ -7,8 +7,6 @@ import SearchBar from '@/components/SearchBar';
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог' },
   { id: 'select', label: 'Подбор' },
-  { id: 'prices', label: 'Цены' },
-  { id: 'install', label: 'Установка' },
   { id: 'guides', label: 'Инструкции', route: '/guides' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },

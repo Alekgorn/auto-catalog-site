@@ -8,7 +8,7 @@ import { loadVehicle } from '@/lib/vehicle';
 const CONTACTS = [
   { label: 'Телефон', value: '8 800 333-44-55', href: 'tel:+78003334455' },
   { label: 'Почта', value: 'zakaz@shtatno.ru', href: 'mailto:zakaz@shtatno.ru' },
-  { label: 'Склад и цех', value: 'Москва, Кировоградская, 24, стр. 3' },
+  { label: 'Склад и выдача', value: 'Москва, Кировоградская, 24, стр. 3' },
   { label: 'Часы работы', value: 'Пн–Сб, 09:00 — 20:00' },
 ];
 
@@ -62,7 +62,7 @@ const Contacts = () => {
     <section id="contacts" className="section-pad anchor-offset bg-surface">
       <div className="rule" />
       <SectionHead
-        index="06"
+        index="04"
         eyebrow="Контакты"
         title="Напишите, подберём"
         note="Отвечаем в рабочее время. Если знаете марку, модель и год — напишите их в комментарии, пришлём готовый список."
@@ -142,7 +142,7 @@ const Contacts = () => {
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               rows={3}
-              placeholder="Например: Lada Vesta SW Cross 2021, нужен фаркоп с розеткой"
+              placeholder="Например: Lada Vesta SW Cross 2021, нужна магнитола 2DIN с камерой"
               className={`${inputClass} resize-none`}
             />
           </div>
