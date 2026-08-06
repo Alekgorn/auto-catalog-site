@@ -80,7 +80,7 @@ const Selection = ({ onPickBrand, ...selector }: Props) => {
     </div>
 
     <div className="rule" />
-    <VehicleSelector {...selector} buttonLabel="Подобрать" />
+    <VehicleSelector {...selector} buttonLabel="Подобрать" idPrefix="sel2" />
     <div className="rule-hair" />
     <div className="h-6" />
   </section>

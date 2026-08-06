@@ -35,6 +35,12 @@ const Product = () => {
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogProduct, setDialogProduct] = useState<ProductType | null>(null);
+  const [openGuides, setOpenGuides] = useState<string[]>([]);
+
+  const toggleGuide = (slug: string) =>
+    setOpenGuides((list) =>
+      list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug],
+    );
 
   useEffect(() => {
     setVehicle(loadVehicle());
@@ -43,6 +49,7 @@ const Product = () => {
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setQty(1);
+    setOpenGuides([]);
   }, [id]);
 
   const openRequest = (p: ProductType | null) => {
@@ -218,9 +225,18 @@ const Product = () => {
               </div>
 
               {productGuides.length > 0 && (
-                <a
-                  href="#guide"
-                  className="mt-4 flex items-center justify-between border border-border px-5 py-4 transition-colors hover:border-primary hover:text-primary"
+                <button
+                  onClick={() => {
+                    setOpenGuides(productGuides.map((g) => g.slug));
+                    setTimeout(
+                      () =>
+                        document
+                          .getElementById('guide')
+                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                      60,
+                    );
+                  }}
+                  className="mt-4 flex w-full items-center justify-between border border-border px-5 py-4 transition-colors hover:border-primary hover:text-primary"
                 >
                   <span className="flex items-center gap-3">
                     <Icon name="BookOpen" size={17} />
@@ -229,7 +245,7 @@ const Product = () => {
                     </span>
                   </span>
                   <Icon name="ArrowDown" size={16} />
-                </a>
+                </button>
               )}
 
               <dl className="mt-8 space-y-2 text-[0.85rem]">
@@ -382,28 +398,74 @@ const Product = () => {
               </p>
             </div>
 
-            {productGuides.map((g) => (
-              <div key={g.slug} className="border-t border-foreground pb-14 pt-8">
-                <div className="flex flex-wrap items-baseline justify-between gap-4">
-                  <h3 className="font-head text-xl font-medium tracking-tight">
-                    {g.title}
-                  </h3>
-                  <Link
-                    to={`/guides/${g.slug}`}
-                    className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    Открыть отдельно
-                    <Icon name="ArrowUpRight" size={14} />
-                  </Link>
+            {productGuides.map((g) => {
+              const open = openGuides.includes(g.slug);
+              const steps = g.blocks?.filter((b) => b.type === 'step').length ?? 0;
+              return (
+                <div key={g.slug} className="border-t border-foreground pb-12 pt-8">
+                  <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-12">
+                    <div className="md:col-span-7">
+                      <h3 className="font-head text-xl font-medium tracking-tight">
+                        {g.title}
+                      </h3>
+                      {g.excerpt && (
+                        <p className="mt-3 max-w-[46em] text-muted-foreground">
+                          {g.excerpt}
+                        </p>
+                      )}
+                      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        {steps > 0 && (
+                          <span className="flex items-center gap-2">
+                            <Icon name="ListOrdered" size={14} />
+                            {steps} шагов
+                          </span>
+                        )}
+                        {g.duration && (
+                          <span className="flex items-center gap-2">
+                            <Icon name="Clock" size={14} />
+                            {g.duration}
+                          </span>
+                        )}
+                        {g.difficulty && (
+                          <span className="flex items-center gap-2">
+                            <Icon name="Wrench" size={14} />
+                            {g.difficulty}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-3 md:col-span-4 md:col-start-9 md:justify-center">
+                      <button
+                        onClick={() => toggleGuide(g.slug)}
+                        aria-expanded={open}
+                        className={`flex items-center justify-between px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] transition-colors ${
+                          open
+                            ? 'border border-foreground hover:border-primary hover:text-primary'
+                            : 'bg-primary text-primary-foreground hover:bg-foreground'
+                        }`}
+                      >
+                        {open ? 'Свернуть инструкцию' : 'Показать инструкцию'}
+                        <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={18} />
+                      </button>
+                      <Link
+                        to={`/guides/${g.slug}`}
+                        className="flex items-center justify-between px-6 py-3 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        Открыть отдельной страницей
+                        <Icon name="ArrowUpRight" size={14} />
+                      </Link>
+                    </div>
+                  </div>
+
+                  {open && (
+                    <div className="mt-10 animate-fade-in border-t border-border pt-8">
+                      <GuideContent guide={g} compact />
+                    </div>
+                  )}
                 </div>
-                {g.excerpt && (
-                  <p className="mt-3 max-w-[46em] text-muted-foreground">{g.excerpt}</p>
-                )}
-                <div className="mt-7">
-                  <GuideContent guide={g} compact />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </section>
         )}
 

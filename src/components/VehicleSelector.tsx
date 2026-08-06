@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
+import SearchSelect from '@/components/SearchSelect';
 
 interface Props {
   brand: string;
@@ -11,10 +12,8 @@ interface Props {
   onYear: (v: string) => void;
   onSubmit: () => void;
   buttonLabel?: string;
+  idPrefix?: string;
 }
-
-const fieldClass =
-  'w-full cursor-pointer appearance-none border-0 bg-transparent font-head text-lg font-medium tracking-tight text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4';
 
 const VehicleSelector = ({
   brand,
@@ -25,6 +24,7 @@ const VehicleSelector = ({
   onYear,
   onSubmit,
   buttonLabel = 'Показать оборудование',
+  idPrefix = 'sel',
 }: Props) => {
   const { brands: BRANDS } = useCatalog();
   const models = useMemo(
@@ -40,63 +40,43 @@ const VehicleSelector = ({
       }}
       className="grid grid-cols-1 items-stretch gap-x-6 md:grid-cols-12"
     >
-      <div className="flex flex-col justify-center gap-1.5 border-b border-border py-4 md:col-span-3 md:border-b-0 md:border-r md:pr-5">
-        <label className="eyebrow" htmlFor="sel-brand">
-          Марка
-        </label>
-        <select
-          id="sel-brand"
-          className={fieldClass}
+      <div className="border-b border-border py-4 md:col-span-3 md:border-b-0 md:border-r md:pr-5">
+        <SearchSelect
+          id={`${idPrefix}-brand`}
+          label="Марка"
           value={brand}
-          onChange={(e) => {
-            const b = e.target.value;
+          options={BRANDS.map((b) => b.name)}
+          placeholder="Введите марку"
+          emptyText="Такой марки нет — напишите нам"
+          onChange={(b) => {
             onBrand(b);
-            const first = BRANDS.find((x) => x.name === b)?.models[0] ?? '';
-            onModel(first);
+            onModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
           }}
-        >
-          {BRANDS.map((b) => (
-            <option key={b.name} value={b.name}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+        />
       </div>
 
-      <div className="flex flex-col justify-center gap-1.5 border-b border-border py-4 md:col-span-3 md:border-b-0 md:border-r md:pr-5">
-        <label className="eyebrow" htmlFor="sel-model">
-          Модель
-        </label>
-        <select
-          id="sel-model"
-          className={fieldClass}
+      <div className="border-b border-border py-4 md:col-span-3 md:border-b-0 md:border-r md:pr-5">
+        <SearchSelect
+          id={`${idPrefix}-model`}
+          label="Модель"
           value={model}
-          onChange={(e) => onModel(e.target.value)}
-        >
-          {models.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+          options={models}
+          placeholder="Введите модель"
+          emptyText="Модель не найдена"
+          onChange={onModel}
+        />
       </div>
 
-      <div className="flex flex-col justify-center gap-1.5 border-b border-border py-4 md:col-span-2 md:border-b-0 md:border-r md:pr-5">
-        <label className="eyebrow" htmlFor="sel-year">
-          Год
-        </label>
-        <select
-          id="sel-year"
-          className={fieldClass}
+      <div className="border-b border-border py-4 md:col-span-2 md:border-b-0 md:border-r md:pr-5">
+        <SearchSelect
+          id={`${idPrefix}-year`}
+          label="Год"
           value={year}
-          onChange={(e) => onYear(e.target.value)}
-        >
-          {YEARS.map((y) => (
-            <option key={y} value={String(y)}>
-              {y}
-            </option>
-          ))}
-        </select>
+          options={YEARS.map(String)}
+          placeholder="Год"
+          emptyText="Нет такого года"
+          onChange={onYear}
+        />
       </div>
 
       <button
