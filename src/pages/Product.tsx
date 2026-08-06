@@ -143,28 +143,34 @@ const Product = () => {
                 Артикул {productSku(product)} · {modelCount} совместимых моделей
               </div>
 
-              <div
-                className={`mt-6 flex items-start gap-3 border px-4 py-3 text-[0.85rem] ${
-                  vehicle
-                    ? fits
-                      ? 'border-primary text-primary'
-                      : 'border-border text-muted-foreground'
-                    : 'border-border text-muted-foreground'
-                }`}
-              >
-                <Icon
-                  name={vehicle ? (fits ? 'CircleCheck' : 'CircleSlash') : 'Info'}
-                  size={17}
-                  className="mt-px flex-none"
-                />
-                <span>
-                  {vehicle
-                    ? fits
-                      ? `Подходит: ${vehicle.brand} ${vehicle.model}, ${vehicle.year} г.`
-                      : `Не подходит к ${vehicle.brand} ${vehicle.model}, ${vehicle.year} г. — подберём аналог по вашему кузову.`
-                    : `Подходит к автомобилям ${product.years[0]}—${product.years[1]} годов. Выберите машину в подборе, чтобы увидеть отметку совместимости.`}
-                </span>
-              </div>
+              {vehicle && fits ? (
+                <div className="mt-6 flex items-center gap-4 border-2 border-success bg-success-soft px-5 py-4">
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
+                    <Icon name="Check" size={20} strokeWidth={3} />
+                  </span>
+                  <span>
+                    <span className="block font-head text-[1.05rem] font-bold uppercase tracking-tight text-success">
+                      Подходит к вашему автомобилю
+                    </span>
+                    <span className="mt-0.5 block text-[0.9rem] text-success">
+                      {vehicle.brand} {vehicle.model}, {vehicle.year} г.
+                    </span>
+                  </span>
+                </div>
+              ) : (
+                <div className="mt-6 flex items-start gap-3 border border-border px-4 py-3 text-[0.85rem] text-muted-foreground">
+                  <Icon
+                    name={vehicle ? 'CircleSlash' : 'Info'}
+                    size={17}
+                    className="mt-px flex-none"
+                  />
+                  <span>
+                    {vehicle
+                      ? `Не подходит к ${vehicle.brand} ${vehicle.model}, ${vehicle.year} г. — подберём аналог по вашему кузову.`
+                      : `Подходит к автомобилям ${product.years[0]}—${product.years[1]} годов. Выберите машину в подборе, чтобы увидеть отметку совместимости.`}
+                  </span>
+                </div>
+              )}
 
               <div className="mt-8 flex items-end gap-4">
                 {product.oldPrice && (

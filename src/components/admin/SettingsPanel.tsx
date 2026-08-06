@@ -14,6 +14,7 @@ const SettingsPanel = ({ onImported }: Props) => {
   const [mode, setMode] = useState<'merge' | 'skip'>('merge');
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const xlsRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     adminFetch('?action=settings')
@@ -39,6 +40,66 @@ const SettingsPanel = ({ onImported }: Props) => {
     );
   };
 
+  const download = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  const exportExcel = async () => {
+    setBusy(true);
+    const res = await adminFetch('?action=export-xlsx');
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok || !data.file) {
+      toast({ title: 'Ошибка', description: 'Не удалось собрать таблицу' });
+      return;
+    }
+    const bytes = Uint8Array.from(atob(data.file), (c) => c.charCodeAt(0));
+    download(
+      new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      }),
+      `katalog-${today()}.xlsx`,
+    );
+    toast({ title: 'Таблица готова', description: 'Откройте её в Excel и правьте данные' });
+  };
+
+  const importExcel = async (file: File) => {
+    setBusy(true);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+        reader.readAsDataURL(file);
+      });
+      const res = await adminFetch('?action=import-xlsx', {
+        method: 'POST',
+        body: JSON.stringify({ mode, file: base64 }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: 'Ошибка', description: data.error ?? 'Не удалось загрузить' });
+        return;
+      }
+      toast({
+        title: 'Каталог обновлён',
+        description: `Добавлено: ${data.created}, обновлено: ${data.updated}`,
+      });
+      onImported();
+    } catch {
+      toast({ title: 'Ошибка', description: 'Файл не читается' });
+    } finally {
+      setBusy(false);
+      if (xlsRef.current) xlsRef.current.value = '';
+    }
+  };
+
   const exportData = async () => {
     setBusy(true);
     const res = await adminFetch('?action=export');
@@ -48,15 +109,10 @@ const SettingsPanel = ({ onImported }: Props) => {
       toast({ title: 'Ошибка', description: 'Не удалось выгрузить' });
       return;
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: 'application/json',
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `catalog-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    download(
+      new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+      `catalog-${today()}.json`,
+    );
     toast({
       title: 'Файл готов',
       description: `${data.products?.length ?? 0} товаров и ${data.brands?.length ?? 0} марок`,
@@ -138,31 +194,19 @@ const SettingsPanel = ({ onImported }: Props) => {
           Перенос каталога
         </h2>
         <p className="mt-4 max-w-[34em] text-muted-foreground">
-          Выгрузите весь каталог одним файлом — товары, марки и модели. Этот же файл можно
-          загрузить обратно: пригодится для массовой правки цен или переноса на другой
-          сайт.
+          Скачайте каталог таблицей Excel, поправьте названия, цены, артикулы и
+          совместимость прямо в ней — и загрузите обратно. Внутри есть лист с подсказками
+          по заполнению.
         </p>
 
         <div className="mt-8 border-t border-foreground pt-6">
-          <div className="font-head text-lg font-medium">Выгрузка</div>
+          <div className="flex items-center gap-3">
+            <Icon name="Sheet" size={20} className="text-primary" />
+            <div className="font-head text-lg font-medium">Таблица Excel</div>
+          </div>
           <p className="mt-2 text-[0.9rem] text-muted-foreground">
-            Скачает файл со всеми товарами, марками и моделями.
-          </p>
-          <button
-            onClick={exportData}
-            disabled={busy}
-            className="mt-4 flex items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary disabled:opacity-60"
-          >
-            <Icon name="Download" size={16} />
-            Скачать каталог
-          </button>
-        </div>
-
-        <div className="mt-8 border-t border-foreground pt-6">
-          <div className="font-head text-lg font-medium">Загрузка</div>
-          <p className="mt-2 text-[0.9rem] text-muted-foreground">
-            Товары сопоставляются по внутреннему коду: совпавшие обновятся, новые
-            добавятся. Ничего не удаляется.
+            Три листа: товары, марки с моделями и подсказки. Столбец «Код» не меняйте — по
+            нему товар находится при загрузке.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-6">
@@ -184,20 +228,62 @@ const SettingsPanel = ({ onImported }: Props) => {
             ))}
           </div>
 
-          <label className="mt-5 flex w-fit cursor-pointer items-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground">
-            <Icon name={busy ? 'Loader' : 'Upload'} size={16} />
-            {busy ? 'Загружаем…' : 'Выбрать файл'}
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/json,.json"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) importData(f);
-              }}
-            />
-          </label>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              onClick={exportExcel}
+              disabled={busy}
+              className="flex items-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+            >
+              <Icon name="Download" size={16} />
+              Скачать Excel
+            </button>
+            <label className="flex w-fit cursor-pointer items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary">
+              <Icon name={busy ? 'Loader' : 'Upload'} size={16} />
+              {busy ? 'Обрабатываем…' : 'Загрузить Excel'}
+              <input
+                ref={xlsRef}
+                type="file"
+                accept=".xlsx"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) importExcel(f);
+                }}
+              />
+            </label>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-border pt-6">
+          <div className="text-[0.9rem] font-medium">Резервная копия</div>
+          <p className="mt-2 text-[0.85rem] text-muted-foreground">
+            Технический формат — сохраняет всё до последнего символа, включая описания и
+            фото. Подходит для переноса каталога целиком.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              onClick={exportData}
+              disabled={busy}
+              className="flex items-center gap-2 border border-border px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground disabled:opacity-60"
+            >
+              <Icon name="Download" size={14} />
+              Скачать копию
+            </button>
+            <label className="flex w-fit cursor-pointer items-center gap-2 border border-border px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground">
+              <Icon name="Upload" size={14} />
+              Восстановить
+              <input
+                ref={fileRef}
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) importData(f);
+                }}
+              />
+            </label>
+          </div>
         </div>
       </div>
     </div>

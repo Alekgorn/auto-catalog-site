@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import io
 import json
 import os
 import secrets
@@ -9,6 +10,9 @@ from datetime import datetime, timedelta
 import boto3
 import psycopg2
 import psycopg2.extras
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -18,6 +22,7 @@ CORS = {
 }
 
 SESSION_DAYS = 7
+XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 
 def resp(status: int, payload: dict) -> dict:
@@ -171,6 +176,305 @@ def slugify(text: str) -> str:
     return slug.strip('-')[:80] or 'guide-' + uuid.uuid4().hex[:6]
 
 
+XLS_COLUMNS = [
+    ('slug', 'Код (не менять)', 30),
+    ('sku', 'Артикул', 16),
+    ('name', 'Название', 46),
+    ('category', 'Категория', 18),
+    ('price', 'Цена', 12),
+    ('oldPrice', 'Старая цена', 13),
+    ('mount', 'Точки крепления', 30),
+    ('warranty', 'Гарантия', 12),
+    ('yearFrom', 'Год с', 8),
+    ('yearTo', 'Год по', 8),
+    ('badge', 'Метка', 12),
+    ('popularity', 'Популярность', 14),
+    ('sortOrder', 'Порядок', 10),
+    ('isActive', 'На сайте (да/нет)', 17),
+    ('fits', 'Совместимость', 60),
+    ('images', 'Фото (ссылки через ;)', 40),
+    ('description', 'Описание (абзацы через |)', 50),
+    ('specs', 'Характеристики (Имя=Значение;)', 50),
+    ('kit', 'Комплектация (через ;)', 40),
+]
+
+
+def fits_to_text(fits: dict) -> str:
+    return ' | '.join(
+        f"{brand}: {', '.join(models)}" for brand, models in (fits or {}).items()
+    )
+
+
+def text_to_fits(text: str) -> dict:
+    out: dict = {}
+    for chunk in str(text or '').split('|'):
+        if ':' not in chunk:
+            continue
+        brand, _, models = chunk.partition(':')
+        brand = brand.strip()
+        items = [m.strip() for m in models.split(',') if m.strip()]
+        if brand and items:
+            out[brand] = items
+    return out
+
+
+def specs_to_text(specs: list) -> str:
+    parts = []
+    for row in specs or []:
+        if isinstance(row, (list, tuple)) and len(row) >= 2:
+            parts.append(f"{row[0]}={row[1]}")
+    return '; '.join(parts)
+
+
+def text_to_specs(text: str) -> list:
+    out = []
+    for chunk in str(text or '').split(';'):
+        if '=' not in chunk:
+            continue
+        k, _, v = chunk.partition('=')
+        if k.strip():
+            out.append([k.strip(), v.strip()])
+    return out
+
+
+def list_to_text(items: list, sep: str = '; ') -> str:
+    return sep.join(str(i) for i in (items or []))
+
+
+def text_to_list(text: str, sep: str) -> list:
+    return [p.strip() for p in str(text or '').split(sep) if p.strip()]
+
+
+def build_xlsx(products: list, brands: list) -> bytes:
+    wb = Workbook()
+    head_font = Font(bold=True, color='FFFFFF', size=10)
+    head_fill = PatternFill('solid', fgColor='1B1B1B')
+    lock_fill = PatternFill('solid', fgColor='E01B0C')
+
+    ws = wb.active
+    ws.title = 'Товары'
+    for i, (key, title, width) in enumerate(XLS_COLUMNS, start=1):
+        cell = ws.cell(row=1, column=i, value=title)
+        cell.font = head_font
+        cell.fill = lock_fill if key == 'slug' else head_fill
+        cell.alignment = Alignment(vertical='center', wrap_text=True)
+        ws.column_dimensions[get_column_letter(i)].width = width
+    ws.row_dimensions[1].height = 32
+    ws.freeze_panes = 'C2'
+
+    for r, p in enumerate(products, start=2):
+        values = {
+            'slug': p.get('slug', ''),
+            'sku': p.get('sku', ''),
+            'name': p.get('name', ''),
+            'category': p.get('category', ''),
+            'price': p.get('price', 0),
+            'oldPrice': p.get('oldPrice'),
+            'mount': p.get('mount', ''),
+            'warranty': p.get('warranty', ''),
+            'yearFrom': p.get('yearFrom', ''),
+            'yearTo': p.get('yearTo', ''),
+            'badge': p.get('badge') or '',
+            'popularity': p.get('popularity', 0),
+            'sortOrder': p.get('sortOrder', 100),
+            'isActive': 'да' if p.get('isActive', True) else 'нет',
+            'fits': fits_to_text(p.get('fits') or {}),
+            'images': list_to_text(p.get('images') or []),
+            'description': ' | '.join(p.get('description') or []),
+            'specs': specs_to_text(p.get('specs') or []),
+            'kit': list_to_text(p.get('kit') or []),
+        }
+        for i, (key, _t, _w) in enumerate(XLS_COLUMNS, start=1):
+            ws.cell(row=r, column=i, value=values.get(key))
+
+    wsb = wb.create_sheet('Марки и модели')
+    for i, title in enumerate(['Марка', 'Модели (через запятую)'], start=1):
+        cell = wsb.cell(row=1, column=i, value=title)
+        cell.font = head_font
+        cell.fill = head_fill
+    wsb.column_dimensions['A'].width = 22
+    wsb.column_dimensions['B'].width = 80
+    wsb.freeze_panes = 'A2'
+    for r, b in enumerate(brands, start=2):
+        wsb.cell(row=r, column=1, value=b.get('name', ''))
+        wsb.cell(row=r, column=2, value=', '.join(b.get('models') or []))
+
+    wsh = wb.create_sheet('Как заполнять')
+    tips = [
+        ['Подсказка', 'Что важно знать'],
+        ['Столбец «Код»', 'Не меняйте и не удаляйте — по нему товар находится при загрузке. Для нового товара оставьте пустым.'],
+        ['Новый товар', 'Добавьте строку внизу, заполните название, категорию и цену. Код создастся сам.'],
+        ['Цены', 'Только числа, без пробелов и знака рубля. Пустая «Старая цена» — скидки нет.'],
+        ['На сайте', '«да» — товар виден покупателям, «нет» — скрыт.'],
+        ['Совместимость', 'Формат: Lada: Vesta SW Cross, Granta | Kia: Rio, Seltos'],
+        ['Фото', 'Ссылки на картинки через точку с запятой.'],
+        ['Описание', 'Абзацы разделяйте вертикальной чертой |'],
+        ['Характеристики', 'Формат: Гарантия=5 лет; Материал=сталь 2 мм'],
+        ['Комплектация', 'Пункты через точку с запятой.'],
+        ['Марки и модели', 'Отдельный лист. Модели одной марки — через запятую.'],
+        ['Загрузка', 'Ничего не удаляется: совпавшие товары обновятся, новые добавятся.'],
+    ]
+    for r, row in enumerate(tips, start=1):
+        for c, val in enumerate(row, start=1):
+            cell = wsh.cell(row=r, column=c, value=val)
+            if r == 1:
+                cell.font = head_font
+                cell.fill = head_fill
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+    wsh.column_dimensions['A'].width = 26
+    wsh.column_dimensions['B'].width = 90
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def parse_xlsx(data: bytes) -> tuple:
+    wb = load_workbook(io.BytesIO(data), data_only=True)
+    products = []
+    brands = []
+
+    titles = {t: k for k, t, _w in XLS_COLUMNS}
+
+    if 'Товары' in wb.sheetnames:
+        ws = wb['Товары']
+    else:
+        ws = wb.worksheets[0]
+
+    header = [str(c.value or '').strip() for c in ws[1]]
+    index = {}
+    for i, title in enumerate(header):
+        key = titles.get(title)
+        if key:
+            index[key] = i
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or all(v in (None, '') for v in row):
+            continue
+
+        def get(key, default=''):
+            i = index.get(key)
+            if i is None or i >= len(row):
+                return default
+            v = row[i]
+            return default if v is None else v
+
+        name = str(get('name')).strip()
+        if not name:
+            continue
+
+        def as_int(key, default=None):
+            raw = str(get(key, '')).strip().replace(' ', '').replace('\u00a0', '')
+            if raw in ('', '-'):
+                return default
+            try:
+                return int(float(raw))
+            except ValueError:
+                return default
+
+        active_raw = str(get('isActive', 'да')).strip().lower()
+        products.append({
+            'slug': str(get('slug')).strip(),
+            'sku': str(get('sku')).strip(),
+            'name': name,
+            'category': str(get('category')).strip(),
+            'price': as_int('price', 0) or 0,
+            'oldPrice': as_int('oldPrice'),
+            'mount': str(get('mount')).strip(),
+            'warranty': str(get('warranty')).strip(),
+            'yearFrom': as_int('yearFrom', 2010),
+            'yearTo': as_int('yearTo', 2026),
+            'badge': str(get('badge')).strip() or None,
+            'popularity': as_int('popularity', 0) or 0,
+            'sortOrder': as_int('sortOrder', 100) or 100,
+            'isActive': active_raw not in ('нет', 'no', 'false', '0', 'скрыт'),
+            'fits': text_to_fits(get('fits')),
+            'images': text_to_list(get('images'), ';'),
+            'description': text_to_list(get('description'), '|'),
+            'specs': text_to_specs(get('specs')),
+            'kit': text_to_list(get('kit'), ';'),
+        })
+
+    if 'Марки и модели' in wb.sheetnames:
+        wsb = wb['Марки и модели']
+        for row in wsb.iter_rows(min_row=2, values_only=True):
+            if not row or not row[0]:
+                continue
+            models = str(row[1] or '')
+            brands.append({
+                'name': str(row[0]).strip(),
+                'models': [m.strip() for m in models.split(',') if m.strip()],
+            })
+
+    return products, brands
+
+
+def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
+    cur = conn.cursor()
+    created = 0
+    updated = 0
+
+    for i, p in enumerate(in_products):
+        name = str(p.get('name', '')).strip()
+        if not name:
+            continue
+        slug = str(p.get('slug', '')).strip() or slugify(name)
+        fields = {
+            'slug': q(slug),
+            'sku': q(str(p.get('sku', '')).strip() or slug.upper()),
+            'name': q(name),
+            'category': q(str(p.get('category', '')).strip() or 'Другое'),
+            'price': qint(p.get('price'), 0),
+            'old_price': qint(p.get('oldPrice')),
+            'mount': q(str(p.get('mount', ''))),
+            'install': q(str(p.get('install', ''))),
+            'warranty': q(str(p.get('warranty', ''))),
+            'year_from': qint(p.get('yearFrom'), 2010),
+            'year_to': qint(p.get('yearTo'), 2026),
+            'badge': q(p.get('badge') or None),
+            'images': qjson(p.get('images') or []),
+            'description': qjson(p.get('description') or []),
+            'specs': qjson(p.get('specs') or []),
+            'kit': qjson(p.get('kit') or []),
+            'fits': qjson(p.get('fits') or {}),
+            'sort_order': qint(p.get('sortOrder'), (i + 1) * 10),
+            'popularity': qint(p.get('popularity'), 0),
+            'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
+        }
+        cur.execute(f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}")
+        found = cur.fetchone()
+        if found:
+            if mode == 'skip':
+                continue
+            sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+            cur.execute(
+                f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
+                f"WHERE id = {found[0]}"
+            )
+            updated += 1
+        else:
+            cur.execute(
+                f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
+                f"VALUES ({', '.join(fields.values())})"
+            )
+            created += 1
+
+    for i, b in enumerate(in_brands):
+        bname = str(b.get('name', '')).strip()
+        if not bname:
+            continue
+        models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+        cur.execute(
+            f"INSERT INTO {schema()}.brands (name, models, sort_order) "
+            f"VALUES ({q(bname)}, {qjson(models)}, {(i + 1) * 10}) "
+            f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models"
+        )
+
+    conn.commit()
+    cur.close()
+    return {'created': created, 'updated': updated}
+
+
 def handler(event: dict, context) -> dict:
     """Админка каталога: вход по паролю, список, создание, изменение и удаление товаров."""
     method = event.get('httpMethod', 'GET')
@@ -275,74 +579,40 @@ def handler(event: dict, context) -> dict:
             return resp(200, {'version': 1, 'products': products, 'brands': brands})
 
         if action == 'import':
-            mode = str(body.get('mode', 'merge'))
-            in_products = body.get('products') or []
-            in_brands = body.get('brands') or []
-            cur = conn.cursor()
-            created = 0
-            updated = 0
+            stats = import_rows(
+                conn,
+                body.get('products') or [],
+                body.get('brands') or [],
+                str(body.get('mode', 'merge')),
+            )
+            return resp(200, {'ok': True, **stats})
 
-            for i, p in enumerate(in_products):
-                name = str(p.get('name', '')).strip()
-                if not name:
-                    continue
-                slug = str(p.get('slug', '')).strip() or slugify(name)
-                fields = {
-                    'slug': q(slug),
-                    'sku': q(str(p.get('sku', '')).strip() or slug.upper()),
-                    'name': q(name),
-                    'category': q(str(p.get('category', '')).strip() or 'Другое'),
-                    'price': qint(p.get('price'), 0),
-                    'old_price': qint(p.get('oldPrice')),
-                    'mount': q(str(p.get('mount', ''))),
-                    'install': q(str(p.get('install', ''))),
-                    'warranty': q(str(p.get('warranty', ''))),
-                    'year_from': qint(p.get('yearFrom'), 2010),
-                    'year_to': qint(p.get('yearTo'), 2026),
-                    'badge': q(p.get('badge') or None),
-                    'images': qjson(p.get('images') or []),
-                    'description': qjson(p.get('description') or []),
-                    'specs': qjson(p.get('specs') or []),
-                    'kit': qjson(p.get('kit') or []),
-                    'fits': qjson(p.get('fits') or {}),
-                    'sort_order': qint(p.get('sortOrder'), (i + 1) * 10),
-                    'popularity': qint(p.get('popularity'), 0),
-                    'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
-                }
-                cur.execute(
-                    f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}"
-                )
-                found = cur.fetchone()
-                if found:
-                    if mode == 'skip':
-                        continue
-                    sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
-                    cur.execute(
-                        f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
-                        f"WHERE id = {found[0]}"
-                    )
-                    updated += 1
-                else:
-                    cur.execute(
-                        f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
-                        f"VALUES ({', '.join(fields.values())})"
-                    )
-                    created += 1
-
-            for i, b in enumerate(in_brands):
-                bname = str(b.get('name', '')).strip()
-                if not bname:
-                    continue
-                models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
-                cur.execute(
-                    f"INSERT INTO {schema()}.brands (name, models, sort_order) "
-                    f"VALUES ({q(bname)}, {qjson(models)}, {(i + 1) * 10}) "
-                    f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models"
-                )
-
-            conn.commit()
+        if action == 'export-xlsx':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(f"SELECT * FROM {schema()}.products ORDER BY sort_order, id")
+            products = [row_to_product(r) for r in cur.fetchall()]
+            cur.execute(f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id")
+            brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
             cur.close()
-            return resp(200, {'ok': True, 'created': created, 'updated': updated})
+            data = build_xlsx(products, brands)
+            return resp(200, {'file': base64.b64encode(data).decode('ascii')})
+
+        if action == 'import-xlsx':
+            raw = str(body.get('file', ''))
+            if ',' in raw and raw.startswith('data:'):
+                raw = raw.split(',', 1)[1]
+            try:
+                blob = base64.b64decode(raw)
+            except Exception:
+                return resp(400, {'error': 'Файл не читается'})
+            try:
+                in_products, in_brands = parse_xlsx(blob)
+            except Exception:
+                return resp(400, {'error': 'Это не таблица Excel или структура изменена'})
+            if not in_products and not in_brands:
+                return resp(400, {'error': 'В таблице не нашлось строк с товарами'})
+            stats = import_rows(conn, in_products, in_brands, str(body.get('mode', 'merge')))
+            return resp(200, {'ok': True, 'brands': len(in_brands), **stats})
 
         if action == 'orders':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
