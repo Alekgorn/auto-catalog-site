@@ -13,6 +13,7 @@ interface CatalogValue {
   brands: Brand[];
   guides: Guide[];
   categories: string[];
+  cardFields: string[];
   loading: boolean;
   reload: () => void;
 }
@@ -23,6 +24,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [cardFields, setCardFields] = useState<string[]>(['mount', 'warranty']);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
@@ -41,6 +43,9 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
         }
         if (Array.isArray(data.guides)) {
           setGuides(data.guides);
+        }
+        if (Array.isArray(data.settings?.card_fields)) {
+          setCardFields(data.settings.card_fields);
         }
       })
       .catch(() => {
@@ -67,6 +72,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
     brands,
     guides,
     categories,
+    cardFields,
     loading,
     reload: () => setTick((t) => t + 1),
   };

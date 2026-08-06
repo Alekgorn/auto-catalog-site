@@ -7,6 +7,7 @@ import ProductEditor, { AdminProduct, emptyProduct } from '@/components/admin/Pr
 import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
 import OrdersPanel from '@/components/admin/OrdersPanel';
 import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
+import SettingsPanel from '@/components/admin/SettingsPanel';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -19,7 +20,9 @@ const Admin = () => {
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
-  const [tab, setTab] = useState<'products' | 'guides' | 'orders' | 'brands'>('orders');
+  const [tab, setTab] = useState<
+    'products' | 'guides' | 'orders' | 'brands' | 'settings'
+  >('orders');
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
@@ -163,7 +166,9 @@ const Admin = () => {
   const filtered = useMemo(
     () =>
       products.filter((p) =>
-        (p.name + ' ' + p.category).toLowerCase().includes(search.toLowerCase()),
+        `${p.name} ${p.category} ${p.sku ?? ''}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
       ),
     [products, search],
   );
@@ -258,6 +263,7 @@ const Admin = () => {
               ['products', `Товары (${products.length})`],
               ['guides', `Инструкции (${guides.length})`],
               ['brands', `Марки (${brands.length})`],
+              ['settings', 'Настройки'],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -353,6 +359,8 @@ const Admin = () => {
 
         {tab === 'brands' && <BrandsEditor brands={brands} onSave={saveBrands} />}
 
+        {tab === 'settings' && <SettingsPanel onImported={load} />}
+
         {tab === 'products' && (
           <>
             <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
@@ -394,7 +402,8 @@ const Admin = () => {
                         {p.name}
                       </div>
                       <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-                        {p.category} · {Object.keys(p.fits ?? {}).length} марок
+                        {p.sku || '—'} · {p.category} ·{' '}
+                        {Object.keys(p.fits ?? {}).length} марок
                       </div>
                     </div>
                     <div className="font-head text-lg font-bold">

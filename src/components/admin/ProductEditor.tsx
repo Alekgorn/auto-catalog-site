@@ -7,6 +7,8 @@ import { AdminBrand } from '@/components/admin/BrandsEditor';
 export interface AdminProduct {
   id?: number;
   slug?: string;
+  sku?: string;
+  popularity?: number;
   name: string;
   category: string;
   price: number;
@@ -27,6 +29,8 @@ export interface AdminProduct {
 }
 
 export const emptyProduct = (): AdminProduct => ({
+  sku: '',
+  popularity: 0,
   name: '',
   category: '',
   price: 0,
@@ -190,10 +194,28 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                 </datalist>
               </div>
               <div>
+                <span className={label}>Артикул</span>
+                <input
+                  value={form.sku ?? ''}
+                  onChange={(e) => set('sku', e.target.value)}
+                  className={field}
+                  placeholder="TOW-01"
+                />
+              </div>
+              <div>
                 <span className={label}>Метка (Хит, Акция)</span>
                 <input
                   value={form.badge ?? ''}
                   onChange={(e) => set('badge', e.target.value || null)}
+                  className={field}
+                />
+              </div>
+              <div>
+                <span className={label}>Популярность (0—100)</span>
+                <input
+                  type="number"
+                  value={form.popularity ?? 0}
+                  onChange={(e) => set('popularity', Number(e.target.value))}
                   className={field}
                 />
               </div>
@@ -222,14 +244,6 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                 <input
                   value={form.mount}
                   onChange={(e) => set('mount', e.target.value)}
-                  className={field}
-                />
-              </div>
-              <div>
-                <span className={label}>Время установки</span>
-                <input
-                  value={form.install}
-                  onChange={(e) => set('install', e.target.value)}
                   className={field}
                 />
               </div>

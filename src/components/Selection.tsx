@@ -36,7 +36,7 @@ const Selection = ({ onPickBrand, ...selector }: Props) => {
   const { brands: BRANDS } = useCatalog();
 
   return (
-  <section id="select" className="section-pad scroll-mt-[76px] bg-card">
+  <section id="select" className="section-pad anchor-offset bg-card">
     <div className="rule" />
     <SectionHead
       index="02"

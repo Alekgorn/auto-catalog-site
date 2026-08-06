@@ -28,14 +28,15 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            f"SELECT slug, name, category, price, old_price, mount, install, warranty, "
-            f"year_from, year_to, badge, images, description, specs, kit, fits "
+            f"SELECT slug, sku, name, category, price, old_price, mount, install, warranty, "
+            f"year_from, year_to, badge, images, description, specs, kit, fits, popularity "
             f"FROM {schema}.products WHERE is_active = TRUE ORDER BY sort_order, id"
         )
         rows = cur.fetchall()
         products = [
             {
                 'id': r['slug'],
+                'sku': r['sku'] or r['slug'].upper(),
                 'name': r['name'],
                 'category': r['category'],
                 'price': r['price'],
@@ -50,6 +51,7 @@ def handler(event: dict, context) -> dict:
                 'specs': r['specs'],
                 'kit': r['kit'],
                 'fits': r['fits'],
+                'popularity': r['popularity'],
             }
             for r in rows
         ]
@@ -70,6 +72,9 @@ def handler(event: dict, context) -> dict:
             f"JOIN {schema}.products p ON p.id = pg.product_id"
         )
         links = cur.fetchall()
+
+        cur.execute(f"SELECT key, value FROM {schema}.settings")
+        settings = {s['key']: s['value'] for s in cur.fetchall()}
         cur.close()
     finally:
         conn.close()
@@ -103,7 +108,12 @@ def handler(event: dict, context) -> dict:
         'headers': CORS,
         'isBase64Encoded': False,
         'body': json.dumps(
-            {'products': products, 'brands': brands, 'guides': guides},
+            {
+                'products': products,
+                'brands': brands,
+                'guides': guides,
+                'settings': settings,
+            },
             ensure_ascii=False,
         ),
     }

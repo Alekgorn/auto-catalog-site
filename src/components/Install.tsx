@@ -41,7 +41,7 @@ const DELIVERY = [
 ];
 
 const Install = () => (
-  <section id="install" className="section-pad scroll-mt-[76px] bg-card">
+  <section id="install" className="section-pad anchor-offset bg-card">
     <div className="rule" />
     <SectionHead
       index="04"

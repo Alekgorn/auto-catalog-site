@@ -2,6 +2,8 @@ export type Category = string;
 
 export interface Product {
   id: string;
+  sku?: string;
+  popularity?: number;
   name: string;
   category: Category;
   price: number;
@@ -374,9 +376,11 @@ export const productDescription = (p: Product): string[] =>
     ? p.description
     : [
         `${p.name} — позиция из категории «${p.category.toLowerCase()}». Изделие рассчитано под конкретный кузов: геометрия повторяет заводские размеры, поэтому установка идёт в ${p.mount} без сверления и вмешательства в силовые элементы.`,
-        `Комплект поставляется с крепежом и инструкцией. Среднее время работ в нашем сервисе — ${p.install}. После установки выдаём отметку в заказ-наряде, гарантия на изделие и работы — ${p.warranty}.`,
+        `Комплект поставляется с крепежом и инструкцией. После установки выдаём отметку в заказ-наряде, гарантия на изделие и работы — ${p.warranty}.`,
         'Перед отправкой каждая позиция проверяется по контрольному образцу кузова, а совместимость с вашей машиной мы подтверждаем по VIN при подтверждении заказа.',
       ];
+
+export const productSku = (p: Product): string => p.sku || p.id.toUpperCase();
 
 export const productSpecs = (p: Product): [string, string][] =>
   p.specs && p.specs.length
@@ -385,12 +389,48 @@ export const productSpecs = (p: Product): [string, string][] =>
         ['Категория', p.category],
         ['Точки крепления', p.mount],
         ['Годы выпуска авто', `${p.years[0]}—${p.years[1]}`],
-        ['Время установки', p.install],
         ['Гарантия', p.warranty],
         ['Сверление кузова', 'не требуется'],
-        ['Артикул', p.id.toUpperCase()],
+        ['Артикул', productSku(p)],
         ['Наличие', 'на складе'],
       ];
+
+export const CARD_FIELDS: { key: string; label: string; get: (p: Product) => string }[] = [
+  { key: 'sku', label: 'Артикул', get: (p) => productSku(p) },
+  { key: 'mount', label: 'Крепление', get: (p) => p.mount },
+  { key: 'warranty', label: 'Гарантия', get: (p) => p.warranty },
+  { key: 'category', label: 'Категория', get: (p) => p.category },
+  { key: 'years', label: 'Годы авто', get: (p) => `${p.years[0]}—${p.years[1]}` },
+];
+
+export const searchProducts = (products: Product[], query: string): Product[] => {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  const words = q.split(/\s+/).filter(Boolean);
+
+  const scored = products.map((p) => {
+    const models = Object.entries(p.fits)
+      .map(([b, m]) => `${b} ${m.join(' ')}`)
+      .join(' ');
+    const haystack = `${p.name} ${p.category} ${productSku(p)} ${p.mount} ${models}`.toLowerCase();
+
+    if (productSku(p).toLowerCase() === q) return { p, score: 1000 };
+
+    const hits = words.filter((w) => haystack.includes(w)).length;
+    if (hits === 0) return { p, score: 0 };
+
+    let score = hits * 10;
+    if (p.name.toLowerCase().includes(q)) score += 50;
+    if (hits === words.length) score += 25;
+    score += (p.popularity ?? 0) / 100;
+    return { p, score };
+  });
+
+  return scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((s) => s.p);
+};
 
 export const productKit = (p: Product): string[] =>
   p.kit && p.kit.length

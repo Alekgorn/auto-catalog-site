@@ -44,7 +44,7 @@ const Prices = ({ onRequest }: Props) => {
   const [tab, setTab] = useState<'price' | 'promo'>('price');
 
   return (
-    <section id="prices" className="section-pad scroll-mt-[76px]">
+    <section id="prices" className="section-pad anchor-offset">
       <div className="rule" />
       <SectionHead
         index="03"

@@ -149,6 +149,10 @@
     @apply px-6 md:px-14;
   }
 
+  .anchor-offset {
+    @apply scroll-mt-[76px] lg:scroll-mt-[140px];
+  }
+
   .link-underline {
     @apply relative border-b border-transparent transition-colors hover:border-primary hover:text-primary;
   }

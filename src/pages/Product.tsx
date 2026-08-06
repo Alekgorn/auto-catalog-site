@@ -15,6 +15,7 @@ import {
   productDescription,
   productImages,
   productKit,
+  productSku,
   productSpecs,
   productsByCategory,
 } from '@/data/catalog';
@@ -104,7 +105,7 @@ const Product = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <section className="section-pad scroll-mt-[76px]">
+        <section className="section-pad anchor-offset">
           <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
             <Link to="/" className="transition-colors hover:text-primary">
               Главная
@@ -139,7 +140,7 @@ const Product = () => {
               </h1>
 
               <div className="mt-3 text-[0.8rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Артикул {product.id.toUpperCase()} · {modelCount} совместимых моделей
+                Артикул {productSku(product)} · {modelCount} совместимых моделей
               </div>
 
               <div
@@ -254,12 +255,12 @@ const Product = () => {
                   <dd className="text-right">{product.mount}</dd>
                 </div>
                 <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted-foreground">Установка</dt>
-                  <dd className="text-right">{product.install}</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
                   <dt className="text-muted-foreground">Гарантия</dt>
                   <dd className="text-right">{product.warranty}</dd>
+                </div>
+                <div className="flex justify-between gap-4 border-b border-border pb-2">
+                  <dt className="text-muted-foreground">Артикул</dt>
+                  <dd className="text-right">{productSku(product)}</dd>
                 </div>
               </dl>
             </div>
@@ -383,7 +384,7 @@ const Product = () => {
         </section>
 
         {productGuides.length > 0 && (
-          <section id="guide" className="section-pad scroll-mt-[76px]">
+          <section id="guide" className="section-pad anchor-offset">
             <div className="rule" />
             <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-10 md:grid-cols-12">
               <div className="md:col-span-6">

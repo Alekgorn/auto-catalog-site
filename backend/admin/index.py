@@ -94,6 +94,7 @@ def row_to_product(r: dict) -> dict:
     return {
         'id': r['id'],
         'slug': r['slug'],
+        'sku': r.get('sku') or '',
         'name': r['name'],
         'category': r['category'],
         'price': r['price'],
@@ -110,6 +111,7 @@ def row_to_product(r: dict) -> dict:
         'kit': r['kit'],
         'fits': r['fits'],
         'sortOrder': r['sort_order'],
+        'popularity': r.get('popularity') or 0,
         'isActive': r['is_active'],
     }
 
@@ -240,6 +242,107 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             cur.close()
             return resp(200, {'ok': True})
+
+        if action == 'settings':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(f"SELECT key, value FROM {schema()}.settings")
+                data = {s['key']: s['value'] for s in cur.fetchall()}
+                cur.close()
+                return resp(200, {'settings': data})
+            if method == 'PUT':
+                for key, value in (body.get('settings') or {}).items():
+                    cur.execute(
+                        f"INSERT INTO {schema()}.settings (key, value, updated_at) "
+                        f"VALUES ({q(str(key)[:64])}, {qjson(value)}, NOW()) "
+                        f"ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()"
+                    )
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
+
+        if action == 'export':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(f"SELECT * FROM {schema()}.products ORDER BY sort_order, id")
+            products = [row_to_product(r) for r in cur.fetchall()]
+            cur.execute(f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id")
+            brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+            cur.close()
+            for p in products:
+                p.pop('id', None)
+            return resp(200, {'version': 1, 'products': products, 'brands': brands})
+
+        if action == 'import':
+            mode = str(body.get('mode', 'merge'))
+            in_products = body.get('products') or []
+            in_brands = body.get('brands') or []
+            cur = conn.cursor()
+            created = 0
+            updated = 0
+
+            for i, p in enumerate(in_products):
+                name = str(p.get('name', '')).strip()
+                if not name:
+                    continue
+                slug = str(p.get('slug', '')).strip() or slugify(name)
+                fields = {
+                    'slug': q(slug),
+                    'sku': q(str(p.get('sku', '')).strip() or slug.upper()),
+                    'name': q(name),
+                    'category': q(str(p.get('category', '')).strip() or 'Другое'),
+                    'price': qint(p.get('price'), 0),
+                    'old_price': qint(p.get('oldPrice')),
+                    'mount': q(str(p.get('mount', ''))),
+                    'install': q(str(p.get('install', ''))),
+                    'warranty': q(str(p.get('warranty', ''))),
+                    'year_from': qint(p.get('yearFrom'), 2010),
+                    'year_to': qint(p.get('yearTo'), 2026),
+                    'badge': q(p.get('badge') or None),
+                    'images': qjson(p.get('images') or []),
+                    'description': qjson(p.get('description') or []),
+                    'specs': qjson(p.get('specs') or []),
+                    'kit': qjson(p.get('kit') or []),
+                    'fits': qjson(p.get('fits') or {}),
+                    'sort_order': qint(p.get('sortOrder'), (i + 1) * 10),
+                    'popularity': qint(p.get('popularity'), 0),
+                    'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
+                }
+                cur.execute(
+                    f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}"
+                )
+                found = cur.fetchone()
+                if found:
+                    if mode == 'skip':
+                        continue
+                    sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+                    cur.execute(
+                        f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
+                        f"WHERE id = {found[0]}"
+                    )
+                    updated += 1
+                else:
+                    cur.execute(
+                        f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
+                        f"VALUES ({', '.join(fields.values())})"
+                    )
+                    created += 1
+
+            for i, b in enumerate(in_brands):
+                bname = str(b.get('name', '')).strip()
+                if not bname:
+                    continue
+                models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+                cur.execute(
+                    f"INSERT INTO {schema()}.brands (name, models, sort_order) "
+                    f"VALUES ({q(bname)}, {qjson(models)}, {(i + 1) * 10}) "
+                    f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models"
+                )
+
+            conn.commit()
+            cur.close()
+            return resp(200, {'ok': True, 'created': created, 'updated': updated})
 
         if action == 'orders':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -387,6 +490,7 @@ def handler(event: dict, context) -> dict:
             category = str(body.get('category', '')).strip() or 'Другое'
             fields = {
                 'slug': q(slug),
+                'sku': q(str(body.get('sku', '')).strip() or slug.upper()),
                 'name': q(name),
                 'category': q(category),
                 'price': qint(body.get('price'), 0),
@@ -403,6 +507,7 @@ def handler(event: dict, context) -> dict:
                 'kit': qjson(body.get('kit') or []),
                 'fits': qjson(body.get('fits') or {}),
                 'sort_order': qint(body.get('sortOrder'), 100),
+                'popularity': qint(body.get('popularity'), 0),
                 'is_active': 'TRUE' if body.get('isActive', True) else 'FALSE',
             }
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

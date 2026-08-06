@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { useCart } from '@/context/CartContext';
+import SearchBar from '@/components/SearchBar';
 
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог' },
@@ -21,6 +22,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { count, setOpen: setCartOpen } = useCart();
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
@@ -69,7 +71,7 @@ const Header = () => {
           Штатно
         </button>
 
-        <nav className="hidden gap-8 lg:flex xl:gap-10">
+        <nav className="hidden gap-6 lg:flex xl:gap-8">
           {NAV.map((item) => (
             <button
               key={item.id}
@@ -84,10 +86,17 @@ const Header = () => {
         <div className="flex items-center gap-5 md:gap-6">
           <a
             href="tel:+78003334455"
-            className="hidden font-head text-[0.95rem] font-medium tracking-tight md:block"
+            className="hidden font-head text-[0.95rem] font-medium tracking-tight xl:block"
           >
             8 800 333-44-55
           </a>
+          <button
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label="Поиск"
+            className="transition-colors hover:text-primary lg:hidden"
+          >
+            <Icon name="Search" size={22} />
+          </button>
           <button
             onClick={() => {
               setOpen(false);
@@ -112,6 +121,16 @@ const Header = () => {
           </button>
         </div>
       </div>
+
+      <div className="hidden pb-4 lg:block">
+        <SearchBar />
+      </div>
+
+      {searchOpen && !open && (
+        <div className="animate-fade-in pb-4 lg:hidden">
+          <SearchBar autoFocus onDone={() => setSearchOpen(false)} />
+        </div>
+      )}
 
       {open && (
         <div className="fixed inset-x-0 bottom-0 top-[76px] z-40 animate-fade-in bg-background section-pad lg:hidden">

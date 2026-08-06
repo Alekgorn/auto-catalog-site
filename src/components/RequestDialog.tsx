@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Product, Vehicle, formatPrice } from '@/data/catalog';
+import { Product, Vehicle, formatPrice, productSku } from '@/data/catalog';
 import { sendOrder } from '@/lib/api';
 
 interface Props {
@@ -82,8 +82,8 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
                 <dd className="font-head font-medium">{formatPrice(product.price)}</dd>
               </div>
               <div className="flex justify-between gap-4 border-b border-border pb-2">
-                <dt className="text-muted-foreground">Установка</dt>
-                <dd>{product.install}</dd>
+                <dt className="text-muted-foreground">Артикул</dt>
+                <dd>{productSku(product)}</dd>
               </div>
               {vehicle && (
                 <div className="flex justify-between gap-4 border-b border-border pb-2">

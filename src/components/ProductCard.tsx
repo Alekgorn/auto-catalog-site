@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import {
+  CARD_FIELDS,
   Product,
   Vehicle,
   formatPrice,
   isCompatible,
   productImages,
+  productSku,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   product: Product;
@@ -17,12 +20,19 @@ interface Props {
 const ProductCard = ({ product, vehicle }: Props) => {
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
+  const { cardFields } = useCatalog();
   const inCart = has(product.id);
+
+  const rows = CARD_FIELDS.filter((f) => cardFields.includes(f.key))
+    .map((f) => ({ label: f.label, value: f.get(product) }))
+    .filter((r) => r.value);
 
   return (
     <article className="group flex flex-col border-t border-foreground pt-5 transition-colors">
       <div className="flex items-start justify-between gap-4">
-        <span className="eyebrow">{product.category}</span>
+        <span className="eyebrow">
+          {product.category} · {productSku(product)}
+        </span>
         {product.badge && (
           <span className="bg-primary px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.12em] text-primary-foreground">
             {product.badge}
@@ -45,20 +55,19 @@ const ProductCard = ({ product, vehicle }: Props) => {
         </Link>
       </h3>
 
-      <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">
-        <div className="flex justify-between gap-4 border-b border-border pb-2">
-          <dt>Крепление</dt>
-          <dd className="text-right text-foreground">{product.mount}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-border pb-2">
-          <dt>Установка</dt>
-          <dd className="text-right text-foreground">{product.install}</dd>
-        </div>
-        <div className="flex justify-between gap-4 border-b border-border pb-2">
-          <dt>Гарантия</dt>
-          <dd className="text-right text-foreground">{product.warranty}</dd>
-        </div>
-      </dl>
+      {rows.length > 0 && (
+        <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">
+          {rows.map((r) => (
+            <div
+              key={r.label}
+              className="flex justify-between gap-4 border-b border-border pb-2"
+            >
+              <dt>{r.label}</dt>
+              <dd className="text-right text-foreground">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       <div
         className={`mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] ${

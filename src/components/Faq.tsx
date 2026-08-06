@@ -35,7 +35,7 @@ const ITEMS = [
 ];
 
 const Faq = () => (
-  <section id="faq" className="section-pad scroll-mt-[76px]">
+  <section id="faq" className="section-pad anchor-offset">
     <div className="rule" />
     <SectionHead
       index="05"
