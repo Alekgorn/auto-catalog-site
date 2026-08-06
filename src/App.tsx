@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Product from "./pages/Product";
 import NotFound from "./pages/NotFound";
 import Admin from "./pages/Admin";
+import Guides from "./pages/Guides";
+import GuidePage from "./pages/GuidePage";
 import { CartProvider } from "@/context/CartContext";
 import { CatalogProvider } from "@/context/CatalogContext";
 import CartDrawer from "@/components/CartDrawer";
@@ -25,6 +27,8 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/product/:id" element={<Product />} />
+              <Route path="/guides" element={<Guides />} />
+              <Route path="/guides/:slug" element={<GuidePage />} />
               <Route path="/admin" element={<Admin />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

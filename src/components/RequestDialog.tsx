@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Vehicle, formatPrice } from '@/data/catalog';
+import { sendOrder } from '@/lib/api';
 
 interface Props {
   open: boolean;
@@ -16,6 +17,7 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -23,11 +25,29 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
     }
   }, [open]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return setError('Укажите имя');
     if (phone.replace(/\D/g, '').length < 10) return setError('Укажите телефон');
     setError(null);
+    setSending(true);
+
+    const ok = await sendOrder({
+      name: name.trim(),
+      phone: phone.trim(),
+      vehicle: vehicle ? `${vehicle.brand} ${vehicle.model}, ${vehicle.year}` : '',
+      source: product ? 'Карточка товара' : 'Общая заявка',
+      items: product
+        ? [{ slug: product.id, name: product.name, price: product.price, qty: 1 }]
+        : [],
+    });
+    setSending(false);
+
+    if (!ok) {
+      setError('Не удалось отправить. Попробуйте ещё раз или позвоните нам.');
+      return;
+    }
+
     onOpenChange(false);
     toast({
       title: 'Заявка отправлена',
@@ -103,9 +123,10 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
             {error && <div className="mt-3 text-[0.8rem] text-primary">{error}</div>}
             <button
               type="submit"
-              className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              disabled={sending}
+              className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
             >
-              Отправить
+              {sending ? 'Отправляем…' : 'Отправить'}
               <Icon name="ArrowRight" size={18} />
             </button>
           </form>

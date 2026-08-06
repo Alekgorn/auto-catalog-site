@@ -56,13 +56,54 @@ def handler(event: dict, context) -> dict:
 
         cur.execute(f"SELECT name, models FROM {schema}.brands ORDER BY sort_order, id")
         brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+
+        cur.execute(
+            f"SELECT id, slug, title, excerpt, cover, duration, difficulty, tools, blocks "
+            f"FROM {schema}.guides WHERE is_active = TRUE ORDER BY sort_order, id"
+        )
+        guide_rows = cur.fetchall()
+
+        cur.execute(
+            f"SELECT g.slug AS guide_slug, p.slug AS product_slug "
+            f"FROM {schema}.product_guides pg "
+            f"JOIN {schema}.guides g ON g.id = pg.guide_id "
+            f"JOIN {schema}.products p ON p.id = pg.product_id"
+        )
+        links = cur.fetchall()
         cur.close()
     finally:
         conn.close()
+
+    guide_products: dict = {}
+    product_guides: dict = {}
+    for link in links:
+        guide_products.setdefault(link['guide_slug'], []).append(link['product_slug'])
+        product_guides.setdefault(link['product_slug'], []).append(link['guide_slug'])
+
+    guides = [
+        {
+            'slug': g['slug'],
+            'title': g['title'],
+            'excerpt': g['excerpt'],
+            'cover': g['cover'],
+            'duration': g['duration'],
+            'difficulty': g['difficulty'],
+            'tools': g['tools'],
+            'blocks': g['blocks'],
+            'products': guide_products.get(g['slug'], []),
+        }
+        for g in guide_rows
+    ]
+
+    for p in products:
+        p['guides'] = product_guides.get(p['id'], [])
 
     return {
         'statusCode': 200,
         'headers': CORS,
         'isBase64Encoded': False,
-        'body': json.dumps({'products': products, 'brands': brands}, ensure_ascii=False),
+        'body': json.dumps(
+            {'products': products, 'brands': brands, 'guides': guides},
+            ensure_ascii=False,
+        ),
     }

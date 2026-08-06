@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import { useToast } from '@/hooks/use-toast';
+import { sendOrder } from '@/lib/api';
+import { loadVehicle } from '@/lib/vehicle';
 
 const CONTACTS = [
   { label: 'Телефон', value: '8 800 333-44-55', href: 'tel:+78003334455' },
@@ -16,8 +18,9 @@ const Contacts = () => {
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const next: { name?: string; phone?: string } = {};
     if (name.trim().length < 2) next.name = 'Укажите имя';
@@ -25,6 +28,23 @@ const Contacts = () => {
     if (digits.length < 10) next.phone = 'Телефон из 10–11 цифр';
     setErrors(next);
     if (Object.keys(next).length) return;
+
+    setSending(true);
+    const vehicle = loadVehicle();
+    const ok = await sendOrder({
+      name: name.trim(),
+      phone: phone.trim(),
+      comment: comment.trim(),
+      vehicle: vehicle ? `${vehicle.brand} ${vehicle.model}, ${vehicle.year}` : '',
+      source: 'Форма контактов',
+      items: [],
+    });
+    setSending(false);
+
+    if (!ok) {
+      setErrors({ phone: 'Не удалось отправить. Попробуйте ещё раз.' });
+      return;
+    }
 
     toast({
       title: 'Заявка принята',
@@ -129,9 +149,10 @@ const Contacts = () => {
 
           <button
             type="submit"
-            className="mt-8 flex w-full items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground"
+            disabled={sending}
+            className="mt-8 flex w-full items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-60"
           >
-            Отправить заявку
+            {sending ? 'Отправляем…' : 'Отправить заявку'}
             <Icon name="ArrowRight" size={20} />
           </button>
           <p className="mt-4 text-[0.78rem] leading-relaxed text-muted-foreground">

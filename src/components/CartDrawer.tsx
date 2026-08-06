@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
 import { formatPrice, isCompatible, productImages } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
+import { sendOrder } from '@/lib/api';
 
 const CartDrawer = () => {
   const { items, count, total, open, setOpen, remove, setQty, clear } = useCart();
@@ -17,6 +18,7 @@ const CartDrawer = () => {
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
 
   const inputClass =
     'w-full border-b border-border bg-transparent py-3 font-head text-lg font-medium tracking-tight outline-none transition-colors placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted-foreground focus:border-primary';
@@ -29,11 +31,33 @@ const CartDrawer = () => {
     }
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim().length < 2) return setError('Укажите имя');
     if (phone.replace(/\D/g, '').length < 10) return setError('Укажите телефон');
     setError(null);
+    setSending(true);
+
+    const ok = await sendOrder({
+      name: name.trim(),
+      phone: phone.trim(),
+      comment: comment.trim(),
+      vehicle: vehicle ? `${vehicle.brand} ${vehicle.model}, ${vehicle.year}` : '',
+      source: 'Корзина',
+      items: items.map(({ product, qty }) => ({
+        slug: product.id,
+        name: product.name,
+        price: product.price,
+        qty,
+      })),
+    });
+    setSending(false);
+
+    if (!ok) {
+      setError('Не удалось отправить. Попробуйте ещё раз или позвоните нам.');
+      return;
+    }
+
     close(false);
     toast({
       title: 'Заказ отправлен',
@@ -254,9 +278,10 @@ const CartDrawer = () => {
               {error && <div className="mt-3 text-[0.8rem] text-primary">{error}</div>}
               <button
                 type="submit"
-                className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+                disabled={sending}
+                className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
               >
-                Отправить заказ
+                {sending ? 'Отправляем…' : 'Отправить заказ'}
                 <Icon name="ArrowRight" size={18} />
               </button>
             </form>

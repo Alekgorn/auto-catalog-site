@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { useCart } from '@/context/CartContext';
 
-const NAV = [
+const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог' },
   { id: 'select', label: 'Подбор' },
   { id: 'prices', label: 'Цены' },
   { id: 'install', label: 'Установка' },
+  { id: 'guides', label: 'Инструкции', route: '/guides' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },
 ];
@@ -36,8 +37,12 @@ const Header = () => {
     };
   }, [open]);
 
-  const go = (id: string) => {
+  const go = (id: string, route?: string) => {
     setOpen(false);
+    if (route) {
+      navigate(route);
+      return;
+    }
     if (window.location.pathname !== '/') {
       navigate('/');
       setTimeout(() => scrollTo(id), 120);
@@ -68,7 +73,7 @@ const Header = () => {
           {NAV.map((item) => (
             <button
               key={item.id}
-              onClick={() => go(item.id)}
+              onClick={() => go(item.id, item.route)}
               className="link-underline pb-0.5 text-[0.8rem] uppercase tracking-[0.1em]"
             >
               {item.label}
@@ -115,7 +120,7 @@ const Header = () => {
             {NAV.map((item) => (
               <button
                 key={item.id}
-                onClick={() => go(item.id)}
+                onClick={() => go(item.id, item.route)}
                 className="flex items-center justify-between border-b border-border py-5 text-left font-head text-2xl font-medium uppercase tracking-tight"
               >
                 {item.label}

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import {
   BRANDS as FALLBACK_BRANDS,
   Brand,
+  Guide,
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
 } from '@/data/catalog';
@@ -10,6 +11,7 @@ import { CATALOG_URL } from '@/lib/api';
 interface CatalogValue {
   products: Product[];
   brands: Brand[];
+  guides: Guide[];
   categories: string[];
   loading: boolean;
   reload: () => void;
@@ -20,6 +22,7 @@ const CatalogContext = createContext<CatalogValue | null>(null);
 export const CatalogProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
   const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
@@ -35,6 +38,9 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
         }
         if (Array.isArray(data.brands) && data.brands.length) {
           setBrands(data.brands);
+        }
+        if (Array.isArray(data.guides)) {
+          setGuides(data.guides);
         }
       })
       .catch(() => {
@@ -59,6 +65,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
   const value: CatalogValue = {
     products,
     brands,
+    guides,
     categories,
     loading,
     reload: () => setTick((t) => t + 1),

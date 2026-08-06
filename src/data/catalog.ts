@@ -16,6 +16,25 @@ export interface Product {
   description?: string[];
   specs?: [string, string][];
   kit?: string[];
+  guides?: string[];
+}
+
+export type GuideBlock =
+  | { type: 'text'; text: string }
+  | { type: 'step'; title: string; text: string; image?: string }
+  | { type: 'image'; image: string; caption?: string }
+  | { type: 'note'; text: string };
+
+export interface Guide {
+  slug: string;
+  title: string;
+  excerpt: string;
+  cover: string;
+  duration: string;
+  difficulty: string;
+  tools: string[];
+  blocks: GuideBlock[];
+  products: string[];
 }
 
 export interface Brand {

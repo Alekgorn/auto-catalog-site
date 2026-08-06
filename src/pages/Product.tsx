@@ -6,6 +6,7 @@ import Footer from '@/components/Footer';
 import ProductGallery from '@/components/ProductGallery';
 import ProductCard from '@/components/ProductCard';
 import RequestDialog from '@/components/RequestDialog';
+import GuideContent from '@/components/GuideContent';
 import {
   Product as ProductType,
   Vehicle,
@@ -23,7 +24,7 @@ import { useCatalog } from '@/context/CatalogContext';
 
 const Product = () => {
   const { id } = useParams();
-  const { products, loading } = useCatalog();
+  const { products, guides, loading } = useCatalog();
   const product = useMemo(
     () => products.find((p) => p.id === id) ?? null,
     [id, products],
@@ -90,6 +91,7 @@ const Product = () => {
   const brands = Object.entries(product.fits);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
   const related = productsByCategory(product, products);
+  const productGuides = guides.filter((g) => g.products?.includes(product.id));
 
   return (
     <div className="min-h-screen bg-background">
@@ -214,6 +216,21 @@ const Product = () => {
                   Позвонить
                 </a>
               </div>
+
+              {productGuides.length > 0 && (
+                <a
+                  href="#guide"
+                  className="mt-4 flex items-center justify-between border border-border px-5 py-4 transition-colors hover:border-primary hover:text-primary"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon name="BookOpen" size={17} />
+                    <span className="text-[0.9rem]">
+                      Инструкция по установке с фото
+                    </span>
+                  </span>
+                  <Icon name="ArrowDown" size={16} />
+                </a>
+              )}
 
               <dl className="mt-8 space-y-2 text-[0.85rem]">
                 <div className="flex justify-between gap-4 border-b border-border pb-2">
@@ -348,6 +365,47 @@ const Product = () => {
             </div>
           </div>
         </section>
+
+        {productGuides.length > 0 && (
+          <section id="guide" className="section-pad scroll-mt-[76px]">
+            <div className="rule" />
+            <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-10 md:grid-cols-12">
+              <div className="md:col-span-6">
+                <div className="eyebrow">Установка</div>
+                <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em] sm:text-3xl">
+                  Как это ставится
+                </h2>
+              </div>
+              <p className="max-w-[34em] text-muted-foreground md:col-span-5 md:col-start-8 md:pt-9">
+                Пошаговое техническое описание монтажа с фотографиями — прямо здесь, без
+                перехода в отдельный раздел.
+              </p>
+            </div>
+
+            {productGuides.map((g) => (
+              <div key={g.slug} className="border-t border-foreground pb-14 pt-8">
+                <div className="flex flex-wrap items-baseline justify-between gap-4">
+                  <h3 className="font-head text-xl font-medium tracking-tight">
+                    {g.title}
+                  </h3>
+                  <Link
+                    to={`/guides/${g.slug}`}
+                    className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    Открыть отдельно
+                    <Icon name="ArrowUpRight" size={14} />
+                  </Link>
+                </div>
+                {g.excerpt && (
+                  <p className="mt-3 max-w-[46em] text-muted-foreground">{g.excerpt}</p>
+                )}
+                <div className="mt-7">
+                  <GuideContent guide={g} compact />
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
 
         {related.length > 0 && (
           <section className="section-pad">

@@ -5,6 +5,8 @@ import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from '@/lib/api';
 import { formatPrice } from '@/data/catalog';
 import ProductEditor, { AdminProduct, emptyProduct } from '@/components/admin/ProductEditor';
 import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
+import OrdersPanel from '@/components/admin/OrdersPanel';
+import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -17,8 +19,18 @@ const Admin = () => {
   const [brands, setBrands] = useState<AdminBrand[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
-  const [tab, setTab] = useState<'products' | 'brands'>('products');
+  const [tab, setTab] = useState<'products' | 'guides' | 'orders' | 'brands'>('orders');
   const [search, setSearch] = useState('');
+  const [newOrders, setNewOrders] = useState(0);
+  const [guides, setGuides] = useState<AdminGuide[]>([]);
+  const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
+
+  const loadGuides = useCallback(async () => {
+    const res = await adminFetch('?action=guides');
+    if (!res.ok) return;
+    const data = await res.json();
+    setGuides(data.guides ?? []);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -32,10 +44,34 @@ const Admin = () => {
       const data = await res.json();
       setProducts(data.products ?? []);
       setBrands(data.brands ?? []);
+      setNewOrders(data.newOrders ?? 0);
+      await loadGuides();
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadGuides]);
+
+  const saveGuide = async (guide: AdminGuide) => {
+    const res = await adminFetch('?action=guides', {
+      method: guide.id ? 'PUT' : 'POST',
+      body: JSON.stringify(guide),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: data.error ?? 'Не удалось сохранить' });
+      return;
+    }
+    toast({ title: 'Инструкция сохранена', description: guide.title });
+    setEditingGuide(null);
+    loadGuides();
+  };
+
+  const removeGuide = async (guide: AdminGuide) => {
+    if (!window.confirm(`Удалить «${guide.title}»?`)) return;
+    await adminFetch(`?action=guides&id=${guide.id}`, { method: 'DELETE' });
+    toast({ title: 'Удалено' });
+    loadGuides();
+  };
 
   useEffect(() => {
     const token = getAdminToken();
@@ -218,7 +254,9 @@ const Admin = () => {
         <div className="flex flex-wrap gap-8 border-b border-border py-5">
           {(
             [
+              ['orders', newOrders > 0 ? `Заявки (${newOrders} новых)` : 'Заявки'],
               ['products', `Товары (${products.length})`],
+              ['guides', `Инструкции (${guides.length})`],
               ['brands', `Марки (${brands.length})`],
             ] as const
           ).map(([key, label]) => (
@@ -236,7 +274,86 @@ const Admin = () => {
           ))}
         </div>
 
-        {tab === 'products' ? (
+        {tab === 'orders' && <OrdersPanel />}
+
+        {tab === 'guides' && (
+          <>
+            <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+              <p className="max-w-[42em] text-muted-foreground">
+                Технические описания установки с фото. Каждую инструкцию можно привязать к
+                товарам — она покажется прямо в карточке товара.
+              </p>
+              <button
+                onClick={() => setEditingGuide(emptyGuide())}
+                className="flex flex-none items-center justify-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="Plus" size={16} />
+                Новая инструкция
+              </button>
+            </div>
+
+            {guides.length === 0 ? (
+              <div className="py-20 text-center text-muted-foreground">
+                Инструкций пока нет
+              </div>
+            ) : (
+              <div className="border-t border-foreground">
+                {guides.map((g) => (
+                  <div
+                    key={g.id}
+                    className="flex flex-wrap items-center gap-4 border-b border-border py-4"
+                  >
+                    {g.cover ? (
+                      <img
+                        src={g.cover}
+                        alt=""
+                        className="h-14 w-20 flex-none bg-card object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-20 flex-none items-center justify-center bg-card text-muted-foreground">
+                        <Icon name="BookOpen" size={18} />
+                      </div>
+                    )}
+                    <div className="min-w-[200px] flex-1">
+                      <div className="font-head text-[1rem] font-medium leading-tight">
+                        {g.title}
+                      </div>
+                      <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        {g.blocks?.length ?? 0} блоков · {g.productIds?.length ?? 0} товаров
+                      </div>
+                    </div>
+                    <span
+                      className={`px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] ${
+                        g.isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-border text-muted-foreground'
+                      }`}
+                    >
+                      {g.isActive ? 'На сайте' : 'Скрыта'}
+                    </span>
+                    <button
+                      onClick={() => setEditingGuide(g)}
+                      className="border border-foreground px-4 py-2 text-[0.75rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      onClick={() => removeGuide(g)}
+                      aria-label="Удалить"
+                      className="text-muted-foreground transition-colors hover:text-primary"
+                    >
+                      <Icon name="Trash2" size={17} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'brands' && <BrandsEditor brands={brands} onSave={saveBrands} />}
+
+        {tab === 'products' && (
           <>
             <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
               <input
@@ -311,8 +428,6 @@ const Admin = () => {
               </div>
             )}
           </>
-        ) : (
-          <BrandsEditor brands={brands} onSave={saveBrands} />
         )}
       </main>
 
@@ -323,6 +438,15 @@ const Admin = () => {
           brands={brands}
           onClose={() => setEditing(null)}
           onSave={save}
+        />
+      )}
+
+      {editingGuide && (
+        <GuideEditor
+          guide={editingGuide}
+          products={products}
+          onClose={() => setEditingGuide(null)}
+          onSave={saveGuide}
         />
       )}
     </div>

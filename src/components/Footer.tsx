@@ -1,4 +1,6 @@
-const COLS = [
+import { useNavigate } from 'react-router-dom';
+
+const COLS: { title: string; links: string[]; target?: string; route?: string }[] = [
   {
     title: 'Каталог',
     links: ['Фаркопы', 'Багажники', 'Пороги', 'Защита', 'Салон', 'Электроника'],
@@ -10,6 +12,11 @@ const COLS = [
     target: 'select',
   },
   {
+    title: 'Инструкции',
+    links: ['Установка с фото', 'Все инструкции'],
+    route: '/guides',
+  },
+  {
     title: 'Компания',
     links: ['О складе', 'Контакты', 'Возврат', 'Оплата'],
     target: 'contacts',
@@ -19,7 +26,24 @@ const COLS = [
 const scrollTo = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-const Footer = () => (
+const Footer = () => {
+  const navigate = useNavigate();
+
+  const go = (col: { target?: string; route?: string }) => {
+    if (col.route) {
+      navigate(col.route);
+      window.scrollTo({ top: 0 });
+      return;
+    }
+    if (window.location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => col.target && scrollTo(col.target), 120);
+      return;
+    }
+    if (col.target) scrollTo(col.target);
+  };
+
+  return (
   <footer className="section-pad bg-background">
     <div className="rule" />
     <div className="grid grid-cols-2 gap-x-6 gap-y-10 py-12 md:grid-cols-12">
@@ -41,7 +65,7 @@ const Footer = () => (
             {col.links.map((l) => (
               <li key={l}>
                 <button
-                  onClick={() => scrollTo(col.target)}
+                  onClick={() => go(col)}
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   {l}
@@ -80,6 +104,7 @@ const Footer = () => (
       </div>
     </div>
   </footer>
-);
+  );
+};
 
 export default Footer;
