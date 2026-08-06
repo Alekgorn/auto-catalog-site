@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { CARD_FIELDS } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
+import SearchPagesPanel from '@/components/admin/SearchPagesPanel';
 
 interface Props {
   onImported: () => void;
@@ -152,6 +153,10 @@ const SettingsPanel = ({ onImported }: Props) => {
 
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <SearchPagesPanel />
+      </div>
+
       <div className="lg:col-span-5">
         <div className="eyebrow">Карточка в каталоге</div>
         <h2 className="mt-3 font-head text-2xl font-bold uppercase tracking-[-0.02em]">

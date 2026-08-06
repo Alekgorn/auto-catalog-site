@@ -218,6 +218,36 @@ const main = async () => {
   const freq = (u) =>
     u === '/' ? 'daily' : u.startsWith('/product/') ? 'weekly' : 'monthly';
 
+  // Слепок того, что попало в статику. Админка сравнивает его с текущим
+  // каталогом и подсказывает, когда страницы для поиска пора обновить.
+  const fingerprint = (list, pick) =>
+    (list ?? [])
+      .map(pick)
+      .sort()
+      .join('|');
+
+  await fs.writeFile(
+    path.join(PUBLIC, 'prerender-manifest.json'),
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        pages: routes.length,
+        products: (data.products ?? []).length,
+        guides: (data.guides ?? []).length,
+        signature: {
+          products: fingerprint(
+            data.products,
+            (p) => `${p.id}:${p.name}:${p.price}:${p.oldPrice ?? ''}`,
+          ),
+          guides: fingerprint(data.guides, (g) => `${g.slug}:${g.title}`),
+        },
+      },
+      null,
+      2,
+    ),
+    'utf-8',
+  );
+
   const sitemap =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
