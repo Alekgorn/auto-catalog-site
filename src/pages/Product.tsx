@@ -20,6 +20,7 @@ import {
   productsByCategory,
 } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
+import { applySeo } from '@/lib/seo';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -52,6 +53,43 @@ const Product = () => {
     setQty(1);
     setOpenGuides([]);
   }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    const image = productImages(product)[0];
+    const specs = productSpecs(product)
+      .slice(0, 3)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('. ');
+    const brandNames = Object.keys(product.fits ?? {}).join(', ');
+    const summary =
+      productDescription(product)[0]?.slice(0, 240) ||
+      `${product.name}. ${specs}`;
+
+    applySeo({
+      title: `${product.name} — купить, артикул ${productSku(product)} | ШТАТНО`,
+      description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ''}`,
+      image,
+      type: 'product',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: product.name,
+        sku: productSku(product),
+        category: product.category,
+        image: productImages(product),
+        description: summary,
+        brand: { '@type': 'Brand', name: 'ШТАТНО' },
+        offers: {
+          '@type': 'Offer',
+          price: product.price,
+          priceCurrency: 'RUB',
+          availability: 'https://schema.org/InStock',
+          url: window.location.href,
+        },
+      },
+    });
+  }, [product]);
 
   const openRequest = (p: ProductType | null) => {
     setDialogProduct(p);

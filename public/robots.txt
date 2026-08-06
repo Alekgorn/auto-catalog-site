@@ -1,8 +1,15 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin
+
+User-agent: Yandex
+Allow: /
+Disallow: /admin
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content&yclid&gclid
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin
 
 User-agent: Twitterbot
 Allow: /
@@ -12,3 +19,6 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+
+Sitemap: https://shtatno.ru/sitemap.xml

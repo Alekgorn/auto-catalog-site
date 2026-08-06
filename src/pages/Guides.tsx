@@ -5,12 +5,18 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SectionHead from '@/components/SectionHead';
 import { useCatalog } from '@/context/CatalogContext';
+import { applySeo } from '@/lib/seo';
 
 const Guides = () => {
   const { guides, loading } = useCatalog();
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    applySeo({
+      title: 'Инструкции по установке автоэлектроники | ШТАТНО',
+      description:
+        'Пошаговые инструкции с фотографиями: подключение Android-магнитол, камер заднего вида, CAN-адаптеров и переходных жгутов.',
+    });
   }, []);
 
   return (

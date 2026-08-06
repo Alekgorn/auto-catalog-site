@@ -1,0 +1,67 @@
+interface SeoData {
+  title: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  type?: 'website' | 'product' | 'article';
+  jsonLd?: Record<string, unknown> | null;
+}
+
+const setMeta = (selector: string, attr: string, value: string) => {
+  let el = document.head.querySelector<HTMLMetaElement>(selector);
+  if (!el) {
+    el = document.createElement('meta');
+    const [key, val] = selector.replace(/[[\]"]/g, '').split('=');
+    el.setAttribute(key.replace('meta', '').trim() || 'name', val);
+    document.head.appendChild(el);
+  }
+  el.setAttribute(attr, value);
+};
+
+const setLink = (rel: string, href: string) => {
+  let el = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
+  if (!el) {
+    el = document.createElement('link');
+    el.setAttribute('rel', rel);
+    document.head.appendChild(el);
+  }
+  el.setAttribute('href', href);
+};
+
+const JSON_LD_ID = 'seo-json-ld';
+
+/** Проставляет title, description, OG-теги и микроразметку для текущей страницы. */
+export const applySeo = ({
+  title,
+  description,
+  image,
+  canonical,
+  type = 'website',
+  jsonLd,
+}: SeoData) => {
+  document.title = title;
+
+  if (description) {
+    setMeta('meta[name="description"]', 'content', description);
+    setMeta('meta[property="og:description"]', 'content', description);
+  }
+  setMeta('meta[property="og:title"]', 'content', title);
+  setMeta('meta[property="og:type"]', 'content', type);
+  if (image) {
+    setMeta('meta[property="og:image"]', 'content', image);
+    setMeta('meta[name="twitter:image"]', 'content', image);
+  }
+
+  const url = canonical ?? window.location.origin + window.location.pathname;
+  setMeta('meta[property="og:url"]', 'content', url);
+  setLink('canonical', url);
+
+  document.getElementById(JSON_LD_ID)?.remove();
+  if (jsonLd) {
+    const script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = JSON_LD_ID;
+    script.textContent = JSON.stringify(jsonLd);
+    document.head.appendChild(script);
+  }
+};

@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { useCatalog } from '@/context/CatalogContext';
 
 const COLS: { title: string; links: string[]; target?: string; route?: string }[] = [
   {
@@ -33,22 +34,11 @@ const COLS: { title: string; links: string[]; target?: string; route?: string }[
 const scrollTo = (id: string) =>
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
-const Footer = () => {
-  const navigate = useNavigate();
+const hrefFor = (col: { target?: string; route?: string }) =>
+  col.route ?? `/#${col.target ?? ''}`;
 
-  const go = (col: { target?: string; route?: string }) => {
-    if (col.route) {
-      navigate(col.route);
-      window.scrollTo({ top: 0 });
-      return;
-    }
-    if (window.location.pathname !== '/') {
-      navigate('/');
-      setTimeout(() => col.target && scrollTo(col.target), 120);
-      return;
-    }
-    if (col.target) scrollTo(col.target);
-  };
+const Footer = () => {
+  const { products } = useCatalog();
 
   return (
   <footer className="section-pad bg-background">
@@ -70,12 +60,20 @@ const Footer = () => {
           <ul className="mt-4 space-y-2 text-[0.9rem]">
             {col.links.map((l) => (
               <li key={l}>
-                <button
-                  onClick={() => go(col)}
+                <Link
+                  to={hrefFor(col)}
+                  onClick={(e) => {
+                    if (!col.route && window.location.pathname === '/') {
+                      e.preventDefault();
+                      if (col.target) scrollTo(col.target);
+                    } else if (col.route) {
+                      window.scrollTo({ top: 0 });
+                    }
+                  }}
                   className="text-muted-foreground transition-colors hover:text-primary"
                 >
                   {l}
-                </button>
+                </Link>
               </li>
             ))}
           </ul>
@@ -101,6 +99,28 @@ const Footer = () => {
         </div>
       </div>
     </div>
+
+    {products.length > 0 && (
+      <>
+        <div className="rule-hair" />
+        <nav aria-label="Все товары" className="py-6">
+          <div className="eyebrow">Популярные позиции</div>
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[0.82rem]">
+            {products.slice(0, 24).map((p) => (
+              <li key={p.id}>
+                <Link
+                  to={`/product/${p.id}`}
+                  onClick={() => window.scrollTo({ top: 0 })}
+                  className="text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {p.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </>
+    )}
 
     <div className="rule-hair" />
     <div className="grid grid-cols-1 gap-x-6 py-5 text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground md:grid-cols-12">

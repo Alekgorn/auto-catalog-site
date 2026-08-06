@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { useCart } from '@/context/CartContext';
 import SearchBar from '@/components/SearchBar';
@@ -58,26 +58,36 @@ const Header = () => {
       }`}
     >
       <div className="flex h-[76px] items-center justify-between gap-6">
-        <button
-          onClick={() => {
-            if (window.location.pathname !== '/') navigate('/');
-            else window.scrollTo({ top: 0, behavior: 'smooth' });
+        <Link
+          to="/"
+          onClick={(e) => {
+            if (window.location.pathname === '/') {
+              e.preventDefault();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
           }}
+          aria-label="ШТАТНО — на главную"
           className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]"
         >
           <span className="block h-4 w-4 flex-none bg-primary" />
           Штатно
-        </button>
+        </Link>
 
         <nav className="hidden gap-6 lg:flex xl:gap-8">
           {NAV.map((item) => (
-            <button
+            <Link
               key={item.id}
-              onClick={() => go(item.id, item.route)}
+              to={item.route ?? `/#${item.id}`}
+              onClick={(e) => {
+                if (!item.route && window.location.pathname === '/') {
+                  e.preventDefault();
+                  go(item.id);
+                }
+              }}
               className="link-underline pb-0.5 text-[0.8rem] uppercase tracking-[0.1em]"
             >
               {item.label}
-            </button>
+            </Link>
           ))}
         </nav>
 
@@ -135,14 +145,22 @@ const Header = () => {
           <div className="rule" />
           <nav className="flex flex-col">
             {NAV.map((item) => (
-              <button
+              <Link
                 key={item.id}
-                onClick={() => go(item.id, item.route)}
+                to={item.route ?? `/#${item.id}`}
+                onClick={(e) => {
+                  if (!item.route && window.location.pathname === '/') {
+                    e.preventDefault();
+                    go(item.id);
+                  } else {
+                    setOpen(false);
+                  }
+                }}
                 className="flex items-center justify-between border-b border-border py-5 text-left font-head text-2xl font-medium uppercase tracking-tight"
               >
                 {item.label}
                 <Icon name="ArrowRight" size={20} className="text-primary" />
-              </button>
+              </Link>
             ))}
           </nav>
           <a

@@ -409,6 +409,128 @@ def parse_xlsx(data: bytes) -> tuple:
     return products, brands
 
 
+def build_brands_xlsx(brands: list) -> bytes:
+    wb = Workbook()
+    head_font = Font(bold=True, color='FFFFFF', size=10)
+    head_fill = PatternFill('solid', fgColor='1B1B1B')
+
+    ws = wb.active
+    ws.title = 'Марки и модели'
+    for i, (title, width) in enumerate(
+        [('Марка', 26), ('Модель', 40), ('Порядок марки', 15)], start=1
+    ):
+        cell = ws.cell(row=1, column=i, value=title)
+        cell.font = head_font
+        cell.fill = head_fill
+        cell.alignment = Alignment(vertical='center')
+        ws.column_dimensions[get_column_letter(i)].width = width
+    ws.row_dimensions[1].height = 26
+    ws.freeze_panes = 'A2'
+
+    row = 2
+    for i, b in enumerate(brands or []):
+        bname = str(b.get('name', '')).strip()
+        if not bname:
+            continue
+        models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+        if not models:
+            ws.cell(row=row, column=1, value=bname)
+            ws.cell(row=row, column=3, value=(i + 1) * 10)
+            row += 1
+            continue
+        for m in models:
+            ws.cell(row=row, column=1, value=bname)
+            ws.cell(row=row, column=2, value=m)
+            ws.cell(row=row, column=3, value=(i + 1) * 10)
+            row += 1
+
+    wsh = wb.create_sheet('Как заполнять')
+    tips = [
+        ['Подсказка', 'Что важно знать'],
+        ['Одна строка', 'Одна строка — одна пара «марка + модель». Марка повторяется столько раз, сколько у неё моделей.'],
+        ['Новая марка', 'Просто добавьте строки внизу: впишите название марки и модель. Марка создастся сама.'],
+        ['Новая модель', 'Добавьте строку с уже существующей маркой и новым названием модели.'],
+        ['Переименование', 'Меняйте название прямо в ячейке. Учтите: у товаров совместимость привязана к старому названию.'],
+        ['Порядок марки', 'Число, по которому марки сортируются в подборе. Меньше — выше. Можно оставить пустым.'],
+        ['Марка без моделей', 'Оставьте столбец «Модель» пустым — марка появится в списке без моделей.'],
+        ['Загрузка', 'Марки из файла заменяют список целиком: чего нет в файле — того не будет на сайте.'],
+        ['Дубли', 'Одинаковые пары «марка + модель» схлопываются автоматически, можно не следить.'],
+    ]
+    for r, line in enumerate(tips, start=1):
+        for c, val in enumerate(line, start=1):
+            cell = wsh.cell(row=r, column=c, value=val)
+            if r == 1:
+                cell.font = head_font
+                cell.fill = head_fill
+            cell.alignment = Alignment(vertical='top', wrap_text=True)
+    wsh.column_dimensions['A'].width = 26
+    wsh.column_dimensions['B'].width = 95
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def parse_brands_xlsx(data: bytes) -> list:
+    wb = load_workbook(io.BytesIO(data), data_only=True)
+    ws = wb['Марки и модели'] if 'Марки и модели' in wb.sheetnames else wb.worksheets[0]
+
+    header = [str(c.value or '').strip().lower() for c in ws[1]]
+    wide = 'модели (через запятую)' in header
+
+    order: dict = {}
+    models_by_brand: dict = {}
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+        bname = str(row[0]).strip()
+        if not bname:
+            continue
+        raw = str(row[1] or '') if len(row) > 1 else ''
+        items = (
+            [m.strip() for m in raw.split(',') if m.strip()]
+            if wide
+            else ([raw.strip()] if raw.strip() else [])
+        )
+        bucket = models_by_brand.setdefault(bname, [])
+        for m in items:
+            if m not in bucket:
+                bucket.append(m)
+        if bname not in order:
+            sort_raw = str(row[2] or '').strip() if len(row) > 2 else ''
+            try:
+                order[bname] = int(float(sort_raw)) if sort_raw else len(order) * 10 + 10
+            except ValueError:
+                order[bname] = len(order) * 10 + 10
+
+    return [
+        {'name': name, 'models': models_by_brand[name]}
+        for name in sorted(models_by_brand, key=lambda n: (order.get(n, 999), n))
+    ]
+
+
+def replace_brands(conn, brands: list) -> int:
+    cur = conn.cursor()
+    cur.execute(f"DELETE FROM {schema()}.brands")
+    saved = 0
+    for i, b in enumerate(brands):
+        name = str(b.get('name', '')).strip()
+        if not name:
+            continue
+        models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+        cur.execute(
+            f"INSERT INTO {schema()}.brands (name, models, sort_order) "
+            f"VALUES ({q(name)}, {qjson(models)}, {(i + 1) * 10}) "
+            f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models, "
+            f"sort_order = EXCLUDED.sort_order"
+        )
+        saved += 1
+    conn.commit()
+    cur.close()
+    return saved
+
+
 def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
     cur = conn.cursor()
     created = 0
@@ -546,6 +668,34 @@ def handler(event: dict, context) -> dict:
             conn.commit()
             cur.close()
             return resp(200, {'ok': True})
+
+        if action == 'brands-export-xlsx':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id"
+            )
+            brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+            cur.close()
+            data = build_brands_xlsx(brands)
+            return resp(200, {'file': base64.b64encode(data).decode('ascii')})
+
+        if action == 'brands-import-xlsx':
+            raw = str(body.get('file', ''))
+            if ',' in raw and raw.startswith('data:'):
+                raw = raw.split(',', 1)[1]
+            try:
+                blob = base64.b64decode(raw)
+            except Exception:
+                return resp(400, {'error': 'Файл не читается'})
+            try:
+                parsed = parse_brands_xlsx(blob)
+            except Exception:
+                return resp(400, {'error': 'Это не таблица Excel или структура изменена'})
+            if not parsed:
+                return resp(400, {'error': 'В таблице не нашлось ни одной марки'})
+            saved = replace_brands(conn, parsed)
+            models = sum(len(b['models']) for b in parsed)
+            return resp(200, {'ok': True, 'brands': saved, 'models': models})
 
         if action == 'settings':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

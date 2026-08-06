@@ -7,6 +7,7 @@ import GuideContent from '@/components/GuideContent';
 import ProductCard from '@/components/ProductCard';
 import { useCatalog } from '@/context/CatalogContext';
 import { loadVehicle } from '@/lib/vehicle';
+import { applySeo } from '@/lib/seo';
 
 const GuidePage = () => {
   const { slug } = useParams();
@@ -18,6 +19,35 @@ const GuidePage = () => {
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [slug]);
+
+  useEffect(() => {
+    if (!guide) return;
+    const steps = (guide.blocks ?? []).filter((b) => b.type === 'step');
+    applySeo({
+      title: `${guide.title} — пошаговая инструкция | ШТАТНО`,
+      description:
+        guide.excerpt ||
+        `Пошаговая инструкция: ${guide.title}. Что снимать, куда подключать и какой инструмент нужен.`,
+      image: guide.cover,
+      type: 'article',
+      jsonLd: {
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: guide.title,
+        description: guide.excerpt || guide.title,
+        image: guide.cover || undefined,
+        totalTime: guide.duration || undefined,
+        tool: (guide.tools ?? []).map((t) => ({ '@type': 'HowToTool', name: t })),
+        step: steps.map((b, i) => ({
+          '@type': 'HowToStep',
+          position: i + 1,
+          name: 'title' in b ? b.title : `Шаг ${i + 1}`,
+          text: 'text' in b ? b.text : '',
+          image: 'image' in b ? b.image : undefined,
+        })),
+      },
+    });
+  }, [guide]);
 
   const linked = useMemo(
     () => products.filter((p) => guide?.products?.includes(p.id)),

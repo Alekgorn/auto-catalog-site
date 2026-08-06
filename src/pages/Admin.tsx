@@ -357,7 +357,9 @@ const Admin = () => {
           </>
         )}
 
-        {tab === 'brands' && <BrandsEditor brands={brands} onSave={saveBrands} />}
+        {tab === 'brands' && (
+          <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
+        )}
 
         {tab === 'settings' && <SettingsPanel onImported={load} />}
 
