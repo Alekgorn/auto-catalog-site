@@ -10,7 +10,8 @@ import Footer from '@/components/Footer';
 import RequestDialog from '@/components/RequestDialog';
 import { Product, Vehicle } from '@/data/catalog';
 import { loadVehicle, saveVehicle } from '@/lib/vehicle';
-import { applySeo } from '@/lib/seo';
+import { SITE_URL } from '@/lib/seo';
+import { useSeo } from '@/hooks/use-seo';
 import { useCatalog } from '@/context/CatalogContext';
 
 const Index = () => {
@@ -28,29 +29,29 @@ const Index = () => {
     saveVehicle(vehicle);
   }, [vehicle]);
 
-  useEffect(() => {
-    applySeo({
-      title: 'ШТАТНО — Android-магнитолы, камеры и жгуты по модели авто',
+  useSeo({
+    title: 'ШТАТНО — Android-магнитолы, камеры и жгуты по модели авто',
+    description:
+      'Android-магнитолы, камеры заднего вида, регистраторы, переходные жгуты ISO, CAN-адаптеры и рамки. Подбор по марке, модели и году выпуска.',
+    canonical: `${SITE_URL}/`,
+    jsonLd: {
+      '@context': 'https://schema.org',
+      '@type': 'Store',
+      name: 'ШТАТНО',
+      url: SITE_URL,
       description:
-        'Android-магнитолы, камеры заднего вида, регистраторы, переходные жгуты ISO, CAN-адаптеры и рамки. Подбор по марке, модели и году выпуска.',
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'Store',
-        name: 'ШТАТНО',
-        description:
-          'Автоэлектроника и комплектующие: Android-магнитолы, камеры, регистраторы, переходные жгуты и рамки.',
-        telephone: '+7 800 333-44-55',
-        email: 'zakaz@shtatno.ru',
-        address: {
-          '@type': 'PostalAddress',
-          addressLocality: 'Москва',
-          streetAddress: 'Кировоградская, 24, стр. 3',
-          addressCountry: 'RU',
-        },
-        openingHours: 'Mo-Sa 09:00-20:00',
+        'Автоэлектроника и комплектующие: Android-магнитолы, камеры, регистраторы, переходные жгуты и рамки.',
+      telephone: '+7 800 333-44-55',
+      email: 'zakaz@shtatno.ru',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: 'Москва',
+        streetAddress: 'Кировоградская, 24, стр. 3',
+        addressCountry: 'RU',
       },
-    });
-  }, []);
+      openingHours: 'Mo-Sa 09:00-20:00',
+    },
+  });
 
   useEffect(() => {
     if (!BRANDS.length) return;

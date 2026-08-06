@@ -1,4 +1,6 @@
-interface SeoData {
+export const SITE_URL = 'https://shtatno.ru';
+
+export interface SeoData {
   title: string;
   description?: string;
   image?: string;
@@ -6,6 +8,13 @@ interface SeoData {
   type?: 'website' | 'product' | 'article';
   jsonLd?: Record<string, unknown> | null;
 }
+
+/** Собранное при сборке SEO — читается генератором статики. */
+const collected = new Map<string, SeoData>();
+
+export const collectSeo = (key: string, data: SeoData) => collected.set(key, data);
+export const takeSeo = (key: string): SeoData | undefined => collected.get(key);
+export const clearSeo = () => collected.clear();
 
 const setMeta = (selector: string, attr: string, value: string) => {
   let el = document.head.querySelector<HTMLMetaElement>(selector);
@@ -30,15 +39,17 @@ const setLink = (rel: string, href: string) => {
 
 const JSON_LD_ID = 'seo-json-ld';
 
-/** Проставляет title, description, OG-теги и микроразметку для текущей страницы. */
-export const applySeo = ({
-  title,
-  description,
-  image,
-  canonical,
-  type = 'website',
-  jsonLd,
-}: SeoData) => {
+/**
+ * В браузере проставляет title, description, OG-теги и микроразметку.
+ * При сборке складывает данные в память — генератор вшивает их прямо в HTML.
+ */
+export const applySeo = (data: SeoData, key = 'current') => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    collectSeo(key, data);
+    return;
+  }
+
+  const { title, description, image, canonical, type = 'website', jsonLd } = data;
   document.title = title;
 
   if (description) {

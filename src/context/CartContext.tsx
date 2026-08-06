@@ -38,6 +38,7 @@ interface CartValue {
 const CartContext = createContext<CartValue | null>(null);
 
 const read = (): CartLine[] => {
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -53,6 +54,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(KEY, JSON.stringify(lines));
     } catch {

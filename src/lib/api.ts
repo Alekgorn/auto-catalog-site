@@ -36,6 +36,7 @@ export const sendOrder = async (payload: OrderPayload): Promise<boolean> => {
 export const ADMIN_TOKEN_KEY = 'shtatno.admin.token';
 
 export const getAdminToken = (): string => {
+  if (typeof window === 'undefined') return '';
   try {
     return localStorage.getItem(ADMIN_TOKEN_KEY) ?? '';
   } catch {
@@ -44,6 +45,7 @@ export const getAdminToken = (): string => {
 };
 
 export const setAdminToken = (token: string | null) => {
+  if (typeof window === 'undefined') return;
   try {
     if (token) localStorage.setItem(ADMIN_TOKEN_KEY, token);
     else localStorage.removeItem(ADMIN_TOKEN_KEY);

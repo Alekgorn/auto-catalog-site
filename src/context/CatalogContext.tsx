@@ -8,6 +8,13 @@ import {
 } from '@/data/catalog';
 import { CATALOG_URL } from '@/lib/api';
 
+export interface PrerenderData {
+  products?: Product[];
+  brands?: Brand[];
+  guides?: Guide[];
+  settings?: { card_fields?: string[] };
+}
+
 interface CatalogValue {
   products: Product[];
   brands: Brand[];
@@ -20,15 +27,42 @@ interface CatalogValue {
 
 const CatalogContext = createContext<CatalogValue | null>(null);
 
-export const CatalogProvider = ({ children }: { children: React.ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>(FALLBACK_PRODUCTS);
-  const [brands, setBrands] = useState<Brand[]>(FALLBACK_BRANDS);
-  const [guides, setGuides] = useState<Guide[]>([]);
-  const [cardFields, setCardFields] = useState<string[]>(['mount', 'warranty']);
-  const [loading, setLoading] = useState(true);
+const DEFAULT_CARD_FIELDS = ['mount', 'warranty'];
+
+/** Данные, вшитые в HTML на этапе сборки, чтобы первый экран не ждал сеть. */
+const bootData = (): PrerenderData | null => {
+  if (typeof window === 'undefined') return null;
+  const raw = (window as unknown as { __CATALOG__?: PrerenderData }).__CATALOG__;
+  return raw && typeof raw === 'object' ? raw : null;
+};
+
+export const CatalogProvider = ({
+  children,
+  initialData,
+}: {
+  children: React.ReactNode;
+  initialData?: PrerenderData;
+}) => {
+  const seed = initialData ?? bootData();
+  const isPrerender = typeof window === 'undefined';
+
+  const [products, setProducts] = useState<Product[]>(
+    seed?.products?.length ? seed.products : FALLBACK_PRODUCTS,
+  );
+  const [brands, setBrands] = useState<Brand[]>(
+    seed?.brands?.length ? seed.brands : FALLBACK_BRANDS,
+  );
+  const [guides, setGuides] = useState<Guide[]>(seed?.guides ?? []);
+  const [cardFields, setCardFields] = useState<string[]>(
+    seed?.settings?.card_fields?.length
+      ? seed.settings.card_fields
+      : DEFAULT_CARD_FIELDS,
+  );
+  const [loading, setLoading] = useState(!seed && !isPrerender);
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
+    if (isPrerender) return;
     let cancelled = false;
     setLoading(true);
     fetch(CATALOG_URL)
@@ -57,7 +91,7 @@ export const CatalogProvider = ({ children }: { children: React.ReactNode }) => 
     return () => {
       cancelled = true;
     };
-  }, [tick]);
+  }, [tick, isPrerender]);
 
   const categories = useMemo(() => {
     const set: string[] = [];

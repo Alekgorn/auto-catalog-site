@@ -20,7 +20,8 @@ import {
   productsByCategory,
 } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
-import { applySeo } from '@/lib/seo';
+import { SITE_URL } from '@/lib/seo';
+import { useSeo } from '@/hooks/use-seo';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -54,23 +55,23 @@ const Product = () => {
     setOpenGuides([]);
   }, [id]);
 
-  useEffect(() => {
-    if (!product) return;
-    const image = productImages(product)[0];
+  const seo = useMemo(() => {
+    if (!product) return null;
     const specs = productSpecs(product)
       .slice(0, 3)
       .map(([k, v]) => `${k}: ${v}`)
       .join('. ');
     const brandNames = Object.keys(product.fits ?? {}).join(', ');
     const summary =
-      productDescription(product)[0]?.slice(0, 240) ||
-      `${product.name}. ${specs}`;
+      productDescription(product)[0]?.slice(0, 240) || `${product.name}. ${specs}`;
+    const url = `${SITE_URL}/product/${product.id}`;
 
-    applySeo({
+    return {
       title: `${product.name} — купить, артикул ${productSku(product)} | ШТАТНО`,
       description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ''}`,
-      image,
-      type: 'product',
+      image: productImages(product)[0],
+      canonical: url,
+      type: 'product' as const,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'Product',
@@ -85,11 +86,13 @@ const Product = () => {
           price: product.price,
           priceCurrency: 'RUB',
           availability: 'https://schema.org/InStock',
-          url: window.location.href,
+          url,
         },
       },
-    });
+    };
   }, [product]);
+
+  useSeo(seo);
 
   const openRequest = (p: ProductType | null) => {
     setDialogProduct(p);

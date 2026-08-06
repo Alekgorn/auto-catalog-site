@@ -7,7 +7,8 @@ import GuideContent from '@/components/GuideContent';
 import ProductCard from '@/components/ProductCard';
 import { useCatalog } from '@/context/CatalogContext';
 import { loadVehicle } from '@/lib/vehicle';
-import { applySeo } from '@/lib/seo';
+import { SITE_URL } from '@/lib/seo';
+import { useSeo } from '@/hooks/use-seo';
 
 const GuidePage = () => {
   const { slug } = useParams();
@@ -20,16 +21,17 @@ const GuidePage = () => {
     window.scrollTo({ top: 0 });
   }, [slug]);
 
-  useEffect(() => {
-    if (!guide) return;
+  const seo = useMemo(() => {
+    if (!guide) return null;
     const steps = (guide.blocks ?? []).filter((b) => b.type === 'step');
-    applySeo({
+    return {
       title: `${guide.title} — пошаговая инструкция | ШТАТНО`,
       description:
         guide.excerpt ||
         `Пошаговая инструкция: ${guide.title}. Что снимать, куда подключать и какой инструмент нужен.`,
       image: guide.cover,
-      type: 'article',
+      canonical: `${SITE_URL}/guides/${guide.slug}`,
+      type: 'article' as const,
       jsonLd: {
         '@context': 'https://schema.org',
         '@type': 'HowTo',
@@ -46,8 +48,10 @@ const GuidePage = () => {
           image: 'image' in b ? b.image : undefined,
         })),
       },
-    });
+    };
   }, [guide]);
+
+  useSeo(seo);
 
   const linked = useMemo(
     () => products.filter((p) => guide?.products?.includes(p.id)),
