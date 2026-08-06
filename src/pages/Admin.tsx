@@ -1,0 +1,332 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Icon from '@/components/ui/icon';
+import { useToast } from '@/hooks/use-toast';
+import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from '@/lib/api';
+import { formatPrice } from '@/data/catalog';
+import ProductEditor, { AdminProduct, emptyProduct } from '@/components/admin/ProductEditor';
+import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
+
+const Admin = () => {
+  const { toast } = useToast();
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<AdminProduct | null>(null);
+  const [tab, setTab] = useState<'products' | 'brands'>('products');
+  const [search, setSearch] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await adminFetch('');
+      if (res.status === 401) {
+        setAuthed(false);
+        setAdminToken(null);
+        return;
+      }
+      const data = await res.json();
+      setProducts(data.products ?? []);
+      setBrands(data.brands ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const token = getAdminToken();
+    if (!token) {
+      setChecking(false);
+      return;
+    }
+    adminFetch('?action=check')
+      .then((r) => {
+        if (r.ok) {
+          setAuthed(true);
+          return load();
+        }
+        setAdminToken(null);
+        return undefined;
+      })
+      .catch(() => setAdminToken(null))
+      .finally(() => setChecking(false));
+  }, [load]);
+
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError(null);
+    const res = await fetch(`${ADMIN_URL}?action=login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setLoginError(data.error ?? 'Не удалось войти');
+      return;
+    }
+    setAdminToken(data.token);
+    setAuthed(true);
+    setPassword('');
+    load();
+  };
+
+  const logout = async () => {
+    await adminFetch('?action=logout', { method: 'GET' }).catch(() => undefined);
+    setAdminToken(null);
+    setAuthed(false);
+  };
+
+  const save = async (product: AdminProduct) => {
+    const res = await adminFetch('', {
+      method: product.id ? 'PUT' : 'POST',
+      body: JSON.stringify(product),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: data.error ?? 'Не удалось сохранить' });
+      return;
+    }
+    toast({ title: 'Сохранено', description: product.name });
+    setEditing(null);
+    load();
+  };
+
+  const remove = async (product: AdminProduct) => {
+    if (!window.confirm(`Удалить «${product.name}»?`)) return;
+    const res = await adminFetch(`?id=${product.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось удалить' });
+      return;
+    }
+    toast({ title: 'Удалено', description: product.name });
+    load();
+  };
+
+  const toggleActive = async (product: AdminProduct) => {
+    await save({ ...product, isActive: !product.isActive });
+  };
+
+  const saveBrands = async (next: AdminBrand[]) => {
+    const res = await adminFetch('?action=brands', {
+      method: 'PUT',
+      body: JSON.stringify({ brands: next }),
+    });
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить марки' });
+      return;
+    }
+    toast({ title: 'Марки сохранены' });
+    load();
+  };
+
+  const filtered = useMemo(
+    () =>
+      products.filter((p) =>
+        (p.name + ' ' + p.category).toLowerCase().includes(search.toLowerCase()),
+      ),
+    [products, search],
+  );
+
+  const categories = useMemo(() => {
+    const set: string[] = [];
+    products.forEach((p) => {
+      if (p.category && !set.includes(p.category)) set.push(p.category);
+    });
+    return set;
+  }, [products]);
+
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Проверяем доступ…
+      </div>
+    );
+  }
+
+  if (!authed) {
+    return (
+      <div className="flex min-h-screen items-center justify-center section-pad">
+        <form onSubmit={login} className="w-full max-w-sm border border-foreground">
+          <div className="border-b border-foreground bg-primary px-6 py-5 text-primary-foreground">
+            <div className="text-[0.7rem] uppercase tracking-[0.16em] opacity-80">
+              Штатно
+            </div>
+            <div className="mt-1 font-head text-xl font-bold uppercase tracking-tight">
+              Управление каталогом
+            </div>
+          </div>
+          <div className="px-6 py-7">
+            <label className="eyebrow" htmlFor="pwd">
+              Пароль
+            </label>
+            <input
+              id="pwd"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border-b border-border bg-transparent py-3 font-head text-lg font-medium outline-none transition-colors focus:border-primary"
+              placeholder="••••••••"
+            />
+            {loginError && (
+              <div className="mt-3 text-[0.8rem] text-primary">{loginError}</div>
+            )}
+            <button
+              type="submit"
+              className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              Войти
+              <Icon name="ArrowRight" size={18} />
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b border-foreground bg-background section-pad">
+        <div className="flex h-[76px] items-center justify-between gap-6">
+          <div className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]">
+            <span className="block h-4 w-4 flex-none bg-primary" />
+            Админка
+          </div>
+          <div className="flex items-center gap-6">
+            <a
+              href="/"
+              className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+            >
+              На сайт
+            </a>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+            >
+              <Icon name="LogOut" size={15} />
+              Выйти
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="section-pad pb-20">
+        <div className="flex flex-wrap gap-8 border-b border-border py-5">
+          {(
+            [
+              ['products', `Товары (${products.length})`],
+              ['brands', `Марки (${brands.length})`],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`border-b-2 pb-2 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
+                tab === key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'products' ? (
+          <>
+            <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Поиск по названию или категории"
+                className="w-full max-w-sm border-b border-border bg-transparent py-2 outline-none transition-colors focus:border-primary"
+              />
+              <button
+                onClick={() => setEditing(emptyProduct())}
+                className="flex items-center justify-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="Plus" size={16} />
+                Добавить товар
+              </button>
+            </div>
+
+            {loading ? (
+              <div className="py-20 text-center text-muted-foreground">Загружаем…</div>
+            ) : filtered.length === 0 ? (
+              <div className="py-20 text-center text-muted-foreground">
+                Товаров не найдено
+              </div>
+            ) : (
+              <div className="border-t border-foreground">
+                {filtered.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex flex-wrap items-center gap-4 border-b border-border py-4"
+                  >
+                    <img
+                      src={p.images?.[0] ?? ''}
+                      alt=""
+                      className="h-14 w-14 flex-none bg-card object-cover"
+                    />
+                    <div className="min-w-[200px] flex-1">
+                      <div className="font-head text-[1rem] font-medium leading-tight">
+                        {p.name}
+                      </div>
+                      <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+                        {p.category} · {Object.keys(p.fits ?? {}).length} марок
+                      </div>
+                    </div>
+                    <div className="font-head text-lg font-bold">
+                      {formatPrice(p.price)}
+                    </div>
+                    <button
+                      onClick={() => toggleActive(p)}
+                      className={`px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] transition-colors ${
+                        p.isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'border border-border text-muted-foreground'
+                      }`}
+                    >
+                      {p.isActive ? 'На сайте' : 'Скрыт'}
+                    </button>
+                    <button
+                      onClick={() => setEditing(p)}
+                      className="border border-foreground px-4 py-2 text-[0.75rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
+                    >
+                      Изменить
+                    </button>
+                    <button
+                      onClick={() => remove(p)}
+                      aria-label="Удалить"
+                      className="text-muted-foreground transition-colors hover:text-primary"
+                    >
+                      <Icon name="Trash2" size={17} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <BrandsEditor brands={brands} onSave={saveBrands} />
+        )}
+      </main>
+
+      {editing && (
+        <ProductEditor
+          product={editing}
+          categories={categories}
+          brands={brands}
+          onClose={() => setEditing(null)}
+          onSave={save}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Admin;

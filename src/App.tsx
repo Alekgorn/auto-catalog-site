@@ -7,7 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Product from "./pages/Product";
 import NotFound from "./pages/NotFound";
+import Admin from "./pages/Admin";
 import { CartProvider } from "@/context/CartContext";
+import { CatalogProvider } from "@/context/CatalogContext";
 import CartDrawer from "@/components/CartDrawer";
 
 const queryClient = new QueryClient();
@@ -18,15 +20,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <CartProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/product/:id" element={<Product />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <CartDrawer />
-        </CartProvider>
+        <CatalogProvider>
+          <CartProvider>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/product/:id" element={<Product />} />
+              <Route path="/admin" element={<Admin />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <CartDrawer />
+          </CartProvider>
+        </CatalogProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

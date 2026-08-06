@@ -1,7 +1,7 @@
 import SectionHead from '@/components/SectionHead';
 import VehicleSelector from '@/components/VehicleSelector';
 import Icon from '@/components/ui/icon';
-import { BRANDS } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   brand: string;
@@ -32,7 +32,10 @@ const STEPS = [
   },
 ];
 
-const Selection = ({ onPickBrand, ...selector }: Props) => (
+const Selection = ({ onPickBrand, ...selector }: Props) => {
+  const { brands: BRANDS } = useCatalog();
+
+  return (
   <section id="select" className="section-pad scroll-mt-[76px] bg-card">
     <div className="rule" />
     <SectionHead
@@ -81,6 +84,7 @@ const Selection = ({ onPickBrand, ...selector }: Props) => (
     <div className="rule-hair" />
     <div className="h-6" />
   </section>
-);
+  );
+};
 
 export default Selection;

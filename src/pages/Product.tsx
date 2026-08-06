@@ -7,7 +7,6 @@ import ProductGallery from '@/components/ProductGallery';
 import ProductCard from '@/components/ProductCard';
 import RequestDialog from '@/components/RequestDialog';
 import {
-  PRODUCTS,
   Product as ProductType,
   Vehicle,
   formatPrice,
@@ -20,10 +19,15 @@ import {
 } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
 import { useCart } from '@/context/CartContext';
+import { useCatalog } from '@/context/CatalogContext';
 
 const Product = () => {
   const { id } = useParams();
-  const product = useMemo(() => PRODUCTS.find((p) => p.id === id) ?? null, [id]);
+  const { products, loading } = useCatalog();
+  const product = useMemo(
+    () => products.find((p) => p.id === id) ?? null,
+    [id, products],
+  );
 
   const { add } = useCart();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -44,6 +48,18 @@ const Product = () => {
     setDialogProduct(p);
     setDialogOpen(true);
   };
+
+  if (!product && loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="section-pad py-32 text-center text-muted-foreground">
+          Загружаем карточку товара…
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -73,7 +89,7 @@ const Product = () => {
   const fits = isCompatible(product, vehicle);
   const brands = Object.entries(product.fits);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
-  const related = productsByCategory(product);
+  const related = productsByCategory(product, products);
 
   return (
     <div className="min-h-screen bg-background">

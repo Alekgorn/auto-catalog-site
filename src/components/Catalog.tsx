@@ -2,13 +2,8 @@ import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import ProductCard from '@/components/ProductCard';
-import {
-  CATEGORIES,
-  Category,
-  PRODUCTS,
-  Vehicle,
-  isCompatible,
-} from '@/data/catalog';
+import { Category, Vehicle, isCompatible } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   vehicle: Vehicle | null;
@@ -16,11 +11,12 @@ interface Props {
 }
 
 const Catalog = ({ vehicle, onReset }: Props) => {
+  const { products, categories } = useCatalog();
   const [category, setCategory] = useState<Category | 'Всё'>('Всё');
   const [onlyFits, setOnlyFits] = useState(true);
 
   const list = useMemo(() => {
-    return PRODUCTS.filter((p) => {
+    return products.filter((p) => {
       if (category !== 'Всё' && p.category !== category) return false;
       if (vehicle && onlyFits && !isCompatible(p, vehicle)) return false;
       return true;
@@ -29,11 +25,11 @@ const Catalog = ({ vehicle, onReset }: Props) => {
       const fb = Number(isCompatible(b, vehicle));
       return fb - fa;
     });
-  }, [category, onlyFits, vehicle]);
+  }, [category, onlyFits, vehicle, products]);
 
   const fitCount = vehicle
-    ? PRODUCTS.filter((p) => isCompatible(p, vehicle)).length
-    : PRODUCTS.length;
+    ? products.filter((p) => isCompatible(p, vehicle)).length
+    : products.length;
 
   return (
     <section id="catalog" className="section-pad scroll-mt-[76px]">
@@ -53,7 +49,7 @@ const Catalog = ({ vehicle, onReset }: Props) => {
 
       <div className="flex flex-col gap-4 py-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          {(['Всё', ...CATEGORIES] as const).map((c) => (
+          {['Всё', ...categories].map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}

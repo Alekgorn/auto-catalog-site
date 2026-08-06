@@ -1,10 +1,4 @@
-export type Category =
-  | 'Фаркопы'
-  | 'Багажники'
-  | 'Пороги'
-  | 'Защита'
-  | 'Салон'
-  | 'Электроника';
+export type Category = string;
 
 export interface Product {
   id: string;
@@ -338,7 +332,7 @@ export const PRODUCTS: Product[] = [
 
 const CDN = 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files';
 
-export const CATEGORY_IMAGE: Record<Category, string> = {
+export const CATEGORY_IMAGE: Record<string, string> = {
   Фаркопы: `${CDN}/fcf688e9-5495-4909-be55-168c2564db75.jpg`,
   Багажники: `${CDN}/4bd3a1e3-6cdb-45c5-acb8-fd0a9f503bc5.jpg`,
   Пороги: `${CDN}/3022b2c3-6f89-48b6-b0ce-b9977c4ef7db.jpg`,
@@ -349,8 +343,12 @@ export const CATEGORY_IMAGE: Record<Category, string> = {
 
 export const MOUNT_IMAGE = `${CDN}/f2b8d406-8103-4372-93fb-79a0bef9cd0b.jpg`;
 
+export const PLACEHOLDER_IMAGE = MOUNT_IMAGE;
+
 export const productImages = (p: Product): string[] =>
-  p.images && p.images.length ? p.images : [CATEGORY_IMAGE[p.category], MOUNT_IMAGE];
+  p.images && p.images.length
+    ? p.images
+    : [CATEGORY_IMAGE[p.category] ?? PLACEHOLDER_IMAGE, MOUNT_IMAGE];
 
 export const productDescription = (p: Product): string[] =>
   p.description && p.description.length
@@ -385,8 +383,11 @@ export const productKit = (p: Product): string[] =>
         'Гарантийный талон',
       ];
 
-export const productsByCategory = (p: Product, limit = 3): Product[] =>
-  PRODUCTS.filter((x) => x.category === p.category && x.id !== p.id).slice(0, limit);
+export const productsByCategory = (
+  p: Product,
+  all: Product[] = PRODUCTS,
+  limit = 3,
+): Product[] => all.filter((x) => x.category === p.category && x.id !== p.id).slice(0, limit);
 
 export interface Vehicle {
   brand: string;

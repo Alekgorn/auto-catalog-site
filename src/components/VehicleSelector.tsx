@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { BRANDS, YEARS } from '@/data/catalog';
+import { YEARS } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   brand: string;
@@ -25,9 +26,10 @@ const VehicleSelector = ({
   onSubmit,
   buttonLabel = 'Показать оборудование',
 }: Props) => {
+  const { brands: BRANDS } = useCatalog();
   const models = useMemo(
     () => BRANDS.find((b) => b.name === brand)?.models ?? [],
-    [brand],
+    [brand, BRANDS],
   );
 
   return (

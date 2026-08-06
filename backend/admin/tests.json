@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "name": "CORS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Без токена доступа нет",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Неверный пароль отклоняется",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"password": "definitely-wrong-password-000"},
+      "expectedStatus": 401
+    }
+  ]
+}

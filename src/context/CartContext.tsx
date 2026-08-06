@@ -6,7 +6,8 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { PRODUCTS, Product } from '@/data/catalog';
+import { Product } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
 
 const KEY = 'shtatno.cart';
 
@@ -47,6 +48,7 @@ const read = (): CartLine[] => {
 };
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
+  const { products } = useCatalog();
   const [lines, setLines] = useState<CartLine[]>(read);
   const [open, setOpen] = useState(false);
 
@@ -89,11 +91,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     () =>
       lines
         .map((l) => {
-          const product = PRODUCTS.find((p) => p.id === l.id);
+          const product = products.find((p) => p.id === l.id);
           return product ? { product, qty: l.qty } : null;
         })
         .filter((x): x is CartItem => x !== null),
-    [lines],
+    [lines, products],
   );
 
   const count = useMemo(() => items.reduce((a, i) => a + i.qty, 0), [items]);

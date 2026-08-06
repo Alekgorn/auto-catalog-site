@@ -10,15 +10,17 @@ import Faq from '@/components/Faq';
 import Contacts from '@/components/Contacts';
 import Footer from '@/components/Footer';
 import RequestDialog from '@/components/RequestDialog';
-import { BRANDS, Product, Vehicle } from '@/data/catalog';
+import { Product, Vehicle } from '@/data/catalog';
 import { loadVehicle, saveVehicle } from '@/lib/vehicle';
+import { useCatalog } from '@/context/CatalogContext';
 
 const Index = () => {
   const location = useLocation();
+  const { brands: BRANDS } = useCatalog();
   const saved = loadVehicle();
 
-  const [brand, setBrand] = useState(saved?.brand ?? BRANDS[0].name);
-  const [model, setModel] = useState(saved?.model ?? BRANDS[0].models[0]);
+  const [brand, setBrand] = useState(saved?.brand ?? BRANDS[0]?.name ?? '');
+  const [model, setModel] = useState(saved?.model ?? BRANDS[0]?.models[0] ?? '');
   const [year, setYear] = useState(String(saved?.year ?? 2021));
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(saved);
@@ -26,6 +28,17 @@ const Index = () => {
   useEffect(() => {
     saveVehicle(vehicle);
   }, [vehicle]);
+
+  useEffect(() => {
+    if (!BRANDS.length) return;
+    const found = BRANDS.find((b) => b.name === brand);
+    if (!found) {
+      setBrand(BRANDS[0].name);
+      setModel(BRANDS[0].models[0] ?? '');
+    } else if (!found.models.includes(model)) {
+      setModel(found.models[0] ?? '');
+    }
+  }, [BRANDS, brand, model]);
 
   useEffect(() => {
     if (location.hash) {
