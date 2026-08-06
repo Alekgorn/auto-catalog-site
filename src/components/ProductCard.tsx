@@ -1,5 +1,12 @@
+import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
-import { Product, Vehicle, formatPrice, isCompatible } from '@/data/catalog';
+import {
+  Product,
+  Vehicle,
+  formatPrice,
+  isCompatible,
+  productImages,
+} from '@/data/catalog';
 
 interface Props {
   product: Product;
@@ -21,8 +28,19 @@ const ProductCard = ({ product, vehicle, onRequest }: Props) => {
         )}
       </div>
 
+      <Link to={`/product/${product.id}`} className="mt-4 block overflow-hidden bg-card">
+        <img
+          src={productImages(product)[0]}
+          alt={product.name}
+          loading="lazy"
+          className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+        />
+      </Link>
+
       <h3 className="mt-4 font-head text-xl font-medium leading-tight tracking-tight">
-        {product.name}
+        <Link to={`/product/${product.id}`} className="transition-colors hover:text-primary">
+          {product.name}
+        </Link>
       </h3>
 
       <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">
@@ -67,13 +85,21 @@ const ProductCard = ({ product, vehicle, onRequest }: Props) => {
             {formatPrice(product.price)}
           </div>
         </div>
-        <button
-          onClick={() => onRequest(product)}
-          className="flex items-center gap-2 border border-foreground px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-primary hover:border-primary hover:text-primary-foreground"
-        >
-          Заявка
-          <Icon name="ArrowRight" size={15} />
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/product/${product.id}`}
+            className="border border-border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-foreground"
+          >
+            Подробнее
+          </Link>
+          <button
+            onClick={() => onRequest(product)}
+            className="flex items-center gap-2 border border-foreground px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-primary hover:border-primary hover:text-primary-foreground"
+          >
+            Заявка
+            <Icon name="ArrowRight" size={15} />
+          </button>
+        </div>
       </div>
     </article>
   );

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 
 const NAV = [
@@ -15,6 +16,7 @@ const scrollTo = (id: string) => {
 };
 
 const Header = () => {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
 
@@ -34,6 +36,11 @@ const Header = () => {
 
   const go = (id: string) => {
     setOpen(false);
+    if (window.location.pathname !== '/') {
+      navigate('/');
+      setTimeout(() => scrollTo(id), 120);
+      return;
+    }
     setTimeout(() => scrollTo(id), 10);
   };
 
@@ -45,7 +52,10 @@ const Header = () => {
     >
       <div className="flex h-[76px] items-center justify-between gap-6">
         <button
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          onClick={() => {
+            if (window.location.pathname !== '/') navigate('/');
+            else window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]"
         >
           <span className="block h-4 w-4 flex-none bg-primary" />

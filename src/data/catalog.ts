@@ -18,6 +18,10 @@ export interface Product {
   fits: Record<string, string[]>; // марка -> модели
   years: [number, number];
   badge?: string;
+  images?: string[];
+  description?: string[];
+  specs?: [string, string][];
+  kit?: string[];
 }
 
 export interface Brand {
@@ -331,6 +335,58 @@ export const PRODUCTS: Product[] = [
     },
   },
 ];
+
+const CDN = 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files';
+
+export const CATEGORY_IMAGE: Record<Category, string> = {
+  Фаркопы: `${CDN}/fcf688e9-5495-4909-be55-168c2564db75.jpg`,
+  Багажники: `${CDN}/4bd3a1e3-6cdb-45c5-acb8-fd0a9f503bc5.jpg`,
+  Пороги: `${CDN}/3022b2c3-6f89-48b6-b0ce-b9977c4ef7db.jpg`,
+  Защита: `${CDN}/d0077366-191f-49c5-b2b3-f6fce4e87c4d.jpg`,
+  Салон: `${CDN}/e38bb980-05fa-4ea9-a5f5-7dd8c8832c79.jpg`,
+  Электроника: `${CDN}/080bcf61-fb74-4ef1-9fd2-ba14e17e180d.jpg`,
+};
+
+export const MOUNT_IMAGE = `${CDN}/f2b8d406-8103-4372-93fb-79a0bef9cd0b.jpg`;
+
+export const productImages = (p: Product): string[] =>
+  p.images && p.images.length ? p.images : [CATEGORY_IMAGE[p.category], MOUNT_IMAGE];
+
+export const productDescription = (p: Product): string[] =>
+  p.description && p.description.length
+    ? p.description
+    : [
+        `${p.name} — позиция из категории «${p.category.toLowerCase()}». Изделие рассчитано под конкретный кузов: геометрия повторяет заводские размеры, поэтому установка идёт в ${p.mount} без сверления и вмешательства в силовые элементы.`,
+        `Комплект поставляется с крепежом и инструкцией. Среднее время работ в нашем сервисе — ${p.install}. После установки выдаём отметку в заказ-наряде, гарантия на изделие и работы — ${p.warranty}.`,
+        'Перед отправкой каждая позиция проверяется по контрольному образцу кузова, а совместимость с вашей машиной мы подтверждаем по VIN при подтверждении заказа.',
+      ];
+
+export const productSpecs = (p: Product): [string, string][] =>
+  p.specs && p.specs.length
+    ? p.specs
+    : [
+        ['Категория', p.category],
+        ['Точки крепления', p.mount],
+        ['Годы выпуска авто', `${p.years[0]}—${p.years[1]}`],
+        ['Время установки', p.install],
+        ['Гарантия', p.warranty],
+        ['Сверление кузова', 'не требуется'],
+        ['Артикул', p.id.toUpperCase()],
+        ['Наличие', 'на складе'],
+      ];
+
+export const productKit = (p: Product): string[] =>
+  p.kit && p.kit.length
+    ? p.kit
+    : [
+        p.name,
+        'Крепёжный комплект под штатные точки',
+        'Инструкция по установке',
+        'Гарантийный талон',
+      ];
+
+export const productsByCategory = (p: Product, limit = 3): Product[] =>
+  PRODUCTS.filter((x) => x.category === p.category && x.id !== p.id).slice(0, limit);
 
 export interface Vehicle {
   brand: string;

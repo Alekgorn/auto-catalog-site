@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import Catalog from '@/components/Catalog';
@@ -10,13 +11,34 @@ import Contacts from '@/components/Contacts';
 import Footer from '@/components/Footer';
 import RequestDialog from '@/components/RequestDialog';
 import { BRANDS, Product, Vehicle } from '@/data/catalog';
+import { loadVehicle, saveVehicle } from '@/lib/vehicle';
 
 const Index = () => {
-  const [brand, setBrand] = useState(BRANDS[0].name);
-  const [model, setModel] = useState(BRANDS[0].models[0]);
-  const [year, setYear] = useState('2021');
+  const location = useLocation();
+  const saved = loadVehicle();
 
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [brand, setBrand] = useState(saved?.brand ?? BRANDS[0].name);
+  const [model, setModel] = useState(saved?.model ?? BRANDS[0].models[0]);
+  const [year, setYear] = useState(String(saved?.year ?? 2021));
+
+  const [vehicle, setVehicle] = useState<Vehicle | null>(saved);
+
+  useEffect(() => {
+    saveVehicle(vehicle);
+  }, [vehicle]);
+
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.slice(1);
+      setTimeout(
+        () =>
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+        80,
+      );
+    }
+  }, [location.hash]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeProduct, setActiveProduct] = useState<Product | null>(null);
