@@ -19,12 +19,15 @@ import {
   productsByCategory,
 } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
+import { useCart } from '@/context/CartContext';
 
 const Product = () => {
   const { id } = useParams();
   const product = useMemo(() => PRODUCTS.find((p) => p.id === id) ?? null, [id]);
 
+  const { add } = useCart();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogProduct, setDialogProduct] = useState<ProductType | null>(null);
 
@@ -34,6 +37,7 @@ const Product = () => {
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    setQty(1);
   }, [id]);
 
   const openRequest = (p: ProductType | null) => {
@@ -151,12 +155,40 @@ const Product = () => {
               </div>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <div className="flex items-center border border-foreground">
+                  <button
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    aria-label="Меньше"
+                    className="px-4 py-4 transition-colors hover:text-primary"
+                  >
+                    <Icon name="Minus" size={16} />
+                  </button>
+                  <span className="min-w-[3rem] text-center font-head text-lg font-bold">
+                    {qty}
+                  </span>
+                  <button
+                    onClick={() => setQty((q) => Math.min(99, q + 1))}
+                    aria-label="Больше"
+                    className="px-4 py-4 transition-colors hover:text-primary"
+                  >
+                    <Icon name="Plus" size={16} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => openRequest(product)}
+                  onClick={() => add(product, qty)}
                   className="flex flex-1 items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
-                  Оставить заявку
-                  <Icon name="ArrowRight" size={18} />
+                  Добавить в заказ
+                  <Icon name="ShoppingCart" size={18} />
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+                <button
+                  onClick={() => openRequest(product)}
+                  className="flex flex-1 items-center justify-center gap-2 border border-foreground px-6 py-4 font-head text-[0.9rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
+                >
+                  Купить в 1 клик
                 </button>
                 <a
                   href="tel:+78003334455"
@@ -312,12 +344,7 @@ const Product = () => {
             </div>
             <div className="grid grid-cols-1 gap-x-6 gap-y-12 pb-16 sm:grid-cols-2 lg:grid-cols-3">
               {related.map((p) => (
-                <ProductCard
-                  key={p.id}
-                  product={p}
-                  vehicle={vehicle}
-                  onRequest={openRequest}
-                />
+                <ProductCard key={p.id} product={p} vehicle={vehicle} />
               ))}
             </div>
           </section>

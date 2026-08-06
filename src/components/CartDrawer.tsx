@@ -1,0 +1,270 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import Icon from '@/components/ui/icon';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useToast } from '@/hooks/use-toast';
+import { useCart } from '@/context/CartContext';
+import { formatPrice, isCompatible, productImages } from '@/data/catalog';
+import { loadVehicle } from '@/lib/vehicle';
+
+const CartDrawer = () => {
+  const { items, count, total, open, setOpen, remove, setQty, clear } = useCart();
+  const { toast } = useToast();
+  const vehicle = loadVehicle();
+
+  const [step, setStep] = useState<'list' | 'form'>('list');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [comment, setComment] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const inputClass =
+    'w-full border-b border-border bg-transparent py-3 font-head text-lg font-medium tracking-tight outline-none transition-colors placeholder:font-body placeholder:text-base placeholder:font-normal placeholder:text-muted-foreground focus:border-primary';
+
+  const close = (v: boolean) => {
+    setOpen(v);
+    if (!v) {
+      setStep('list');
+      setError(null);
+    }
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim().length < 2) return setError('Укажите имя');
+    if (phone.replace(/\D/g, '').length < 10) return setError('Укажите телефон');
+    setError(null);
+    close(false);
+    toast({
+      title: 'Заказ отправлен',
+      description: `${count} поз. на ${formatPrice(total)} — перезвоним и подтвердим наличие.`,
+    });
+    clear();
+    setName('');
+    setPhone('');
+    setComment('');
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={close}>
+      <SheetContent
+        side="right"
+        className="flex w-full flex-col gap-0 rounded-none border-foreground p-0 sm:max-w-md"
+      >
+        <div className="flex items-center justify-between border-b border-foreground bg-primary px-6 py-5 text-primary-foreground">
+          <div>
+            <div className="text-[0.7rem] uppercase tracking-[0.16em] opacity-80">
+              {step === 'form' ? 'Оформление заказа' : 'Ваш заказ'}
+            </div>
+            <div className="mt-1 font-head text-xl font-bold uppercase tracking-tight">
+              {count > 0 ? `${count} позиций` : 'Пусто'}
+            </div>
+          </div>
+        </div>
+
+        {items.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+            <Icon name="ShoppingCart" size={34} className="text-muted-foreground" />
+            <div className="mt-5 font-head text-xl font-medium uppercase tracking-tight">
+              Заказ пуст
+            </div>
+            <p className="mt-3 text-[0.9rem] text-muted-foreground">
+              Добавьте оборудование из каталога — соберём всё в одну заявку и посчитаем
+              общую стоимость.
+            </p>
+            <button
+              onClick={() => close(false)}
+              className="mt-7 border border-foreground px-6 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-primary hover:border-primary hover:text-primary-foreground"
+            >
+              К каталогу
+            </button>
+          </div>
+        ) : step === 'list' ? (
+          <>
+            <div className="flex-1 overflow-y-auto px-6">
+              {vehicle && (
+                <div className="mt-5 border border-border px-4 py-3 text-[0.8rem] text-muted-foreground">
+                  Автомобиль: {vehicle.brand} {vehicle.model}, {vehicle.year} г.
+                </div>
+              )}
+
+              {items.map(({ product, qty }) => {
+                const fits = isCompatible(product, vehicle);
+                return (
+                  <div key={product.id} className="border-b border-border py-5">
+                    <div className="flex gap-4">
+                      <Link
+                        to={`/product/${product.id}`}
+                        onClick={() => close(false)}
+                        className="block h-20 w-20 flex-none overflow-hidden bg-card"
+                      >
+                        <img
+                          src={productImages(product)[0]}
+                          alt={product.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </Link>
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          to={`/product/${product.id}`}
+                          onClick={() => close(false)}
+                          className="block font-head text-[0.95rem] font-medium leading-tight transition-colors hover:text-primary"
+                        >
+                          {product.name}
+                        </Link>
+                        <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+                          {formatPrice(product.price)} / шт
+                        </div>
+                        {vehicle && !fits && (
+                          <div className="mt-1 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-primary">
+                            <Icon name="CircleSlash" size={12} />
+                            Не подходит к вашей машине
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => remove(product.id)}
+                        aria-label="Удалить"
+                        className="h-fit text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <Icon name="X" size={16} />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center border border-border">
+                        <button
+                          onClick={() => setQty(product.id, qty - 1)}
+                          aria-label="Меньше"
+                          className="px-3 py-2 transition-colors hover:text-primary"
+                        >
+                          <Icon name="Minus" size={14} />
+                        </button>
+                        <span className="min-w-[2.5rem] text-center font-head text-[0.95rem] font-medium">
+                          {qty}
+                        </span>
+                        <button
+                          onClick={() => setQty(product.id, qty + 1)}
+                          aria-label="Больше"
+                          className="px-3 py-2 transition-colors hover:text-primary"
+                        >
+                          <Icon name="Plus" size={14} />
+                        </button>
+                      </div>
+                      <div className="font-head text-lg font-bold tracking-tight">
+                        {formatPrice(product.price * qty)}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                onClick={clear}
+                className="my-5 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Icon name="Trash2" size={14} />
+                Очистить заказ
+              </button>
+            </div>
+
+            <div className="border-t border-foreground px-6 py-5">
+              <div className="flex items-end justify-between">
+                <span className="eyebrow">Итого</span>
+                <span className="font-head text-3xl font-bold tracking-tight">
+                  {formatPrice(total)}
+                </span>
+              </div>
+              <p className="mt-2 text-[0.78rem] text-muted-foreground">
+                Стоимость установки рассчитаем при подтверждении заказа.
+              </p>
+              <button
+                onClick={() => setStep('form')}
+                className="mt-5 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                Оформить заявку
+                <Icon name="ArrowRight" size={18} />
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-1 flex-col overflow-y-auto px-6 py-6">
+            <button
+              onClick={() => setStep('list')}
+              className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+            >
+              <Icon name="ArrowLeft" size={14} />
+              К списку
+            </button>
+
+            <dl className="mt-5 space-y-2 text-[0.85rem]">
+              {items.map(({ product, qty }) => (
+                <div
+                  key={product.id}
+                  className="flex justify-between gap-4 border-b border-border pb-2"
+                >
+                  <dt className="text-muted-foreground">
+                    {product.name} × {qty}
+                  </dt>
+                  <dd className="flex-none">{formatPrice(product.price * qty)}</dd>
+                </div>
+              ))}
+              <div className="flex justify-between gap-4 pt-2">
+                <dt className="font-head font-bold uppercase">Итого</dt>
+                <dd className="font-head text-xl font-bold">{formatPrice(total)}</dd>
+              </div>
+            </dl>
+
+            <form onSubmit={submit} noValidate className="mt-7">
+              <label className="eyebrow" htmlFor="c-name">
+                Имя
+              </label>
+              <input
+                id="c-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Имя"
+                className={inputClass}
+              />
+              <div className="mt-6">
+                <label className="eyebrow" htmlFor="c-phone">
+                  Телефон
+                </label>
+                <input
+                  id="c-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+7 900 000-00-00"
+                  inputMode="tel"
+                  className={inputClass}
+                />
+              </div>
+              <div className="mt-6">
+                <label className="eyebrow" htmlFor="c-comment">
+                  Комментарий
+                </label>
+                <input
+                  id="c-comment"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Марка, модель, год или пожелания"
+                  className={inputClass}
+                />
+              </div>
+              {error && <div className="mt-3 text-[0.8rem] text-primary">{error}</div>}
+              <button
+                type="submit"
+                className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                Отправить заказ
+                <Icon name="ArrowRight" size={18} />
+              </button>
+            </form>
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+export default CartDrawer;

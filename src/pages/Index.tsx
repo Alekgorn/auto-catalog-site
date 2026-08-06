@@ -79,11 +79,7 @@ const Index = () => {
       <Header />
       <main>
         <Hero {...selectorProps} />
-        <Catalog
-          vehicle={vehicle}
-          onReset={() => setVehicle(null)}
-          onRequest={(p) => openRequest(p)}
-        />
+        <Catalog vehicle={vehicle} onReset={() => setVehicle(null)} />
         <Selection {...selectorProps} onPickBrand={pickBrand} />
         <Prices onRequest={() => openRequest(null)} />
         <Install />

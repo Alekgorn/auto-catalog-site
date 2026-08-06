@@ -6,7 +6,6 @@ import {
   CATEGORIES,
   Category,
   PRODUCTS,
-  Product,
   Vehicle,
   isCompatible,
 } from '@/data/catalog';
@@ -14,10 +13,9 @@ import {
 interface Props {
   vehicle: Vehicle | null;
   onReset: () => void;
-  onRequest: (p: Product) => void;
 }
 
-const Catalog = ({ vehicle, onReset, onRequest }: Props) => {
+const Catalog = ({ vehicle, onReset }: Props) => {
   const [category, setCategory] = useState<Category | 'Всё'>('Всё');
   const [onlyFits, setOnlyFits] = useState(true);
 
@@ -109,12 +107,7 @@ const Catalog = ({ vehicle, onReset, onRequest }: Props) => {
       ) : (
         <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-12 sm:grid-cols-2 lg:grid-cols-3">
           {list.map((p) => (
-            <ProductCard
-              key={p.id}
-              product={p}
-              vehicle={vehicle}
-              onRequest={onRequest}
-            />
+            <ProductCard key={p.id} product={p} vehicle={vehicle} />
           ))}
         </div>
       )}

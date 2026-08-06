@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { useCart } from '@/context/CartContext';
 
 const NAV = [
   { id: 'catalog', label: 'Каталог' },
@@ -17,6 +18,7 @@ const scrollTo = (id: string) => {
 
 const Header = () => {
   const navigate = useNavigate();
+  const { count, setOpen: setCartOpen } = useCart();
   const [open, setOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
 
@@ -74,13 +76,28 @@ const Header = () => {
           ))}
         </nav>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-5 md:gap-6">
           <a
             href="tel:+78003334455"
             className="hidden font-head text-[0.95rem] font-medium tracking-tight md:block"
           >
             8 800 333-44-55
           </a>
+          <button
+            onClick={() => {
+              setOpen(false);
+              setCartOpen(true);
+            }}
+            aria-label="Заказ"
+            className="relative flex items-center gap-2 transition-colors hover:text-primary"
+          >
+            <Icon name="ShoppingCart" size={22} />
+            {count > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-[18px] min-w-[18px] items-center justify-center bg-primary px-1 text-[0.65rem] font-medium text-primary-foreground">
+                {count}
+              </span>
+            )}
+          </button>
           <button
             className="lg:hidden"
             aria-label="Меню"

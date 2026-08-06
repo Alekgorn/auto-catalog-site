@@ -7,15 +7,17 @@ import {
   isCompatible,
   productImages,
 } from '@/data/catalog';
+import { useCart } from '@/context/CartContext';
 
 interface Props {
   product: Product;
   vehicle: Vehicle | null;
-  onRequest: (p: Product) => void;
 }
 
-const ProductCard = ({ product, vehicle, onRequest }: Props) => {
+const ProductCard = ({ product, vehicle }: Props) => {
   const fits = isCompatible(product, vehicle);
+  const { add, has } = useCart();
+  const inCart = has(product.id);
 
   return (
     <article className="group flex flex-col border-t border-foreground pt-5 transition-colors">
@@ -93,11 +95,15 @@ const ProductCard = ({ product, vehicle, onRequest }: Props) => {
             Подробнее
           </Link>
           <button
-            onClick={() => onRequest(product)}
-            className="flex items-center gap-2 border border-foreground px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-primary hover:border-primary hover:text-primary-foreground"
+            onClick={() => add(product)}
+            className={`flex items-center gap-2 border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors ${
+              inCart
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'
+            }`}
           >
-            Заявка
-            <Icon name="ArrowRight" size={15} />
+            {inCart ? 'В заказе' : 'В заказ'}
+            <Icon name={inCart ? 'Check' : 'Plus'} size={15} />
           </button>
         </div>
       </div>
