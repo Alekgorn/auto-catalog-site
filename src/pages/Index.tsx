@@ -1,15 +1,80 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from 'react';
+import Header from '@/components/Header';
+import Hero from '@/components/Hero';
+import Catalog from '@/components/Catalog';
+import Selection from '@/components/Selection';
+import Prices from '@/components/Prices';
+import Install from '@/components/Install';
+import Faq from '@/components/Faq';
+import Contacts from '@/components/Contacts';
+import Footer from '@/components/Footer';
+import RequestDialog from '@/components/RequestDialog';
+import { BRANDS, Product, Vehicle } from '@/data/catalog';
 
 const Index = () => {
+  const [brand, setBrand] = useState(BRANDS[0].name);
+  const [model, setModel] = useState(BRANDS[0].models[0]);
+  const [year, setYear] = useState('2021');
+
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [activeProduct, setActiveProduct] = useState<Product | null>(null);
+
+  const applyVehicle = () => {
+    setVehicle({ brand, model, year: Number(year) });
+    setTimeout(
+      () =>
+        document
+          .getElementById('catalog')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+      40,
+    );
+  };
+
+  const pickBrand = (b: string) => {
+    setBrand(b);
+    setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
+  };
+
+  const openRequest = (p: Product | null) => {
+    setActiveProduct(p);
+    setDialogOpen(true);
+  };
+
+  const selectorProps = {
+    brand,
+    model,
+    year,
+    onBrand: setBrand,
+    onModel: setModel,
+    onYear: setYear,
+    onSubmit: applyVehicle,
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
-      </div>
-      <span className="absolute bottom-8 left-1/2 -translate-x-1/2 inline-block bg-[#FF6637] text-white text-sm px-4 py-2 rounded-full whitespace-nowrap">
-        Подождите 5 минут, Юра создает первую версию проекта с нуля
-      </span>
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main>
+        <Hero {...selectorProps} />
+        <Catalog
+          vehicle={vehicle}
+          onReset={() => setVehicle(null)}
+          onRequest={(p) => openRequest(p)}
+        />
+        <Selection {...selectorProps} onPickBrand={pickBrand} />
+        <Prices onRequest={() => openRequest(null)} />
+        <Install />
+        <Faq />
+        <Contacts />
+      </main>
+      <Footer />
+      <RequestDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        product={activeProduct}
+        vehicle={vehicle}
+      />
     </div>
   );
 };

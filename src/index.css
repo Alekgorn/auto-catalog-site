@@ -4,89 +4,104 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* — hero-токены варианта 1 (Вильелли) — */
+    --hero-bg: #ffffff;
+    --hero-surface: #f2f2ef;
+    --hero-text: #111111;
+    --hero-muted: #6e6e68;
+    --hero-accent: #e01b0c;
+    --hero-accent-contrast: #ffffff;
+    --hero-x-rule: #111111;
+    --hero-x-grid: #e3e3de;
+    --hero-x-diagram: #1b1b1b;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 7%;
+
+    --card: 60 8% 97%;
+    --card-foreground: 0 0% 7%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 0 0% 7%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 4 90% 46%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 60 8% 94%;
+    --secondary-foreground: 0 0% 7%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 60 8% 94%;
+    --muted-foreground: 60 3% 42%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 4 90% 46%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 4 90% 46%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 60 8% 88%;
+    --input: 60 8% 88%;
+    --ring: 4 90% 46%;
 
-    --radius: 0.5rem;
+    --radius: 0px;
 
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 60 8% 97%;
+    --sidebar-foreground: 0 0% 7%;
+    --sidebar-primary: 4 90% 46%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 60 8% 94%;
+    --sidebar-accent-foreground: 0 0% 7%;
+    --sidebar-border: 60 8% 88%;
+    --sidebar-ring: 4 90% 46%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --hero-bg: #111111;
+    --hero-surface: #1b1b1b;
+    --hero-text: #f5f5f0;
+    --hero-muted: #9c9c94;
+    --hero-accent: #e01b0c;
+    --hero-accent-contrast: #ffffff;
+    --hero-x-rule: #f5f5f0;
+    --hero-x-grid: #2c2c29;
+    --hero-x-diagram: #f5f5f0;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --background: 0 0% 7%;
+    --foreground: 60 20% 95%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --card: 0 0% 11%;
+    --card-foreground: 60 20% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 60 20% 95%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --primary: 4 90% 46%;
+    --primary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 60 20% 95%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 60 4% 60%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --accent: 4 90% 46%;
+    --accent-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --destructive: 4 90% 46%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 4 90% 46%;
+
+    --sidebar-background: 0 0% 11%;
+    --sidebar-foreground: 60 20% 95%;
+    --sidebar-primary: 4 90% 46%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 0 0% 14%;
+    --sidebar-accent-foreground: 60 20% 95%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 4 90% 46%;
   }
 }
 
@@ -96,6 +111,84 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  ::selection {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+  }
+}
+
+@layer components {
+  /* колоночная сетка Вильелли — вертикальные линейки на всю секцию */
+  @media (min-width: 768px) {
+    .grid-rules {
+      background-image: repeating-linear-gradient(
+        to right,
+        hsl(var(--border)) 0 1px,
+        transparent 1px calc((100% + 24px) / 12)
+      );
+      background-position: left top;
+    }
+  }
+
+  .rule {
+    @apply h-px bg-foreground flex-none;
+  }
+
+  .rule-hair {
+    @apply h-px bg-border flex-none;
+  }
+
+  .eyebrow {
+    @apply text-[0.72rem] uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+  .section-pad {
+    @apply px-6 md:px-14;
+  }
+
+  .link-underline {
+    @apply relative border-b border-transparent transition-colors hover:border-primary hover:text-primary;
+  }
+}
+
+@layer utilities {
+  .rise {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: rise 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) forwards;
+  }
+
+  .hover-scale {
+    @apply transition-transform duration-200 hover:scale-105;
+  }
+}
+
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pt {
+  to {
+    opacity: 1;
+  }
+}
+
+.pt {
+  opacity: 0;
+  animation: pt 0.5s ease forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pt {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
   }
 }
