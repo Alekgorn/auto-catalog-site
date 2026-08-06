@@ -12,7 +12,7 @@ interface Props {
 }
 
 const Hero = (props: Props) => (
-  <section className="section-pad flex min-h-[calc(100vh-76px)] flex-col">
+  <section className="section-pad flex min-h-[min(calc(100vh-76px),900px)] flex-col">
     <div className="rule" />
 
     <div className="grid flex-1 grid-cols-1 gap-x-6 md:grid-cols-12 md:grid-rules">
