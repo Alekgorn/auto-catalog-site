@@ -3,9 +3,11 @@ interface Props {
   eyebrow: string;
   title: React.ReactNode;
   note?: React.ReactNode;
+  /** Кнопки рядом с заголовком — например смена автомобиля */
+  action?: React.ReactNode;
 }
 
-const SectionHead = ({ index, eyebrow, title, note }: Props) => (
+const SectionHead = ({ index, eyebrow, title, note, action }: Props) => (
   <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-10 md:grid-cols-12 md:py-14">
     <div className="flex items-start gap-4 md:col-span-5">
       <span className="font-head text-[0.72rem] font-medium tracking-[0.16em] text-primary">
@@ -16,6 +18,7 @@ const SectionHead = ({ index, eyebrow, title, note }: Props) => (
         <h2 className="mt-3 font-head text-3xl font-bold uppercase leading-[1.05] tracking-[-0.03em] sm:text-4xl lg:text-5xl">
           {title}
         </h2>
+        {action && <div className="mt-5">{action}</div>}
       </div>
     </div>
     {note && (

@@ -259,6 +259,26 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
             ? `${vehicle.brand} ${vehicle.model} ${vehicle.year}`
             : 'Всё оборудование'
         }
+        action={
+          vehicle ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => setPickerOpen(true)}
+                className="flex items-center gap-2 bg-primary px-5 py-3 font-head text-[0.75rem] font-bold uppercase tracking-[0.08em] text-primary-foreground transition-colors hover:bg-foreground"
+              >
+                <Icon name="RefreshCw" size={15} />
+                Сменить автомобиль
+              </button>
+              <button
+                onClick={onReset}
+                className="flex items-center gap-2 border border-border px-4 py-3 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name="X" size={14} />
+                Сбросить
+              </button>
+            </div>
+          ) : null
+        }
         note={
           vehicle ? (
             <>
@@ -279,40 +299,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
 
       {vehicle ? (
         <div className="pb-6">
-          {/* Машина видна при прокрутке — сменить её можно, не листая блоки */}
-          <div className="sticky top-[76px] z-30 -mx-6 mb-2 border-b border-border bg-surface/95 px-6 py-3 backdrop-blur md:-mx-14 md:px-14 lg:top-[140px]">
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <Icon name="Car" size={18} className="flex-none text-primary" />
-                <div className="min-w-0">
-                  <div className="eyebrow">Подбор по автомобилю</div>
-                  <div className="truncate font-head text-[1.05rem] font-bold uppercase leading-tight tracking-tight">
-                    {vehicle.brand} {vehicle.model}
-                    <span className="text-muted-foreground"> · {vehicle.year}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-none items-center gap-2">
-                <button
-                  onClick={() => setPickerOpen(true)}
-                  className="flex items-center gap-2 border border-foreground px-4 py-2.5 text-[0.72rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                >
-                  <Icon name="RefreshCw" size={14} />
-                  Сменить автомобиль
-                </button>
-                <button
-                  onClick={onReset}
-                  aria-label="Очистить подбор"
-                  title="Очистить подбор"
-                  className="flex items-center justify-center border border-border p-2.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-                >
-                  <Icon name="X" size={15} />
-                </button>
-              </div>
-            </div>
-          </div>
-
           {grouped.length === 0 ? (
             <div className="py-24 text-center">
               <div className="font-head text-2xl font-medium uppercase tracking-tight">
