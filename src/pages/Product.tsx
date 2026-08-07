@@ -235,9 +235,6 @@ const Product = () => {
                   {formatPrice(product.price)}
                 </span>
               </div>
-              <div className="mt-2 text-[0.85rem] text-muted-foreground">
-                Цена с установкой в нашем сервисе — по расчёту при подтверждении заявки.
-              </div>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <div className="flex items-center border border-foreground">
