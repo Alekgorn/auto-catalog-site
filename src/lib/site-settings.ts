@@ -57,7 +57,6 @@ export const FILTER_BLOCKS = [
   { key: 'categories', label: 'Категории' },
   { key: 'price', label: 'Цена' },
   { key: 'badges', label: 'Хиты и скидки' },
-  { key: 'mounts', label: 'Точки крепления' },
   { key: 'warranties', label: 'Гарантия' },
 ] as const;
 
@@ -67,7 +66,6 @@ export const DEFAULT_FILTER_BLOCKS: FilterBlockKey[] = [
   'categories',
   'price',
   'badges',
-  'mounts',
   'warranties',
 ];
 

@@ -47,7 +47,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
     priceMax: bounds.max,
     onlyHits: false,
     onlySale: false,
-    mounts: [],
     warranties: [],
   });
 
@@ -61,14 +60,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
     }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bounds.min, bounds.max]);
-
-  const mounts = useMemo(() => {
-    const set: string[] = [];
-    products.forEach((p) => {
-      if (p.mount && !set.includes(p.mount)) set.push(p.mount);
-    });
-    return set.sort();
-  }, [products]);
 
   const warranties = useMemo(() => {
     const set: string[] = [];
@@ -96,7 +87,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
       if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
       if (filters.onlyHits && p.badge !== 'Хит') return false;
       if (filters.onlySale && !p.oldPrice) return false;
-      if (filters.mounts.length && !filters.mounts.includes(p.mount)) return false;
       if (filters.warranties.length && !filters.warranties.includes(p.warranty))
         return false;
       return true;
@@ -166,7 +156,7 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
       window.removeEventListener('resize', measure);
       observer?.disconnect();
     };
-  }, [filters, categories.length, mounts.length, warranties.length]);
+  }, [filters, categories.length, warranties.length]);
 
   const goToSelection = () => {
     document
@@ -203,7 +193,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
 
   const activeCount =
     filters.categories.length +
-    filters.mounts.length +
     filters.warranties.length +
     (filters.onlyHits ? 1 : 0) +
     (filters.onlySale ? 1 : 0) +
@@ -214,7 +203,6 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
       state={filters}
       bounds={bounds}
       categories={categories}
-      mounts={mounts}
       warranties={warranties}
       counts={counts}
       onChange={setFilters}

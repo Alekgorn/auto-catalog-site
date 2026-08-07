@@ -299,10 +299,6 @@ const Product = () => {
 
               <dl className="mt-8 space-y-2 text-[0.85rem]">
                 <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted-foreground">Крепление</dt>
-                  <dd className="text-right">{product.mount}</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
                   <dt className="text-muted-foreground">Гарантия</dt>
                   <dd className="text-right">{product.warranty}</dd>
                 </div>

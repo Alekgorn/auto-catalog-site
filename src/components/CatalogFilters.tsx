@@ -11,7 +11,6 @@ export interface FilterState {
   priceMax: number;
   onlyHits: boolean;
   onlySale: boolean;
-  mounts: string[];
   warranties: string[];
 }
 
@@ -19,7 +18,6 @@ interface Props {
   state: FilterState;
   bounds: { min: number; max: number };
   categories: string[];
-  mounts: string[];
   warranties: string[];
   counts: Record<string, number>;
   onChange: (next: FilterState) => void;
@@ -68,7 +66,6 @@ const CatalogFilters = ({
   state,
   bounds,
   categories,
-  mounts,
   warranties,
   counts,
   onChange,
@@ -76,7 +73,7 @@ const CatalogFilters = ({
 }: Props) => {
   const { filterBlocks } = useCatalog();
   const shows = (key: FilterBlockKey) => filterBlocks.includes(key);
-  const toggleIn = (key: 'categories' | 'mounts' | 'warranties', value: string) => {
+  const toggleIn = (key: 'categories' | 'warranties', value: string) => {
     const list = state[key];
     onChange({
       ...state,
@@ -161,21 +158,6 @@ const CatalogFilters = ({
           onToggle={() => onChange({ ...state, onlySale: !state.onlySale })}
         />
       </Group>
-      )}
-
-      {shows('mounts') && mounts.length > 0 && (
-        <Group title="Крепление">
-          <div className="max-h-52 overflow-y-auto pr-1">
-            {mounts.map((m) => (
-              <Check
-                key={m}
-                label={m}
-                checked={state.mounts.includes(m)}
-                onToggle={() => toggleIn('mounts', m)}
-              />
-            ))}
-          </div>
-        </Group>
       )}
 
       {shows('warranties') && warranties.length > 0 && (

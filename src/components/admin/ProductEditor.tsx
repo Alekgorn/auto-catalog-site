@@ -13,7 +13,6 @@ export interface AdminProduct {
   category: string;
   price: number;
   oldPrice: number | null;
-  mount: string;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -35,7 +34,6 @@ export const emptyProduct = (): AdminProduct => ({
   category: '',
   price: 0,
   oldPrice: null,
-  mount: '',
   install: '',
   warranty: '',
   yearFrom: 2015,
@@ -112,6 +110,22 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
     });
   };
 
+  const totalModels = brands.reduce((n, b) => n + b.models.length, 0);
+  const selectedCount = Object.values(form.fits).reduce((n, m) => n + m.length, 0);
+  const allSelected = totalModels > 0 && selectedCount === totalModels;
+
+  /** Отметить сразу все марки со всеми моделями (или снять всё) */
+  const toggleAll = () => {
+    setForm((f) => {
+      if (allSelected) return { ...f, fits: {} };
+      const fits: Record<string, string[]> = {};
+      brands.forEach((b) => {
+        if (b.models.length) fits[b.name] = [...b.models];
+      });
+      return { ...f, fits };
+    });
+  };
+
   const toggleBrand = (brand: AdminBrand) => {
     setForm((f) => {
       const fits = { ...f.fits };
@@ -180,18 +194,21 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
               </div>
               <div>
                 <span className={label}>Категория</span>
-                <input
+                <select
                   value={form.category}
                   onChange={(e) => set('category', e.target.value)}
-                  list="cat-list"
-                  className={field}
-                  placeholder="Например: Android-магнитолы"
-                />
-                <datalist id="cat-list">
+                  className={`${field} cursor-pointer`}
+                >
+                  <option value="">— выберите категорию —</option>
                   {categories.map((c) => (
-                    <option key={c} value={c} />
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </datalist>
+                  {form.category && !categories.includes(form.category) && (
+                    <option value={form.category}>{form.category}</option>
+                  )}
+                </select>
               </div>
               <div>
                 <span className={label}>Артикул</span>
@@ -236,14 +253,6 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                   onChange={(e) =>
                     set('oldPrice', e.target.value ? Number(e.target.value) : null)
                   }
-                  className={field}
-                />
-              </div>
-              <div>
-                <span className={label}>Точки крепления</span>
-                <input
-                  value={form.mount}
-                  onChange={(e) => set('mount', e.target.value)}
                   className={field}
                 />
               </div>
@@ -468,6 +477,22 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                 Отметьте модели, к которым подходит товар. Годы выпуска задаются на
                 вкладке «Основное».
               </p>
+
+              {brands.length > 0 && (
+                <div className="flex flex-wrap items-center gap-3 border-y border-border py-3">
+                  <button
+                    onClick={toggleAll}
+                    className="flex items-center gap-2 border border-foreground px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Icon name={allSelected ? 'Square' : 'CheckCheck'} size={15} />
+                    {allSelected ? 'Снять все марки и модели' : 'Все марки и модели'}
+                  </button>
+                  <span className="text-[0.78rem] text-muted-foreground">
+                    Выбрано {selectedCount} из {totalModels}
+                  </span>
+                </div>
+              )}
+
               {brands.length === 0 && (
                 <div className="text-muted-foreground">
                   Сначала добавьте марки на вкладке «Марки».

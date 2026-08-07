@@ -18,18 +18,21 @@ const MainSection = ({ form, categories, set }: Props) => (
     </div>
     <div>
       <span className={label}>Категория</span>
-      <input
+      <select
         value={form.category}
         onChange={(e) => set('category', e.target.value)}
-        list="cat-list"
-        className={field}
-        placeholder="Например: Android-магнитолы"
-      />
-      <datalist id="cat-list">
+        className={`${field} cursor-pointer`}
+      >
+        <option value="">— выберите категорию —</option>
         {categories.map((c) => (
-          <option key={c} value={c} />
+          <option key={c} value={c}>
+            {c}
+          </option>
         ))}
-      </datalist>
+        {form.category && !categories.includes(form.category) && (
+          <option value={form.category}>{form.category}</option>
+        )}
+      </select>
     </div>
     <div>
       <span className={label}>Артикул</span>
@@ -72,14 +75,6 @@ const MainSection = ({ form, categories, set }: Props) => (
         type="number"
         value={form.oldPrice ?? ''}
         onChange={(e) => set('oldPrice', e.target.value ? Number(e.target.value) : null)}
-        className={field}
-      />
-    </div>
-    <div>
-      <span className={label}>Точки крепления</span>
-      <input
-        value={form.mount}
-        onChange={(e) => set('mount', e.target.value)}
         className={field}
       />
     </div>

@@ -9,6 +9,7 @@ import OrdersPanel from '@/components/admin/OrdersPanel';
 import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
 import SettingsPanel from '@/components/admin/SettingsPanel';
 import SitePanel from '@/components/admin/SitePanel';
+import CategoriesEditor from '@/components/admin/CategoriesEditor';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -22,10 +23,11 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [tab, setTab] = useState<
-    'products' | 'guides' | 'orders' | 'brands' | 'site' | 'settings'
+    'products' | 'guides' | 'orders' | 'brands' | 'categories' | 'site' | 'settings'
   >('orders');
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
+  const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
   const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
 
@@ -50,6 +52,14 @@ const Admin = () => {
       setBrands(data.brands ?? []);
       setNewOrders(data.newOrders ?? 0);
       await loadGuides();
+      await adminFetch('?action=categories')
+        .then((r) => r.json())
+        .then((d) =>
+          setCatalogCategories(
+            ((d.categories ?? []) as { name: string }[]).map((c) => c.name),
+          ),
+        )
+        .catch(() => undefined);
     } finally {
       setLoading(false);
     }
@@ -174,13 +184,14 @@ const Admin = () => {
     [products, search],
   );
 
+  // Справочник категорий; категория старого товара тоже остаётся в списке
   const categories = useMemo(() => {
-    const set: string[] = [];
+    const set = [...catalogCategories];
     products.forEach((p) => {
       if (p.category && !set.includes(p.category)) set.push(p.category);
     });
     return set;
-  }, [products]);
+  }, [products, catalogCategories]);
 
   if (checking) {
     return (
@@ -264,6 +275,7 @@ const Admin = () => {
               ['products', `Товары (${products.length})`],
               ['guides', `Инструкции (${guides.length})`],
               ['brands', `Марки (${brands.length})`],
+              ['categories', `Категории (${categories.length})`],
               ['site', 'Сайт'],
               ['settings', 'Настройки'],
             ] as const
@@ -362,6 +374,8 @@ const Admin = () => {
         {tab === 'brands' && (
           <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
         )}
+
+        {tab === 'categories' && <CategoriesEditor onSaved={load} />}
 
         {tab === 'site' && <SitePanel onSaved={load} categories={categories} />}
 

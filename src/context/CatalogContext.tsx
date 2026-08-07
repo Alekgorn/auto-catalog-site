@@ -21,6 +21,7 @@ import {
 export interface PrerenderData {
   products?: Product[];
   brands?: Brand[];
+  categories?: string[];
   guides?: Guide[];
   settings?: {
     card_fields?: string[];
@@ -47,7 +48,7 @@ interface CatalogValue {
 
 const CatalogContext = createContext<CatalogValue | null>(null);
 
-const DEFAULT_CARD_FIELDS = ['mount', 'warranty'];
+const DEFAULT_CARD_FIELDS = ['warranty'];
 
 /** Данные, вшитые в HTML на этапе сборки, чтобы первый экран не ждал сеть. */
 const bootData = (): PrerenderData | null => {
@@ -93,6 +94,9 @@ export const CatalogProvider = ({
   const [shortcuts, setShortcuts] = useState<HeroShortcut[]>(
     seed?.settings?.shortcuts?.length ? seed.settings.shortcuts : DEFAULT_SHORTCUTS,
   );
+  const [catalogCategories, setCatalogCategories] = useState<string[]>(
+    seed?.categories ?? [],
+  );
   const [loading, setLoading] = useState(!seed && !isPrerender);
   const [tick, setTick] = useState(0);
 
@@ -112,6 +116,9 @@ export const CatalogProvider = ({
         }
         if (Array.isArray(data.guides)) {
           setGuides(data.guides);
+        }
+        if (Array.isArray(data.categories)) {
+          setCatalogCategories(data.categories);
         }
         if (Array.isArray(data.settings?.card_fields)) {
           setCardFields(data.settings.card_fields);
@@ -140,13 +147,14 @@ export const CatalogProvider = ({
     };
   }, [tick, isPrerender]);
 
+  // Порядок категорий задаётся в админке; товары без категории тоже показываем
   const categories = useMemo(() => {
-    const set: string[] = [];
+    const set = [...catalogCategories];
     products.forEach((p) => {
-      if (!set.includes(p.category)) set.push(p.category);
+      if (p.category && !set.includes(p.category)) set.push(p.category);
     });
     return set;
-  }, [products]);
+  }, [products, catalogCategories]);
 
   const value: CatalogValue = {
     products,

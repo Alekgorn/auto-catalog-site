@@ -28,7 +28,7 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            f"SELECT slug, sku, name, category, price, old_price, mount, install, warranty, "
+            f"SELECT slug, sku, name, category, price, old_price, install, warranty, "
             f"year_from, year_to, badge, images, description, specs, kit, fits, popularity "
             f"FROM {schema}.products WHERE is_active = TRUE ORDER BY sort_order, id"
         )
@@ -41,7 +41,6 @@ def handler(event: dict, context) -> dict:
                 'category': r['category'],
                 'price': r['price'],
                 'oldPrice': r['old_price'],
-                'mount': r['mount'],
                 'install': r['install'],
                 'warranty': r['warranty'],
                 'years': [r['year_from'], r['year_to']],
@@ -72,6 +71,12 @@ def handler(event: dict, context) -> dict:
             f"JOIN {schema}.products p ON p.id = pg.product_id"
         )
         links = cur.fetchall()
+
+        cur.execute(
+            f"SELECT name FROM {schema}.categories WHERE is_active "
+            f"ORDER BY sort_order, name"
+        )
+        category_rows = [c['name'] for c in cur.fetchall()]
 
         cur.execute(f"SELECT key, value FROM {schema}.settings")
         settings = {s['key']: s['value'] for s in cur.fetchall()}
@@ -111,6 +116,7 @@ def handler(event: dict, context) -> dict:
             {
                 'products': products,
                 'brands': brands,
+                'categories': category_rows,
                 'guides': guides,
                 'settings': settings,
             },

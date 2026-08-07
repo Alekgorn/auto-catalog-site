@@ -7,7 +7,6 @@ export interface AdminProduct {
   category: string;
   price: number;
   oldPrice: number | null;
-  mount: string;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -29,7 +28,6 @@ export const emptyProduct = (): AdminProduct => ({
   category: '',
   price: 0,
   oldPrice: null,
-  mount: '',
   install: '',
   warranty: '',
   yearFrom: 2015,

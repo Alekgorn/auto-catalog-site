@@ -104,7 +104,6 @@ def row_to_product(r: dict) -> dict:
         'category': r['category'],
         'price': r['price'],
         'oldPrice': r['old_price'],
-        'mount': r['mount'],
         'install': r['install'],
         'warranty': r['warranty'],
         'yearFrom': r['year_from'],
@@ -183,7 +182,6 @@ XLS_COLUMNS = [
     ('category', 'Категория', 18),
     ('price', 'Цена', 12),
     ('oldPrice', 'Старая цена', 13),
-    ('mount', 'Точки крепления', 30),
     ('warranty', 'Гарантия', 12),
     ('yearFrom', 'Год с', 8),
     ('yearTo', 'Год по', 8),
@@ -270,7 +268,6 @@ def build_xlsx(products: list, brands: list) -> bytes:
             'category': p.get('category', ''),
             'price': p.get('price', 0),
             'oldPrice': p.get('oldPrice'),
-            'mount': p.get('mount', ''),
             'warranty': p.get('warranty', ''),
             'yearFrom': p.get('yearFrom', ''),
             'yearTo': p.get('yearTo', ''),
@@ -380,7 +377,6 @@ def parse_xlsx(data: bytes) -> tuple:
             'category': str(get('category')).strip(),
             'price': as_int('price', 0) or 0,
             'oldPrice': as_int('oldPrice'),
-            'mount': str(get('mount')).strip(),
             'warranty': str(get('warranty')).strip(),
             'yearFrom': as_int('yearFrom', 2010),
             'yearTo': as_int('yearTo', 2026),
@@ -573,7 +569,6 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'category': q(str(p.get('category', '')).strip()[:64] or 'Другое'),
             'price': qint(p.get('price'), 0),
             'old_price': qint(p.get('oldPrice')),
-            'mount': q(str(p.get('mount', ''))[:255]),
             'install': q(str(p.get('install', ''))[:64]),
             'warranty': q(str(p.get('warranty', ''))[:64]),
             'year_from': qint(p.get('yearFrom'), 2010),
@@ -686,6 +681,68 @@ def handler(event: dict, context) -> dict:
             if not data_url.startswith('data:'):
                 return resp(400, {'error': 'Некорректный файл'})
             return resp(200, {'url': upload_image(data_url)})
+
+        if action == 'categories':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT c.name, c.sort_order, c.is_active, "
+                    f"(SELECT COUNT(*) FROM {schema()}.products p WHERE p.category = c.name) AS products "
+                    f"FROM {schema()}.categories c WHERE c.is_active "
+                    f"ORDER BY c.sort_order, c.name"
+                )
+                items = [
+                    {
+                        'name': r['name'],
+                        'sortOrder': r['sort_order'],
+                        'products': int(r['products']),
+                    }
+                    for r in cur.fetchall()
+                ]
+                cur.close()
+                return resp(200, {'categories': items})
+
+            if method == 'PUT':
+                items = body.get('categories') or []
+                # Прячем все, затем возвращаем присланные — так удаление не теряет товары
+                cur.execute(f"UPDATE {schema()}.categories SET is_active = FALSE")
+                for i, item in enumerate(items):
+                    name = str(item.get('name', '')).strip()[:128]
+                    if not name:
+                        continue
+                    old = str(item.get('oldName', '')).strip()[:128]
+                    order = (i + 1) * 10
+                    if old and old != name:
+                        # Переименование — тянем за собой товары
+                        cur.execute(
+                            f"UPDATE {schema()}.products SET category = {q(name)}, "
+                            f"updated_at = NOW() WHERE category = {q(old)}"
+                        )
+                        cur.execute(
+                            f"UPDATE {schema()}.categories SET name = {q(name)}, "
+                            f"sort_order = {order}, is_active = TRUE WHERE name = {q(old)}"
+                        )
+                        continue
+                    cur.execute(
+                        f"SELECT id FROM {schema()}.categories WHERE name = {q(name)}"
+                    )
+                    if cur.fetchone():
+                        cur.execute(
+                            f"UPDATE {schema()}.categories SET sort_order = {order}, "
+                            f"is_active = TRUE WHERE name = {q(name)}"
+                        )
+                    else:
+                        slug = 'cat-' + uuid.uuid4().hex[:8]
+                        cur.execute(
+                            f"INSERT INTO {schema()}.categories (slug, name, sort_order) "
+                            f"VALUES ({q(slug)}, {q(name)}, {order})"
+                        )
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
 
         if action == 'brands' and method == 'PUT':
             brands = body.get('brands', [])
@@ -950,7 +1007,6 @@ def handler(event: dict, context) -> dict:
                 'category': q(category),
                 'price': qint(body.get('price'), 0),
                 'old_price': qint(body.get('oldPrice')),
-                'mount': q(str(body.get('mount', ''))),
                 'install': q(str(body.get('install', ''))),
                 'warranty': q(str(body.get('warranty', ''))),
                 'year_from': qint(body.get('yearFrom'), 2010),

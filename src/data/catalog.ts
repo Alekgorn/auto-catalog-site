@@ -8,7 +8,6 @@ export interface Product {
   category: Category;
   price: number;
   oldPrice?: number;
-  mount: string;
   install: string;
   warranty: string;
   fits: Record<string, string[]>; // марка -> модели
@@ -72,7 +71,6 @@ export const PRODUCTS: Product[] = [
     category: "Android-магнитолы",
     price: 24900,
     oldPrice: 28900,
-    mount: "штатная шахта 2DIN",
     install: "",
     warranty: "2 года",
     years: [2012, 2019],
@@ -90,7 +88,6 @@ export const PRODUCTS: Product[] = [
     name: "Android-магнитола 1DIN с выдвижным экраном 7\"",
     category: "Android-магнитолы",
     price: 18900,
-    mount: "универсальная шахта 1DIN",
     install: "",
     warranty: "2 года",
     years: [2005, 2026],
@@ -108,7 +105,6 @@ export const PRODUCTS: Product[] = [
     category: "Камеры и парктроники",
     price: 4900,
     oldPrice: 6200,
-    mount: "штатное место подсветки номера",
     install: "",
     warranty: "2 года",
     years: [2010, 2026],
@@ -126,7 +122,6 @@ export const PRODUCTS: Product[] = [
     name: "Камера переднего вида в решётку радиатора",
     category: "Камеры и парктроники",
     price: 5400,
-    mount: "решётка радиатора / эмблема",
     install: "",
     warranty: "2 года",
     years: [2012, 2026],
@@ -144,7 +139,6 @@ export const PRODUCTS: Product[] = [
     category: "Камеры и парктроники",
     price: 6800,
     oldPrice: 8400,
-    mount: "врезка в бампер, 8 датчиков",
     install: "",
     warranty: "1 год",
     years: [2005, 2026],
@@ -162,7 +156,6 @@ export const PRODUCTS: Product[] = [
     category: "Видеорегистраторы",
     price: 12900,
     oldPrice: 15400,
-    mount: "кронштейн на лобовое",
     install: "",
     warranty: "2 года",
     years: [2005, 2026],
@@ -180,7 +173,6 @@ export const PRODUCTS: Product[] = [
     name: "Регистратор-зеркало с камерой заднего вида",
     category: "Видеорегистраторы",
     price: 9400,
-    mount: "накладка на штатное зеркало",
     install: "",
     warranty: "1 год",
     years: [2005, 2026],
@@ -197,7 +189,6 @@ export const PRODUCTS: Product[] = [
     name: "Жгут проводки ISO с CAN-модулем для Mazda",
     category: "Жгуты и адаптеры",
     price: 3900,
-    mount: "штатный разъём Mazda (JAE)",
     install: "",
     warranty: "2 года",
     years: [2012, 2022],
@@ -214,7 +205,6 @@ export const PRODUCTS: Product[] = [
     name: "Переходная рамка 2DIN под Kia Rio",
     category: "Жгуты и адаптеры",
     price: 2400,
-    mount: "штатная панель",
     install: "",
     warranty: "1 год",
     years: [2017, 2023],
@@ -232,7 +222,6 @@ export const PRODUCTS: Product[] = [
     category: "Комплектующие для установщиков",
     price: 2900,
     oldPrice: 3600,
-    mount: "кейс с секциями",
     install: "",
     warranty: "—",
     years: [2005, 2026],
@@ -250,7 +239,6 @@ export const PRODUCTS: Product[] = [
     name: "Термоусадка с клеевым слоем, набор 320 шт",
     category: "Комплектующие для установщиков",
     price: 1400,
-    mount: "кейс с секциями",
     install: "",
     warranty: "—",
     years: [2005, 2026],
@@ -268,7 +256,6 @@ export const PRODUCTS: Product[] = [
     category: "Акустика и шумоизоляция",
     price: 4200,
     oldPrice: 5100,
-    mount: "штатное место двери 16.5 см",
     install: "",
     warranty: "1 год",
     years: [2005, 2026],
@@ -315,7 +302,6 @@ export const productSpecs = (p: Product): [string, string][] =>
     ? p.specs
     : [
         ['Категория', p.category],
-        ['Место установки', p.mount],
         ['Годы выпуска авто', `${p.years[0]}—${p.years[1]}`],
         ['Гарантия', p.warranty],
         ['Артикул', productSku(p)],
@@ -324,7 +310,6 @@ export const productSpecs = (p: Product): [string, string][] =>
 
 export const CARD_FIELDS: { key: string; label: string; get: (p: Product) => string }[] = [
   { key: 'sku', label: 'Артикул', get: (p) => productSku(p) },
-  { key: 'mount', label: 'Крепление', get: (p) => p.mount },
   { key: 'warranty', label: 'Гарантия', get: (p) => p.warranty },
   { key: 'category', label: 'Категория', get: (p) => p.category },
   { key: 'years', label: 'Годы авто', get: (p) => `${p.years[0]}—${p.years[1]}` },
@@ -339,7 +324,7 @@ export const searchProducts = (products: Product[], query: string): Product[] =>
     const models = Object.entries(p.fits)
       .map(([b, m]) => `${b} ${m.join(' ')}`)
       .join(' ');
-    const haystack = `${p.name} ${p.category} ${productSku(p)} ${p.mount} ${models}`.toLowerCase();
+    const haystack = `${p.name} ${p.category} ${productSku(p)} ${models}`.toLowerCase();
 
     if (productSku(p).toLowerCase() === q) return { p, score: 1000 };
 
