@@ -4,12 +4,16 @@ import Product from './pages/Product';
 import NotFound from './pages/NotFound';
 import Admin from './pages/Admin';
 import Guides from './pages/Guides';
+import CategoryPage from './pages/CategoryPage';
+import BrandPage from './pages/BrandPage';
 import GuidePage from './pages/GuidePage';
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/product/:id" element={<Product />} />
+    <Route path="/catalog/:slug" element={<CategoryPage />} />
+    <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />
     <Route path="/guides/:slug" element={<GuidePage />} />
     <Route path="/admin" element={<Admin />} />

@@ -1,20 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useCatalog } from '@/context/CatalogContext';
 import { telHref } from '@/lib/site-settings';
+import { slugify } from '@/lib/slug';
 
 const COLS: { title: string; links: string[]; target?: string; route?: string }[] = [
-  {
-    title: 'Каталог',
-    links: [
-      'Android-магнитолы',
-      'Камеры и парктроники',
-      'Видеорегистраторы',
-      'Жгуты и адаптеры',
-      'Переходные рамки',
-      'Комплектующие',
-    ],
-    target: 'catalog',
-  },
   {
     title: 'Покупателю',
     links: ['Подбор по авто', 'Доставка', 'Оплата', 'Возврат', 'Гарантия'],
@@ -39,7 +28,7 @@ const hrefFor = (col: { target?: string; route?: string }) =>
   col.route ?? `/#${col.target ?? ''}`;
 
 const Footer = () => {
-  const { products, contacts } = useCatalog();
+  const { products, contacts, categories, brands } = useCatalog();
 
   return (
   <footer className="section-pad bg-background">
@@ -54,6 +43,25 @@ const Footer = () => {
           Автоэлектроника и комплектующие с подбором по марке, модели и году выпуска.
         </p>
       </div>
+
+      {categories.length > 0 && (
+        <div className="md:col-span-2">
+          <div className="eyebrow">Каталог</div>
+          <ul className="mt-4 space-y-2 text-[0.9rem]">
+            {categories.map((c) => (
+              <li key={c}>
+                <Link
+                  to={`/catalog/${slugify(c)}`}
+                  onClick={() => window.scrollTo({ top: 0 })}
+                  className="text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {c}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {COLS.map((col) => (
         <div key={col.title} className="md:col-span-2 md:col-start-auto">
@@ -100,6 +108,28 @@ const Footer = () => {
         </div>
       </div>
     </div>
+
+    {brands.length > 0 && (
+      <>
+        <div className="rule-hair" />
+        <nav aria-label="Подбор по маркам" className="py-6">
+          <div className="eyebrow">Оборудование по маркам авто</div>
+          <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[0.82rem]">
+            {brands.map((b) => (
+              <li key={b.name}>
+                <Link
+                  to={`/brand/${slugify(b.name)}`}
+                  onClick={() => window.scrollTo({ top: 0 })}
+                  className="text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {b.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </>
+    )}
 
     {products.length > 0 && (
       <>
