@@ -35,9 +35,13 @@ const Footer = () => {
     <div className="rule" />
     <div className="grid grid-cols-2 gap-x-6 gap-y-10 py-12 md:grid-cols-12">
       <div className="col-span-2 md:col-span-3">
-        <div className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]">
-          <span className="block h-4 w-4 flex-none bg-primary" />
-          Штатно
+        <div className="flex items-center gap-2.5">
+          <span className="relative block h-5 w-5 flex-none bg-primary">
+            <span className="absolute inset-[5px] bg-primary-foreground" />
+          </span>
+          <span className="wordmark text-[1.6rem] leading-none">
+            Штат<span className="text-primary">но</span>
+          </span>
         </div>
         <p className="mt-4 max-w-[22em] text-[0.88rem] leading-relaxed text-muted-foreground">
           Автоэлектроника и комплектующие с подбором по марке, модели и году выпуска.

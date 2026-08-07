@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SectionHead from '@/components/SectionHead';
-import ProductCard from '@/components/ProductCard';
+import BentoGrid from '@/components/BentoGrid';
 import NotFound from '@/pages/NotFound';
 import { useCatalog } from '@/context/CatalogContext';
 import { SITE_URL } from '@/lib/seo';
@@ -113,10 +113,8 @@ const BrandPage = () => {
                   {list.length}
                 </span>
               </h2>
-              <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {list.map((p) => (
-                  <ProductCard key={p.id} product={p} vehicle={vehicle} />
-                ))}
+              <div className="mt-5">
+                <BentoGrid products={list} vehicle={vehicle} />
               </div>
             </div>
           ))

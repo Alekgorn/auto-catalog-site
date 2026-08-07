@@ -4,7 +4,7 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SectionHead from '@/components/SectionHead';
-import ProductCard from '@/components/ProductCard';
+import BentoGrid from '@/components/BentoGrid';
 import CatalogFilters, { FilterState, SortKey } from '@/components/CatalogFilters';
 import NotFound from '@/pages/NotFound';
 import { useCatalog } from '@/context/CatalogContext';
@@ -263,10 +263,8 @@ const CategoryPage = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 py-8 sm:grid-cols-2 xl:grid-cols-3">
-                {list.map((p) => (
-                  <ProductCard key={p.id} product={p} vehicle={vehicle} />
-                ))}
+              <div className="py-8">
+                <BentoGrid products={list} vehicle={vehicle} />
               </div>
             )}
           </div>
