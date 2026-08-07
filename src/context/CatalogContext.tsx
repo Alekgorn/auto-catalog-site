@@ -30,6 +30,7 @@ export interface PrerenderData {
     faq?: FaqItem[];
     filter_blocks?: FilterBlockKey[];
     shortcuts?: HeroShortcut[];
+    shortcuts_hidden?: boolean;
   };
 }
 
@@ -44,6 +45,7 @@ interface CatalogValue {
   faq: FaqItem[];
   filterBlocks: FilterBlockKey[];
   shortcuts: HeroShortcut[];
+  shortcutsHidden: boolean;
   loading: boolean;
   reload: () => void;
 }
@@ -96,6 +98,9 @@ export const CatalogProvider = ({
   const [shortcuts, setShortcuts] = useState<HeroShortcut[]>(
     seed?.settings?.shortcuts?.length ? seed.settings.shortcuts : DEFAULT_SHORTCUTS,
   );
+  const [shortcutsHidden, setShortcutsHidden] = useState<boolean>(
+    seed?.settings?.shortcuts_hidden === true,
+  );
   const [catalogCategories, setCatalogCategories] = useState<string[]>(
     seed?.categories ?? [],
   );
@@ -143,6 +148,7 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.shortcuts) && data.settings.shortcuts.length) {
           setShortcuts(data.settings.shortcuts);
         }
+        setShortcutsHidden(data.settings?.shortcuts_hidden === true);
       })
       .catch(() => {
         /* остаёмся на встроенных данных */
@@ -175,6 +181,7 @@ export const CatalogProvider = ({
     faq,
     filterBlocks,
     shortcuts,
+    shortcutsHidden,
     loading,
     reload: () => setTick((t) => t + 1),
   };

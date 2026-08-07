@@ -38,6 +38,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
   const [faq, setFaq] = useState<FaqItem[]>(DEFAULT_FAQ);
   const [blocks, setBlocks] = useState<FilterBlockKey[]>(DEFAULT_FILTER_BLOCKS);
   const [shortcuts, setShortcuts] = useState<HeroShortcut[]>(DEFAULT_SHORTCUTS);
+  const [shortcutsHidden, setShortcutsHidden] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -49,6 +50,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
         if (Array.isArray(s.faq) && s.faq.length) setFaq(s.faq);
         if (Array.isArray(s.filter_blocks)) setBlocks(s.filter_blocks);
         if (Array.isArray(s.shortcuts) && s.shortcuts.length) setShortcuts(s.shortcuts);
+        setShortcutsHidden(s.shortcuts_hidden === true);
       })
       .catch(() => undefined);
   }, []);
@@ -64,6 +66,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
           faq: clean,
           filter_blocks: blocks,
           shortcuts: shortcuts.filter((x) => x.label.trim()),
+          shortcuts_hidden: shortcutsHidden,
         },
       }),
     });
@@ -223,6 +226,8 @@ const SitePanel = ({ onSaved, categories }: Props) => {
         <ShortcutsEditor
           value={shortcuts}
           categories={categories}
+          hidden={shortcutsHidden}
+          onHidden={setShortcutsHidden}
           onChange={setShortcuts}
         />
       </div>

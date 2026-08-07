@@ -24,7 +24,7 @@ interface Props {
 }
 
 const Hero = (props: Props) => {
-  const { shortcuts } = useCatalog();
+  const { shortcuts, shortcutsHidden } = useCatalog();
 
   return (
   <section className="section-pad flex flex-col">
@@ -53,6 +53,7 @@ const Hero = (props: Props) => {
           <b className="font-medium text-foreground">с подбором по модели</b>.
         </p>
 
+        {!shortcutsHidden && shortcuts.length > 0 && (
         <div
           className="rise ml-0 mt-7 flex flex-wrap gap-2 md:ml-4"
           style={{ animationDelay: '.35s' }}
@@ -76,6 +77,7 @@ const Hero = (props: Props) => {
             </button>
           ))}
         </div>
+        )}
       </div>
 
       <div className="relative flex h-[240px] flex-col py-4 md:col-span-6 md:h-[320px] md:py-6 md:pl-4">

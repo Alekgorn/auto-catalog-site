@@ -6,6 +6,9 @@ import { HeroShortcut } from '@/lib/site-settings';
 interface Props {
   value: HeroShortcut[];
   categories: string[];
+  /** Кнопки полностью убраны с главной */
+  hidden: boolean;
+  onHidden: (v: boolean) => void;
   onChange: (list: HeroShortcut[]) => void;
 }
 
@@ -14,7 +17,7 @@ const input =
 
 const isImage = (icon: string) => /^(https?:)?\//.test(icon);
 
-const ShortcutsEditor = ({ value, categories, onChange }: Props) => {
+const ShortcutsEditor = ({ value, categories, hidden, onHidden, onChange }: Props) => {
   const [busy, setBusy] = useState<number | null>(null);
 
   const setAt = (i: number, patch: Partial<HeroShortcut>) =>
@@ -62,14 +65,35 @@ const ShortcutsEditor = ({ value, categories, onChange }: Props) => {
           onClick={() =>
             onChange([...value, { label: '', category: '', icon: 'Tag' }])
           }
-          className="flex flex-none items-center gap-2 border border-foreground px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+          disabled={hidden}
+          className="flex flex-none items-center gap-2 border border-foreground px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground"
         >
           <Icon name="Plus" size={14} />
           Кнопка
         </button>
       </div>
 
-      <div className="mt-6 space-y-4">
+      <label className="mt-6 flex cursor-pointer items-start gap-3 border border-border bg-surface p-4">
+        <input
+          type="checkbox"
+          checked={hidden}
+          onChange={(e) => onHidden(e.target.checked)}
+          className="mt-0.5 h-4 w-4 flex-none cursor-pointer accent-primary"
+        />
+        <span>
+          <span className="block text-[0.95rem] font-medium">
+            Скрыть кнопки с главной страницы
+          </span>
+          <span className="mt-1 block text-[0.85rem] text-muted-foreground">
+            Блок исчезнет полностью. Настройки кнопок сохранятся — снимете
+            галочку, и они вернутся в прежнем виде.
+          </span>
+        </span>
+      </label>
+
+      <div
+        className={`mt-6 space-y-4 ${hidden ? 'pointer-events-none opacity-40' : ''}`}
+      >
         {value.map((s, i) => (
           <div key={i} className="border border-border p-4">
             <div className="flex items-start gap-4">
