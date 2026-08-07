@@ -28,7 +28,7 @@ import { useCatalog } from '@/context/CatalogContext';
 
 const Product = () => {
   const { id } = useParams();
-  const { products, guides, loading, categorySpecs } = useCatalog();
+  const { products, guides, loading } = useCatalog();
   const product = useMemo(
     () => products.find((p) => p.id === id) ?? null,
     [id, products],
@@ -55,20 +55,6 @@ const Product = () => {
     setQty(1);
     setOpenGuides([]);
   }, [id]);
-
-  // Характеристики, заданные для категории в админке
-  const categoryRows = useMemo(() => {
-    if (!product) return [];
-    const wanted = categorySpecs[product.category] ?? [];
-    if (!wanted.length) return [];
-    const all = productSpecs(product);
-    return wanted
-      .map((field) => {
-        const hit = all.find(([k]) => k.trim().toLowerCase() === field.trim().toLowerCase());
-        return hit ? ([field, hit[1]] as [string, string]) : null;
-      })
-      .filter((x): x is [string, string] => !!x);
-  }, [product, categorySpecs]);
 
   const seo = useMemo(() => {
     if (!product) return null;
@@ -322,25 +308,6 @@ const Product = () => {
                 </div>
               </dl>
 
-              {categoryRows.length > 0 && (
-                <div className="mt-10">
-                  <div className="eyebrow">{product.category}</div>
-                  <h3 className="mt-3 font-head text-xl font-bold uppercase tracking-tight">
-                    Параметры категории
-                  </h3>
-                  <dl className="mt-5 text-[0.9rem]">
-                    {categoryRows.map(([k, v]) => (
-                      <div
-                        key={k}
-                        className="flex justify-between gap-6 border-b border-border py-3"
-                      >
-                        <dt className="text-muted-foreground">{k}</dt>
-                        <dd className="text-right">{v}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-              )}
             </div>
           </div>
         </section>

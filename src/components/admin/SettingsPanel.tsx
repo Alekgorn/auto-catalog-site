@@ -92,7 +92,9 @@ const SettingsPanel = ({ onImported }: Props) => {
         title: data.skipped ? 'Загружено с замечаниями' : 'Каталог обновлён',
         description: data.skipped
           ? `Добавлено: ${data.created}, обновлено: ${data.updated}. Пропущено строк: ${data.skipped} — проверьте их в файле.`
-          : `Добавлено: ${data.created}, обновлено: ${data.updated}`,
+          : `Добавлено: ${data.created}, обновлено: ${data.updated}${
+              data.categories ? `, категорий: ${data.categories}` : ''
+            }`,
       });
       onImported();
     } catch {

@@ -9,6 +9,7 @@ import {
   isCompatible,
   productImages,
   productSku,
+  productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
@@ -21,12 +22,27 @@ interface Props {
 const ProductCard = ({ product, vehicle }: Props) => {
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
-  const { cardFields } = useCatalog();
+  const { cardFields, categorySpecs } = useCatalog();
   const inCart = has(product.id);
 
   const rows = CARD_FIELDS.filter((f) => cardFields.includes(f.key))
     .map((f) => ({ label: f.label, value: f.get(product) }))
     .filter((r) => r.value);
+
+  // Важные параметры категории — видны сразу, без захода в товар
+  const categoryRows = (() => {
+    const wanted = categorySpecs[product.category] ?? [];
+    if (!wanted.length) return [];
+    const all = productSpecs(product);
+    return wanted
+      .map((field) => {
+        const hit = all.find(
+          ([k]) => k.trim().toLowerCase() === field.trim().toLowerCase(),
+        );
+        return hit ? { label: field, value: hit[1] } : null;
+      })
+      .filter((x): x is { label: string; value: string } => !!x);
+  })();
 
   return (
     <article className="group flex flex-col bg-surface p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
@@ -70,6 +86,20 @@ const ProductCard = ({ product, vehicle }: Props) => {
       {rows.length > 0 && (
         <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">
           {rows.map((r) => (
+            <div
+              key={r.label}
+              className="flex justify-between gap-4 border-b border-border pb-2"
+            >
+              <dt>{r.label}</dt>
+              <dd className="text-right text-foreground">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {categoryRows.length > 0 && (
+        <dl className="mt-4 space-y-2 text-[0.82rem] text-muted-foreground">
+          {categoryRows.map((r) => (
             <div
               key={r.label}
               className="flex justify-between gap-4 border-b border-border pb-2"

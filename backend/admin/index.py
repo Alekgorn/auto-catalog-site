@@ -243,7 +243,7 @@ def text_to_list(text: str, sep: str) -> list:
     return [p.strip() for p in str(text or '').split(sep) if p.strip()]
 
 
-def build_xlsx(products: list, brands: list) -> bytes:
+def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
     wb = Workbook()
     head_font = Font(bold=True, color='FFFFFF', size=10)
     head_fill = PatternFill('solid', fgColor='1B1B1B')
@@ -296,6 +296,22 @@ def build_xlsx(products: list, brands: list) -> bytes:
         wsb.cell(row=r, column=1, value=b.get('name', ''))
         wsb.cell(row=r, column=2, value=', '.join(b.get('models') or []))
 
+    wsc = wb.create_sheet('Категории')
+    for i, title in enumerate(
+        ['Категория', 'Порядок', 'Характеристики категории (через запятую)'], start=1
+    ):
+        cell = wsc.cell(row=1, column=i, value=title)
+        cell.font = head_font
+        cell.fill = head_fill
+    wsc.column_dimensions['A'].width = 30
+    wsc.column_dimensions['B'].width = 10
+    wsc.column_dimensions['C'].width = 60
+    wsc.freeze_panes = 'A2'
+    for r, c in enumerate(categories or [], start=2):
+        wsc.cell(row=r, column=1, value=c.get('name', ''))
+        wsc.cell(row=r, column=2, value=c.get('sortOrder', (r - 1) * 10))
+        wsc.cell(row=r, column=3, value=', '.join(c.get('specFields') or []))
+
     wsh = wb.create_sheet('Как заполнять')
     tips = [
         ['Подсказка', 'Что важно знать'],
@@ -309,6 +325,7 @@ def build_xlsx(products: list, brands: list) -> bytes:
         ['Характеристики', 'Формат: Гарантия=5 лет; Материал=сталь 2 мм'],
         ['Комплектация', 'Пункты через точку с запятой.'],
         ['Марки и модели', 'Отдельный лист. Модели одной марки — через запятую.'],
+        ['Категории', 'Отдельный лист. Порядок задаёт вид фильтра на сайте. Характеристики категории показываются в каталоге под товаром.'],
         ['Загрузка', 'Ничего не удаляется: совпавшие товары обновятся, новые добавятся.'],
     ]
     for r, row in enumerate(tips, start=1):
@@ -330,6 +347,7 @@ def parse_xlsx(data: bytes) -> tuple:
     wb = load_workbook(io.BytesIO(data), data_only=True)
     products = []
     brands = []
+    categories = []
 
     titles = {t: k for k, t, _w in XLS_COLUMNS}
 
@@ -402,7 +420,23 @@ def parse_xlsx(data: bytes) -> tuple:
                 'models': [m.strip() for m in models.split(',') if m.strip()],
             })
 
-    return products, brands
+    if 'Категории' in wb.sheetnames:
+        wsc = wb['Категории']
+        for row in wsc.iter_rows(min_row=2, values_only=True):
+            if not row or not row[0]:
+                continue
+            fields = str(row[2] or '') if len(row) > 2 else ''
+            try:
+                order = int(row[1]) if len(row) > 1 and row[1] is not None else 0
+            except (TypeError, ValueError):
+                order = 0
+            categories.append({
+                'name': str(row[0]).strip(),
+                'sortOrder': order,
+                'specFields': [f.strip() for f in fields.split(',') if f.strip()],
+            })
+
+    return products, brands, categories
 
 
 def build_brands_xlsx(brands: list) -> bytes:
@@ -439,6 +473,22 @@ def build_brands_xlsx(brands: list) -> bytes:
             ws.cell(row=row, column=2, value=m)
             ws.cell(row=row, column=3, value=(i + 1) * 10)
             row += 1
+
+    wsc = wb.create_sheet('Категории')
+    for i, title in enumerate(
+        ['Категория', 'Порядок', 'Характеристики категории (через запятую)'], start=1
+    ):
+        cell = wsc.cell(row=1, column=i, value=title)
+        cell.font = head_font
+        cell.fill = head_fill
+    wsc.column_dimensions['A'].width = 30
+    wsc.column_dimensions['B'].width = 10
+    wsc.column_dimensions['C'].width = 60
+    wsc.freeze_panes = 'A2'
+    for r, c in enumerate(categories or [], start=2):
+        wsc.cell(row=r, column=1, value=c.get('name', ''))
+        wsc.cell(row=r, column=2, value=c.get('sortOrder', (r - 1) * 10))
+        wsc.cell(row=r, column=3, value=', '.join(c.get('specFields') or []))
 
     wsh = wb.create_sheet('Как заполнять')
     tips = [
@@ -546,6 +596,38 @@ def make_slug(name: str, taken: set) -> str:
     return slug
 
 
+def import_categories(conn, items: list) -> int:
+    """Сохраняет лист «Категории»: порядок и набор характеристик."""
+    if not items:
+        return 0
+    cur = conn.cursor()
+    saved = 0
+    for i, item in enumerate(items):
+        name = str(item.get('name', '')).strip()[:128]
+        if not name:
+            continue
+        order = int(item.get('sortOrder') or 0) or (i + 1) * 10
+        fields = [
+            str(f).strip()[:64] for f in (item.get('specFields') or []) if str(f).strip()
+        ]
+        cur.execute(f"SELECT id FROM {schema()}.categories WHERE name = {q(name)}")
+        if cur.fetchone():
+            cur.execute(
+                f"UPDATE {schema()}.categories SET sort_order = {order}, "
+                f"spec_fields = {qjson(fields)}, is_active = TRUE WHERE name = {q(name)}"
+            )
+        else:
+            slug = 'cat-' + uuid.uuid4().hex[:8]
+            cur.execute(
+                f"INSERT INTO {schema()}.categories (slug, name, sort_order, spec_fields) "
+                f"VALUES ({q(slug)}, {q(name)}, {order}, {qjson(fields)})"
+            )
+        saved += 1
+    conn.commit()
+    cur.close()
+    return saved
+
+
 def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
     cur = conn.cursor()
     created = 0
@@ -617,6 +699,15 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             f"VALUES ({q(bname)}, {qjson(models)}, {(i + 1) * 10}) "
             f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models"
         )
+
+    # Категории из загруженных товаров должны появиться в справочнике
+    cur.execute(
+        f"INSERT INTO {schema()}.categories (slug, name, sort_order) "
+        f"SELECT 'cat-' || substr(md5(random()::text), 1, 8), src.category, 999 "
+        f"FROM (SELECT DISTINCT category FROM {schema()}.products "
+        f"WHERE category IS NOT NULL AND category <> '') AS src "
+        f"WHERE NOT EXISTS (SELECT 1 FROM {schema()}.categories c WHERE c.name = src.category)"
+    )
 
     conn.commit()
     cur.close()
@@ -878,8 +969,20 @@ def handler(event: dict, context) -> dict:
             products = [row_to_product(r) for r in cur.fetchall()]
             cur.execute(f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id")
             brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+            cur.execute(
+                f"SELECT name, sort_order, spec_fields FROM {schema()}.categories "
+                f"WHERE is_active ORDER BY sort_order, name"
+            )
+            categories = [
+                {
+                    'name': c['name'],
+                    'sortOrder': c['sort_order'],
+                    'specFields': c['spec_fields'] or [],
+                }
+                for c in cur.fetchall()
+            ]
             cur.close()
-            data = build_xlsx(products, brands)
+            data = build_xlsx(products, brands, categories)
             return resp(200, {'file': base64.b64encode(data).decode('ascii')})
 
         if action == 'import-xlsx':
@@ -891,13 +994,22 @@ def handler(event: dict, context) -> dict:
             except Exception:
                 return resp(400, {'error': 'Файл не читается'})
             try:
-                in_products, in_brands = parse_xlsx(blob)
+                in_products, in_brands, in_categories = parse_xlsx(blob)
             except Exception:
                 return resp(400, {'error': 'Это не таблица Excel или структура изменена'})
-            if not in_products and not in_brands:
+            if not in_products and not in_brands and not in_categories:
                 return resp(400, {'error': 'В таблице не нашлось строк с товарами'})
             stats = import_rows(conn, in_products, in_brands, str(body.get('mode', 'merge')))
-            return resp(200, {'ok': True, 'brands': len(in_brands), **stats})
+            saved_cats = import_categories(conn, in_categories)
+            return resp(
+                200,
+                {
+                    'ok': True,
+                    'brands': len(in_brands),
+                    'categories': saved_cats,
+                    **stats,
+                },
+            )
 
         if action == 'orders':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
