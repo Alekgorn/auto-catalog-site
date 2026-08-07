@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import ProductCard from '@/components/ProductCard';
@@ -15,6 +15,10 @@ interface Props {
 }
 
 const PAGE_SIZE = 15;
+
+/** Высота прилипшей шапки с поисковой строкой */
+const HEADER_OFFSET = 150;
+const BOTTOM_GAP = 20;
 
 const SORTS: { key: SortKey; label: string }[] = [
   { key: 'popular', label: 'По популярности' },
@@ -122,6 +126,33 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
 
   const visible = useMemo(() => list.slice(0, shown), [list, shown]);
   const hasMore = shown < list.length;
+
+  const filterRef = useRef<HTMLDivElement>(null);
+  const [filterTop, setFilterTop] = useState(HEADER_OFFSET);
+
+  // Фильтр ниже экрана — прижимаем его низом, чтобы дочитать до конца.
+  // Помещается целиком — прилипает обычным образом под шапкой.
+  useEffect(() => {
+    const measure = () => {
+      const height = filterRef.current?.offsetHeight ?? 0;
+      const free = window.innerHeight - HEADER_OFFSET - BOTTOM_GAP;
+      setFilterTop(
+        height > free ? window.innerHeight - height - BOTTOM_GAP : HEADER_OFFSET,
+      );
+    };
+
+    measure();
+    window.addEventListener('resize', measure);
+
+    const observer =
+      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(measure) : null;
+    if (filterRef.current && observer) observer.observe(filterRef.current);
+
+    return () => {
+      window.removeEventListener('resize', measure);
+      observer?.disconnect();
+    };
+  }, [filters, categories.length, mounts.length, warranties.length]);
 
   const goToSelection = () => {
     document
@@ -287,9 +318,16 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
         </div>
       ) : (
       <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-12">
-        <aside className="hidden lg:col-span-3 lg:block">
-          {/* Фильтр выше экрана — прокручиваем его сам, иначе нижние поля недоступны */}
-          <div className="sticky top-[150px] my-6 max-h-[calc(100vh-170px)] overflow-y-auto overscroll-contain bg-surface p-5 shadow-panel">
+        <aside className="hidden self-start lg:col-span-3 lg:block">
+          {/*
+            Фильтр едет вместе с каталогом. Если он выше экрана — прилипает,
+            когда показался последний пункт, и дальше листается только каталог.
+          */}
+          <div
+            ref={filterRef}
+            style={{ top: filterTop }}
+            className="sticky my-6 bg-surface p-5 shadow-panel"
+          >
             {filtersNode}
           </div>
         </aside>
