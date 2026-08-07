@@ -363,7 +363,7 @@ const Admin = () => {
           <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
         )}
 
-        {tab === 'site' && <SitePanel onSaved={load} />}
+        {tab === 'site' && <SitePanel onSaved={load} categories={categories} />}
 
         {tab === 'settings' && <SettingsPanel onImported={load} />}
 

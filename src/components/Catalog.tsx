@@ -130,11 +130,11 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
   // Клик по категории в баннере — отмечаем её в фильтре
   useEffect(() => {
     const onPick = (e: Event) => {
-      const category = (e as CustomEvent<string>).detail;
-      if (!category) return;
+      const category = (e as CustomEvent<string>).detail ?? '';
       // Подбор по авто перекрывает фильтр — сбрасываем его, иначе выбор не виден
       onReset();
-      setFilters({ ...emptyState(), categories: [category] });
+      // Пустая категория — показываем весь каталог
+      setFilters({ ...emptyState(), categories: category ? [category] : [] });
     };
     window.addEventListener('catalog:filter-category', onPick);
     return () => window.removeEventListener('catalog:filter-category', onPick);

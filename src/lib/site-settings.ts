@@ -71,5 +71,23 @@ export const DEFAULT_FILTER_BLOCKS: FilterBlockKey[] = [
   'warranties',
 ];
 
+/** Кнопка-якорь под слоганом на главной. */
+export interface HeroShortcut {
+  /** Подпись на кнопке */
+  label: string;
+  /** Категория каталога, на которую ведёт кнопка. Пусто — весь каталог */
+  category: string;
+  /** Название иконки или ссылка на картинку */
+  icon: string;
+}
+
+export const DEFAULT_SHORTCUTS: HeroShortcut[] = [
+  { label: 'Магнитолы', category: 'Android-магнитолы', icon: 'Radio' },
+  { label: 'Проводка', category: 'Жгуты и адаптеры', icon: 'Cable' },
+  { label: 'Камеры', category: 'Камеры и парктроники', icon: 'Camera' },
+  { label: 'Регистраторы', category: 'Видеорегистраторы', icon: 'Video' },
+  { label: 'Весь каталог', category: '', icon: 'LayoutGrid' },
+];
+
 /** Ссылка для звонка из человекочитаемого номера. */
 export const telHref = (phone: string) => `tel:+${phone.replace(/\D/g, '')}`;

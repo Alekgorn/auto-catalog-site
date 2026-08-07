@@ -11,6 +11,8 @@ import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
   DEFAULT_FILTER_BLOCKS,
+  DEFAULT_SHORTCUTS,
+  HeroShortcut,
   FaqItem,
   FilterBlockKey,
   SiteContacts,
@@ -25,6 +27,7 @@ export interface PrerenderData {
     contacts?: Partial<SiteContacts>;
     faq?: FaqItem[];
     filter_blocks?: FilterBlockKey[];
+    shortcuts?: HeroShortcut[];
   };
 }
 
@@ -37,6 +40,7 @@ interface CatalogValue {
   contacts: SiteContacts;
   faq: FaqItem[];
   filterBlocks: FilterBlockKey[];
+  shortcuts: HeroShortcut[];
   loading: boolean;
   reload: () => void;
 }
@@ -86,6 +90,9 @@ export const CatalogProvider = ({
       ? seed.settings.filter_blocks
       : DEFAULT_FILTER_BLOCKS,
   );
+  const [shortcuts, setShortcuts] = useState<HeroShortcut[]>(
+    seed?.settings?.shortcuts?.length ? seed.settings.shortcuts : DEFAULT_SHORTCUTS,
+  );
   const [loading, setLoading] = useState(!seed && !isPrerender);
   const [tick, setTick] = useState(0);
 
@@ -118,6 +125,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.filter_blocks)) {
           setFilterBlocks(data.settings.filter_blocks);
         }
+        if (Array.isArray(data.settings?.shortcuts) && data.settings.shortcuts.length) {
+          setShortcuts(data.settings.shortcuts);
+        }
       })
       .catch(() => {
         /* остаёмся на встроенных данных */
@@ -147,6 +157,7 @@ export const CatalogProvider = ({
     contacts,
     faq,
     filterBlocks,
+    shortcuts,
     loading,
     reload: () => setTick((t) => t + 1),
   };

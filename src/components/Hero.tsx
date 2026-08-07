@@ -1,16 +1,9 @@
 import Icon from '@/components/ui/icon';
 import MountPlan from '@/components/MountPlan';
 import VehicleSelector from '@/components/VehicleSelector';
+import { useCatalog } from '@/context/CatalogContext';
 
-/** Быстрый переход к категории: имя должно совпадать с категорией товара */
-const SHORTCUTS = [
-  { label: 'Магнитолы', category: 'Android-магнитолы', icon: 'Radio' },
-  { label: 'Проводка', category: 'Жгуты и адаптеры', icon: 'Cable' },
-  { label: 'Камеры', category: 'Камеры и парктроники', icon: 'Camera' },
-  { label: 'Регистраторы', category: 'Видеорегистраторы', icon: 'Video' },
-];
-
-/** Открывает каталог с уже отмеченной категорией */
+/** Открывает каталог с отмеченной категорией. Пустая — весь каталог */
 const goToCategory = (category: string) => {
   window.dispatchEvent(
     new CustomEvent('catalog:filter-category', { detail: category }),
@@ -30,7 +23,10 @@ interface Props {
   onSubmit: () => void;
 }
 
-const Hero = (props: Props) => (
+const Hero = (props: Props) => {
+  const { shortcuts } = useCatalog();
+
+  return (
   <section className="section-pad flex flex-col">
     <div className="rule" />
 
@@ -61,13 +57,21 @@ const Hero = (props: Props) => (
           className="rise ml-0 mt-7 flex flex-wrap gap-2 md:ml-4"
           style={{ animationDelay: '.35s' }}
         >
-          {SHORTCUTS.map((s) => (
+          {shortcuts.map((s, i) => (
             <button
-              key={s.category}
+              key={`${s.label}-${i}`}
               onClick={() => goToCategory(s.category)}
-              className="flex items-center gap-2 border border-border bg-surface px-3.5 py-2.5 text-[0.78rem] transition-colors hover:border-primary hover:text-primary"
+              className={`flex items-center gap-2 border px-3.5 py-2.5 text-[0.78rem] transition-colors ${
+                s.category
+                  ? 'border-border bg-surface hover:border-primary hover:text-primary'
+                  : 'border-foreground bg-foreground text-background hover:border-primary hover:bg-primary hover:text-primary-foreground'
+              }`}
             >
-              <Icon name={s.icon} size={16} className="flex-none" />
+              {/^(https?:)?\//.test(s.icon) ? (
+                <img src={s.icon} alt="" className="h-4 w-4 flex-none object-contain" />
+              ) : (
+                <Icon name={s.icon} size={16} className="flex-none" />
+              )}
               {s.label}
             </button>
           ))}
@@ -94,6 +98,7 @@ const Hero = (props: Props) => (
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default Hero;
