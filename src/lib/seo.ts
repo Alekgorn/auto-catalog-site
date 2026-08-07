@@ -1,4 +1,4 @@
-export const SITE_URL = 'https://shtatno.ru';
+export const SITE_URL = 'https://xn--80a0adnb7a.xn--p1ai';
 
 export interface SeoData {
   title: string;

@@ -21,4 +21,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://shtatno.ru/sitemap.xml
+Sitemap: https://xn--80a0adnb7a.xn--p1ai/sitemap.xml

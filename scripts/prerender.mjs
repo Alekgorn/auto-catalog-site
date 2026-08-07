@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const PUBLIC = path.join(ROOT, 'public');
-const SITE_URL = 'https://shtatno.ru';
+const SITE_URL = 'https://xn--80a0adnb7a.xn--p1ai';
 
 const readJson = async (file) => JSON.parse(await fs.readFile(file, 'utf-8'));
 
