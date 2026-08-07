@@ -55,6 +55,21 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
 
   const [filters, setFilters] = useState<FilterState>(emptyState);
 
+  // Вернулись со страницы категории — восстанавливаем набор, который там собрали
+  useEffect(() => {
+    const raw = window.sessionStorage.getItem('shtatno.filters');
+    if (!raw) return;
+    window.sessionStorage.removeItem('shtatno.filters');
+    try {
+      const saved = JSON.parse(raw) as FilterState;
+      setFilters({ ...emptyState(), ...saved });
+      onReset();
+    } catch {
+      /* noop */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /**
    * Одна категория и больше ничего — у такой выборки есть собственная страница.
    * Уводим на неё: ссылкой можно поделиться, и её видят поисковики.
