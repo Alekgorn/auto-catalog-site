@@ -1,8 +1,8 @@
 interface Props {
   index: string;
   eyebrow: string;
-  title: string;
-  note?: string;
+  title: React.ReactNode;
+  note?: React.ReactNode;
 }
 
 const SectionHead = ({ index, eyebrow, title, note }: Props) => (

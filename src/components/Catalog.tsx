@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import ProductCard from '@/components/ProductCard';
+import CatalogGroup from '@/components/CatalogGroup';
 import CatalogFilters, { FilterState, SortKey } from '@/components/CatalogFilters';
 import { Vehicle, isCompatible } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
@@ -22,7 +23,6 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 const Catalog = ({ vehicle, onReset }: Props) => {
   const { products, categories } = useCatalog();
-  const [onlyFits, setOnlyFits] = useState(true);
   const [sort, setSort] = useState<SortKey>('popular');
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -71,10 +71,8 @@ const Catalog = ({ vehicle, onReset }: Props) => {
     return set.sort();
   }, [products]);
 
-  const base = useMemo(
-    () => products.filter((p) => !(vehicle && onlyFits && !isCompatible(p, vehicle))),
-    [products, vehicle, onlyFits],
-  );
+  // Обычный режим — весь каталог; при выбранном авто работает группировка ниже
+  const base = products;
 
   const counts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -109,21 +107,15 @@ const Catalog = ({ vehicle, onReset }: Props) => {
         return (b.popularity ?? 0) - (a.popularity ?? 0);
       });
 
-    if (vehicle && !onlyFits) {
-      sorted.sort(
-        (a, b) =>
-          Number(isCompatible(b, vehicle)) - Number(isCompatible(a, vehicle)),
-      );
-    }
     return sorted;
-  }, [base, filters, sort, vehicle, onlyFits]);
+  }, [base, filters, sort]);
 
   const [shown, setShown] = useState(PAGE_SIZE);
 
   // Новый набор фильтров — снова показываем первую страницу
   useEffect(() => {
     setShown(PAGE_SIZE);
-  }, [filters, sort, vehicle, onlyFits]);
+  }, [filters, sort]);
 
   const visible = useMemo(() => list.slice(0, shown), [list, shown]);
   const hasMore = shown < list.length;
@@ -137,6 +129,29 @@ const Catalog = ({ vehicle, onReset }: Props) => {
   const fitCount = vehicle
     ? products.filter((p) => isCompatible(p, vehicle)).length
     : products.length;
+
+  // Подобрана машина — показываем совместимое, разложенное по категориям
+  const grouped = useMemo(() => {
+    if (!vehicle) return [];
+    const map = new Map<string, typeof products>();
+    products
+      .filter((p) => isCompatible(p, vehicle))
+      .forEach((p) => {
+        map.set(p.category, [...(map.get(p.category) ?? []), p]);
+      });
+    return [...map.entries()]
+      .map(([category, items]) => ({
+        category,
+        items: [...items].sort((a, b) => {
+          const ba = a.badge === 'Хит' ? 1 : 0;
+          const bb = b.badge === 'Хит' ? 1 : 0;
+          if (ba !== bb) return bb - ba;
+          return (b.popularity ?? 0) - (a.popularity ?? 0);
+        }),
+      }))
+      .filter((g) => g.items.length > 0)
+      .sort((a, b) => b.items.length - a.items.length);
+  }, [products, vehicle]);
 
   const activeCount =
     filters.categories.length +
@@ -165,16 +180,75 @@ const Catalog = ({ vehicle, onReset }: Props) => {
       <SectionHead
         index="01"
         eyebrow="Каталог оборудования"
-        title={vehicle ? 'Подходит вашей машине' : 'Всё оборудование'}
-        note={
+        title={
           vehicle
-            ? `Для ${vehicle.brand} ${vehicle.model} ${vehicle.year} года подходит ${fitCount} позиций. Совместимость проверена по штатным разъёмам и посадочному месту.`
-            : 'Выберите марку, модель и год выпуска в форме подбора — в списке останется только совместимое оборудование.'
+            ? `${vehicle.brand} ${vehicle.model} ${vehicle.year}`
+            : 'Всё оборудование'
+        }
+        note={
+          vehicle ? (
+            <>
+              <span className="font-head text-lg font-bold uppercase tracking-tight text-foreground">
+                Подходит {fitCount} позиций
+              </span>
+              <span className="mt-2 block">
+                Совместимость проверена по штатным разъёмам и посадочному месту.
+              </span>
+            </>
+          ) : (
+            'Выберите марку, модель и год выпуска в форме подбора — в списке останется только совместимое оборудование.'
+          )
         }
       />
 
       <div className="rule-hair" />
 
+      {vehicle ? (
+        <div className="pb-6">
+          {grouped.length === 0 ? (
+            <div className="py-24 text-center">
+              <div className="font-head text-2xl font-medium uppercase tracking-tight">
+                Под эту машину пока ничего нет
+              </div>
+              <p className="mx-auto mt-3 max-w-[30em] text-muted-foreground">
+                Оставьте заявку — подберём вручную по VIN и предложим аналог.
+              </p>
+              <button
+                onClick={onReset}
+                className="mt-6 border border-foreground px-6 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                Показать весь каталог
+              </button>
+            </div>
+          ) : (
+            <>
+              {grouped.map((g) => (
+                <CatalogGroup
+                  key={g.category}
+                  category={g.category}
+                  products={g.items}
+                  vehicle={vehicle}
+                />
+              ))}
+
+              <div className="flex flex-col items-center gap-4 border-t border-foreground py-12">
+                <p className="max-w-[32em] text-center text-muted-foreground">
+                  Показано оборудование для {vehicle.brand} {vehicle.model}{' '}
+                  {vehicle.year} года. Сбросьте подбор, чтобы вернуться ко всему
+                  каталогу с фильтрами.
+                </p>
+                <button
+                  onClick={onReset}
+                  className="flex items-center justify-center gap-3 border-2 border-foreground px-8 py-4 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Icon name="RotateCcw" size={17} />
+                  Очистить подбор
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-12">
         <aside className="hidden lg:col-span-3 lg:block">
           {/* Фильтр выше экрана — прокручиваем его сам, иначе нижние поля недоступны */}
@@ -204,26 +278,6 @@ const Catalog = ({ vehicle, onReset }: Props) => {
             </div>
 
             <div className="flex flex-wrap items-center gap-5">
-              {vehicle && (
-                <>
-                  <label className="flex cursor-pointer select-none items-center gap-2 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 cursor-pointer accent-primary"
-                      checked={onlyFits}
-                      onChange={(e) => setOnlyFits(e.target.checked)}
-                    />
-                    Только совместимое
-                  </label>
-                  <button
-                    onClick={onReset}
-                    className="flex items-center gap-2 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    <Icon name="X" size={14} />
-                    Сбросить авто
-                  </button>
-                </>
-              )}
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
@@ -291,8 +345,9 @@ const Catalog = ({ vehicle, onReset }: Props) => {
           )}
         </div>
       </div>
+      )}
 
-      {mobileOpen && (
+      {mobileOpen && !vehicle && (
         <div className="fixed inset-0 z-[60] flex lg:hidden">
           <button
             aria-label="Закрыть"
