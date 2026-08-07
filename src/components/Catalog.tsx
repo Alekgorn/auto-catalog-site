@@ -127,6 +127,20 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
   const visible = useMemo(() => list.slice(0, shown), [list, shown]);
   const hasMore = shown < list.length;
 
+  // Клик по категории в баннере — отмечаем её в фильтре
+  useEffect(() => {
+    const onPick = (e: Event) => {
+      const category = (e as CustomEvent<string>).detail;
+      if (!category) return;
+      // Подбор по авто перекрывает фильтр — сбрасываем его, иначе выбор не виден
+      onReset();
+      setFilters({ ...emptyState(), categories: [category] });
+    };
+    window.addEventListener('catalog:filter-category', onPick);
+    return () => window.removeEventListener('catalog:filter-category', onPick);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds.min, bounds.max]);
+
   const filterRef = useRef<HTMLDivElement>(null);
   const [filterTop, setFilterTop] = useState(HEADER_OFFSET);
 

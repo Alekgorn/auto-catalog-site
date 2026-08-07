@@ -1,5 +1,24 @@
+import Icon from '@/components/ui/icon';
 import MountPlan from '@/components/MountPlan';
 import VehicleSelector from '@/components/VehicleSelector';
+
+/** Быстрый переход к категории: имя должно совпадать с категорией товара */
+const SHORTCUTS = [
+  { label: 'Магнитолы', category: 'Android-магнитолы', icon: 'Radio' },
+  { label: 'Проводка', category: 'Жгуты и адаптеры', icon: 'Cable' },
+  { label: 'Камеры', category: 'Камеры и парктроники', icon: 'Camera' },
+  { label: 'Регистраторы', category: 'Видеорегистраторы', icon: 'Video' },
+];
+
+/** Открывает каталог с уже отмеченной категорией */
+const goToCategory = (category: string) => {
+  window.dispatchEvent(
+    new CustomEvent('catalog:filter-category', { detail: category }),
+  );
+  document
+    .getElementById('catalog')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 interface Props {
   brand: string;
@@ -24,20 +43,35 @@ const Hero = (props: Props) => (
           className="rise ml-0 mt-4 font-head text-[11vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 lg:text-[58px]"
           style={{ animationDelay: '.15s' }}
         >
-          Магнитолы
+          Всё для
           <br />
-          и камеры
+          <span className="text-primary">вашего</span>
           <br />
-          <span className="text-primary">под вашу</span> модель
+          автомобиля
         </h1>
         <p
           className="rise ml-0 mt-5 max-w-[26em] leading-relaxed text-muted-foreground md:ml-4"
           style={{ animationDelay: '.25s' }}
         >
-          Android-магнитолы, переходники и рамки, камеры заднего вида. Укажите
-          машину — останется только то, что встаёт{' '}
-          <b className="font-medium text-foreground">в штатные разъёмы</b>.
+          Автоэлектроника, аксессуары и оборудование{' '}
+          <b className="font-medium text-foreground">с подбором по модели</b>.
         </p>
+
+        <div
+          className="rise ml-0 mt-7 flex flex-wrap gap-2 md:ml-4"
+          style={{ animationDelay: '.35s' }}
+        >
+          {SHORTCUTS.map((s) => (
+            <button
+              key={s.category}
+              onClick={() => goToCategory(s.category)}
+              className="flex items-center gap-2 border border-border bg-surface px-3.5 py-2.5 text-[0.78rem] transition-colors hover:border-primary hover:text-primary"
+            >
+              <Icon name={s.icon} size={16} className="flex-none" />
+              {s.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="relative flex h-[240px] flex-col py-4 md:col-span-6 md:h-[320px] md:py-6 md:pl-4">
