@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { slugify } from '@/lib/slug';
-import BentoGrid from '@/components/BentoGrid';
+import ProductCard from '@/components/ProductCard';
 import { Product, Vehicle } from '@/data/catalog';
 
 interface Props {
@@ -37,8 +37,10 @@ const CatalogGroup = ({ category, products, vehicle }: Props) => {
         </span>
       </div>
 
-      <div className="mt-7">
-        <BentoGrid products={visible} vehicle={vehicle} />
+      <div className="mt-7 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {visible.map((p) => (
+          <ProductCard key={p.id} product={p} vehicle={vehicle} />
+        ))}
       </div>
 
       {(hidden > 0 || open) && (

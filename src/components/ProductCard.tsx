@@ -17,11 +17,9 @@ import { useCatalog } from '@/context/CatalogContext';
 interface Props {
   product: Product;
   vehicle: Vehicle | null;
-  /** Крупная плитка бенто-сетки: выше изображение, увеличенный заголовок */
-  featured?: boolean;
 }
 
-const ProductCard = ({ product, vehicle, featured = false }: Props) => {
+const ProductCard = ({ product, vehicle }: Props) => {
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
   const { cardFields, categorySpecs } = useCatalog();
@@ -47,11 +45,7 @@ const ProductCard = ({ product, vehicle, featured = false }: Props) => {
   })();
 
   return (
-    <article
-      className={`tex-grain lift group relative flex h-full flex-col border border-border/70 bg-surface ${
-        featured ? 'p-6' : 'p-5'
-      }`}
-    >
+    <article className="group flex flex-col bg-surface p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
       <div className="flex items-start justify-between gap-4">
         <Link
           to={`/catalog/${slugify(product.category)}`}
@@ -68,18 +62,13 @@ const ProductCard = ({ product, vehicle, featured = false }: Props) => {
 
       <Link
         to={`/product/${product.id}`}
-        className={`tex-hatch relative mt-4 block overflow-hidden border border-border/60 ${
-          featured ? 'min-h-[240px] flex-1' : ''
-        }`}
+        className="relative mt-4 block overflow-hidden bg-surface-muted"
       >
-        <span className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-foreground/[0.05]" />
         <img
           src={productImages(product)[0]}
           alt={product.name}
           loading="lazy"
-          className={`relative object-contain p-4 drop-shadow-[0_10px_18px_rgba(17,17,17,0.16)] transition-transform duration-500 group-hover:scale-[1.06] ${
-            featured ? 'h-full w-full' : 'aspect-[4/3] w-full'
-          }`}
+          className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
         />
         {vehicle && fits && (
           <span className="absolute left-0 top-3 flex items-center gap-2 bg-success px-3 py-2 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-success-foreground">
@@ -89,11 +78,7 @@ const ProductCard = ({ product, vehicle, featured = false }: Props) => {
         )}
       </Link>
 
-      <h3
-        className={`mt-4 font-head font-extrabold uppercase leading-[1.02] tracking-[-0.035em] ${
-          featured ? 'text-[1.9rem] sm:text-[2.2rem]' : 'text-[1.35rem]'
-        }`}
-      >
+      <h3 className="mt-4 font-head text-xl font-medium leading-tight tracking-tight">
         <Link to={`/product/${product.id}`} className="transition-colors hover:text-primary">
           {product.name}
         </Link>
@@ -157,11 +142,7 @@ const ProductCard = ({ product, vehicle, featured = false }: Props) => {
               {formatPrice(product.oldPrice)}
             </div>
           )}
-          <div
-            className={`whitespace-nowrap font-head font-black tracking-[-0.04em] ${
-              featured ? 'text-[2.6rem]' : 'text-[1.9rem]'
-            }`}
-          >
+          <div className="whitespace-nowrap font-head text-2xl font-bold tracking-tight">
             {formatPrice(product.price)}
           </div>
         </div>

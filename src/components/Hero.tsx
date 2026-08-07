@@ -36,12 +36,12 @@ const Hero = (props: Props) => {
           Автоэлектроника для вашей машины
         </div>
         <h1
-          className="display rise ml-0 mt-4 text-[12vw] sm:text-[3.4rem] md:ml-3 lg:text-[4.6rem]"
+          className="rise ml-0 mt-4 font-head text-[11vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 lg:text-[58px]"
           style={{ animationDelay: '.15s' }}
         >
           Всё для
           <br />
-          <span className="display-outline">вашего</span>
+          <span className="text-primary">вашего</span>
           <br />
           автомобиля
         </h1>

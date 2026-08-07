@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { slugify } from '@/lib/slug';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
-import BentoGrid from '@/components/BentoGrid';
+import ProductCard from '@/components/ProductCard';
 import CatalogGroup from '@/components/CatalogGroup';
 import CatalogFilters, { FilterState, SortKey } from '@/components/CatalogFilters';
 import VehicleDialog from '@/components/VehicleDialog';
@@ -413,8 +413,10 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
             </div>
           ) : (
             <>
-              <div className="py-12">
-                <BentoGrid products={visible} vehicle={vehicle} />
+              <div className="grid grid-cols-1 gap-6 py-12 sm:grid-cols-2 xl:grid-cols-3">
+                {visible.map((p) => (
+                  <ProductCard key={p.id} product={p} vehicle={vehicle} />
+                ))}
               </div>
 
               {hasMore && (

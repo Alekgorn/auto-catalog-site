@@ -70,14 +70,10 @@ const Header = () => {
             }
           }}
           aria-label="ШТАТНО — на главную"
-          className="group flex items-center gap-2.5"
+          className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]"
         >
-          <span className="relative block h-5 w-5 flex-none bg-primary transition-transform duration-300 group-hover:rotate-45">
-            <span className="absolute inset-[5px] bg-primary-foreground" />
-          </span>
-          <span className="wordmark text-[1.6rem] leading-none">
-            Штат<span className="text-primary">но</span>
-          </span>
+          <span className="block h-4 w-4 flex-none bg-primary" />
+          Штатно
         </Link>
 
         <nav className="hidden gap-6 lg:flex xl:gap-8">
