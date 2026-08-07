@@ -4,12 +4,14 @@ import SectionHead from '@/components/SectionHead';
 import ProductCard from '@/components/ProductCard';
 import CatalogGroup from '@/components/CatalogGroup';
 import CatalogFilters, { FilterState, SortKey } from '@/components/CatalogFilters';
+import VehicleDialog from '@/components/VehicleDialog';
 import { Vehicle, isCompatible } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   vehicle: Vehicle | null;
   onReset: () => void;
+  onChangeVehicle?: (v: Vehicle) => void;
 }
 
 const PAGE_SIZE = 15;
@@ -21,10 +23,11 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: 'name', label: 'По названию' },
 ];
 
-const Catalog = ({ vehicle, onReset }: Props) => {
+const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
   const { products, categories } = useCatalog();
   const [sort, setSort] = useState<SortKey>('popular');
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const bounds = useMemo(() => {
     const prices = products.map((p) => p.price);
@@ -221,7 +224,7 @@ const Catalog = ({ vehicle, onReset }: Props) => {
 
               <div className="flex flex-none items-center gap-2">
                 <button
-                  onClick={goToSelection}
+                  onClick={() => setPickerOpen(true)}
                   className="flex items-center gap-2 border border-foreground px-4 py-2.5 text-[0.72rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
                 >
                   <Icon name="RefreshCw" size={14} />
@@ -366,7 +369,9 @@ const Catalog = ({ vehicle, onReset }: Props) => {
                       Загрузить ещё
                     </button>
                     <button
-                      onClick={goToSelection}
+                      onClick={() =>
+                        onChangeVehicle ? setPickerOpen(true) : goToSelection()
+                      }
                       className="flex items-center justify-center gap-3 bg-primary px-8 py-4 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground"
                     >
                       <Icon name="Car" size={17} />
@@ -407,6 +412,12 @@ const Catalog = ({ vehicle, onReset }: Props) => {
           </div>
         </div>
       )}
+      <VehicleDialog
+        open={pickerOpen}
+        vehicle={vehicle}
+        onClose={() => setPickerOpen(false)}
+        onApply={(v) => onChangeVehicle?.(v)}
+      />
     </section>
   );
 };

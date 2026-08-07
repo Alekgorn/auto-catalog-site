@@ -91,6 +91,14 @@ const Index = () => {
     );
   };
 
+  // Смена машины из каталога: список обновляется на месте, страница не прыгает
+  const changeVehicle = (next: Vehicle) => {
+    setBrand(next.brand);
+    setModel(next.model);
+    setYear(String(next.year));
+    setVehicle(next);
+  };
+
   const pickBrand = (b: string) => {
     setBrand(b);
     setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
@@ -111,7 +119,11 @@ const Index = () => {
       <Header />
       <main>
         <Hero {...selectorProps} />
-        <Catalog vehicle={vehicle} onReset={() => setVehicle(null)} />
+        <Catalog
+          vehicle={vehicle}
+          onReset={() => setVehicle(null)}
+          onChangeVehicle={changeVehicle}
+        />
         <Selection {...selectorProps} onPickBrand={pickBrand} />
         <Faq />
         <Contacts />
