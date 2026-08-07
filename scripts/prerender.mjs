@@ -126,11 +126,13 @@ const EMPTY_ROOT = '<div id="root"><!--prerender--><!--/prerender--></div>';
  */
 const resetShell = (html) =>
   html
+    // Жадный поиск — до ПОСЛЕДНЕГО закрывающего маркера. Иначе обрывок
+    // прошлой генерации остаётся в файле и сайт показывается дважды.
     .replace(
-      /<!--prerender-->[\s\S]*?<!--\/prerender-->/,
+      /<!--prerender-->[\s\S]*<!--\/prerender-->/,
       '<!--prerender--><!--/prerender-->',
     )
-    .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/, '')
+    .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/g, '')
     .replace(
       /\s*<script type="application\/ld\+json" id="seo-json-ld">[\s\S]*?<\/script>/g,
       '',

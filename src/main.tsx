@@ -1,6 +1,12 @@
-import * as React from 'react';
-import { createRoot } from 'react-dom/client'
-import App from './App'
-import './index.css'
+import { createRoot } from 'react-dom/client';
+import App from './App';
+import './index.css';
 
-createRoot(document.getElementById("root")!).render(<App />);
+const container = document.getElementById('root')!;
+
+// В HTML уже лежит версия страницы, собранная заранее для поисковых роботов.
+// Убираем её перед стартом приложения — иначе React добавит свою копию рядом
+// и содержимое сайта покажется дважды.
+container.innerHTML = '';
+
+createRoot(container).render(<App />);

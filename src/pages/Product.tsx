@@ -22,6 +22,7 @@ import {
 import { loadVehicle } from '@/lib/vehicle';
 import { SITE_URL } from '@/lib/seo';
 import { useSeo } from '@/hooks/use-seo';
+import FitsList from '@/components/FitsList';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -391,41 +392,7 @@ const Product = () => {
             </div>
 
             <div className="lg:col-span-6 lg:col-start-7">
-              <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-                {brands.map(([brand, models]) => (
-                  <div key={brand} className="border-t border-foreground py-5">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="font-head text-lg font-bold uppercase tracking-tight">
-                        {brand}
-                      </div>
-                      <span className="text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground">
-                        {models.length} мод.
-                      </span>
-                    </div>
-                    <ul className="mt-3 space-y-1.5">
-                      {models.map((m) => {
-                        const current =
-                          vehicle && vehicle.brand === brand && vehicle.model === m;
-                        return (
-                          <li
-                            key={m}
-                            className={`flex items-center gap-2 text-[0.88rem] ${
-                              current ? 'text-primary' : 'text-muted-foreground'
-                            }`}
-                          >
-                            <Icon
-                              name={current ? 'CircleCheck' : 'Minus'}
-                              size={13}
-                              className="flex-none"
-                            />
-                            {m}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              <FitsList brands={brands} vehicle={vehicle} />
             </div>
           </div>
         </section>

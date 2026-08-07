@@ -4,16 +4,19 @@ import SectionHead from '@/components/SectionHead';
 import { useToast } from '@/hooks/use-toast';
 import { sendOrder } from '@/lib/api';
 import { loadVehicle } from '@/lib/vehicle';
-
-const CONTACTS = [
-  { label: 'Телефон', value: '8 800 333-44-55', href: 'tel:+78003334455' },
-  { label: 'Почта', value: 'zakaz@shtatno.ru', href: 'mailto:zakaz@shtatno.ru' },
-  { label: 'Склад и выдача', value: 'Москва, Кировоградская, 24, стр. 3' },
-  { label: 'Часы работы', value: 'Пн–Сб, 09:00 — 20:00' },
-];
+import { useCatalog } from '@/context/CatalogContext';
+import { telHref } from '@/lib/site-settings';
 
 const Contacts = () => {
   const { toast } = useToast();
+  const { contacts } = useCatalog();
+
+  const CONTACTS = [
+    { label: 'Телефон', value: contacts.phone, href: telHref(contacts.phone) },
+    { label: 'Почта', value: contacts.email, href: `mailto:${contacts.email}` },
+    { label: 'Склад и выдача', value: contacts.address },
+    { label: 'Часы работы', value: contacts.hours },
+  ].filter((c) => c.value);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
@@ -88,14 +91,24 @@ const Contacts = () => {
             </div>
           ))}
           <div className="mt-8 flex gap-4">
-            {['MessageCircle', 'Send', 'Phone'].map((n) => (
-              <span
-                key={n}
-                className="flex h-11 w-11 items-center justify-center border border-border bg-background text-foreground transition-colors hover:border-primary hover:text-primary"
-              >
-                <Icon name={n} size={18} />
-              </span>
-            ))}
+            {[
+              { icon: 'Send', href: contacts.telegram, title: 'Telegram' },
+              { icon: 'MessageCircle', href: contacts.whatsapp, title: 'WhatsApp' },
+              { icon: 'Phone', href: telHref(contacts.phone), title: 'Позвонить' },
+            ]
+              .filter((s) => s.href)
+              .map((s) => (
+                <a
+                  key={s.icon}
+                  href={s.href}
+                  target={s.href.startsWith('http') ? '_blank' : undefined}
+                  rel="noreferrer"
+                  title={s.title}
+                  className="flex h-11 w-11 items-center justify-center border border-border bg-background text-foreground transition-colors hover:border-primary hover:text-primary"
+                >
+                  <Icon name={s.icon} size={18} />
+                </a>
+              ))}
           </div>
         </div>
 

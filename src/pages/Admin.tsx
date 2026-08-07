@@ -8,6 +8,7 @@ import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
 import OrdersPanel from '@/components/admin/OrdersPanel';
 import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
 import SettingsPanel from '@/components/admin/SettingsPanel';
+import SitePanel from '@/components/admin/SitePanel';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -21,7 +22,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [tab, setTab] = useState<
-    'products' | 'guides' | 'orders' | 'brands' | 'settings'
+    'products' | 'guides' | 'orders' | 'brands' | 'site' | 'settings'
   >('orders');
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
@@ -263,6 +264,7 @@ const Admin = () => {
               ['products', `Товары (${products.length})`],
               ['guides', `Инструкции (${guides.length})`],
               ['brands', `Марки (${brands.length})`],
+              ['site', 'Сайт'],
               ['settings', 'Настройки'],
             ] as const
           ).map(([key, label]) => (
@@ -360,6 +362,8 @@ const Admin = () => {
         {tab === 'brands' && (
           <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
         )}
+
+        {tab === 'site' && <SitePanel onSaved={load} />}
 
         {tab === 'settings' && <SettingsPanel onImported={load} />}
 

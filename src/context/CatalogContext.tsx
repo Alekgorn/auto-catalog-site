@@ -7,12 +7,25 @@ import {
   Product,
 } from '@/data/catalog';
 import { CATALOG_URL } from '@/lib/api';
+import {
+  DEFAULT_CONTACTS,
+  DEFAULT_FAQ,
+  DEFAULT_FILTER_BLOCKS,
+  FaqItem,
+  FilterBlockKey,
+  SiteContacts,
+} from '@/lib/site-settings';
 
 export interface PrerenderData {
   products?: Product[];
   brands?: Brand[];
   guides?: Guide[];
-  settings?: { card_fields?: string[] };
+  settings?: {
+    card_fields?: string[];
+    contacts?: Partial<SiteContacts>;
+    faq?: FaqItem[];
+    filter_blocks?: FilterBlockKey[];
+  };
 }
 
 interface CatalogValue {
@@ -21,6 +34,9 @@ interface CatalogValue {
   guides: Guide[];
   categories: string[];
   cardFields: string[];
+  contacts: SiteContacts;
+  faq: FaqItem[];
+  filterBlocks: FilterBlockKey[];
   loading: boolean;
   reload: () => void;
 }
@@ -58,6 +74,18 @@ export const CatalogProvider = ({
       ? seed.settings.card_fields
       : DEFAULT_CARD_FIELDS,
   );
+  const [contacts, setContacts] = useState<SiteContacts>({
+    ...DEFAULT_CONTACTS,
+    ...(seed?.settings?.contacts ?? {}),
+  });
+  const [faq, setFaq] = useState<FaqItem[]>(
+    seed?.settings?.faq?.length ? seed.settings.faq : DEFAULT_FAQ,
+  );
+  const [filterBlocks, setFilterBlocks] = useState<FilterBlockKey[]>(
+    seed?.settings?.filter_blocks?.length
+      ? seed.settings.filter_blocks
+      : DEFAULT_FILTER_BLOCKS,
+  );
   const [loading, setLoading] = useState(!seed && !isPrerender);
   const [tick, setTick] = useState(0);
 
@@ -80,6 +108,15 @@ export const CatalogProvider = ({
         }
         if (Array.isArray(data.settings?.card_fields)) {
           setCardFields(data.settings.card_fields);
+        }
+        if (data.settings?.contacts && typeof data.settings.contacts === 'object') {
+          setContacts({ ...DEFAULT_CONTACTS, ...data.settings.contacts });
+        }
+        if (Array.isArray(data.settings?.faq) && data.settings.faq.length) {
+          setFaq(data.settings.faq);
+        }
+        if (Array.isArray(data.settings?.filter_blocks)) {
+          setFilterBlocks(data.settings.filter_blocks);
         }
       })
       .catch(() => {
@@ -107,6 +144,9 @@ export const CatalogProvider = ({
     guides,
     categories,
     cardFields,
+    contacts,
+    faq,
+    filterBlocks,
     loading,
     reload: () => setTick((t) => t + 1),
   };

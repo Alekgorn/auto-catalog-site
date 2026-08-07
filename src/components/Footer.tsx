@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useCatalog } from '@/context/CatalogContext';
+import { telHref } from '@/lib/site-settings';
 
 const COLS: { title: string; links: string[]; target?: string; route?: string }[] = [
   {
@@ -38,7 +39,7 @@ const hrefFor = (col: { target?: string; route?: string }) =>
   col.route ?? `/#${col.target ?? ''}`;
 
 const Footer = () => {
-  const { products } = useCatalog();
+  const { products, contacts } = useCatalog();
 
   return (
   <footer className="section-pad bg-background">
@@ -83,19 +84,19 @@ const Footer = () => {
       <div className="col-span-2 md:col-span-3">
         <div className="eyebrow">Связь</div>
         <a
-          href="tel:+78003334455"
+          href={telHref(contacts.phone)}
           className="mt-4 block font-head text-2xl font-bold tracking-tight transition-colors hover:text-primary"
         >
-          8 800 333-44-55
+          {contacts.phone}
         </a>
         <a
-          href="mailto:zakaz@shtatno.ru"
+          href={`mailto:${contacts.email}`}
           className="mt-2 block text-muted-foreground transition-colors hover:text-primary"
         >
-          zakaz@shtatno.ru
+          {contacts.email}
         </a>
         <div className="mt-3 text-[0.85rem] text-muted-foreground">
-          Москва, Кировоградская, 24, стр. 3
+          {contacts.address}
         </div>
       </div>
     </div>

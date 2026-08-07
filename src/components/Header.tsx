@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import { useCatalog } from '@/context/CatalogContext';
+import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
 import SearchBar from '@/components/SearchBar';
 
@@ -18,6 +20,7 @@ const scrollTo = (id: string) => {
 
 const Header = () => {
   const navigate = useNavigate();
+  const { contacts } = useCatalog();
   const { count, setOpen: setCartOpen } = useCart();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -93,10 +96,10 @@ const Header = () => {
 
         <div className="flex items-center gap-5 md:gap-6">
           <a
-            href="tel:+78003334455"
+            href={telHref(contacts.phone)}
             className="hidden font-head text-[0.95rem] font-medium tracking-tight xl:block"
           >
-            8 800 333-44-55
+            {contacts.phone}
           </a>
           <button
             onClick={() => setSearchOpen((v) => !v)}
@@ -164,10 +167,10 @@ const Header = () => {
             ))}
           </nav>
           <a
-            href="tel:+78003334455"
+            href={telHref(contacts.phone)}
             className="mt-8 block font-head text-2xl font-bold text-primary"
           >
-            8 800 333-44-55
+            {contacts.phone}
           </a>
         </div>
       )}

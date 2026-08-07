@@ -11,6 +11,8 @@ interface Props {
   onReset: () => void;
 }
 
+const PAGE_SIZE = 15;
+
 const SORTS: { key: SortKey; label: string }[] = [
   { key: 'popular', label: 'По популярности' },
   { key: 'price-asc', label: 'Сначала дешевле' },
@@ -116,6 +118,22 @@ const Catalog = ({ vehicle, onReset }: Props) => {
     return sorted;
   }, [base, filters, sort, vehicle, onlyFits]);
 
+  const [shown, setShown] = useState(PAGE_SIZE);
+
+  // Новый набор фильтров — снова показываем первую страницу
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [filters, sort, vehicle, onlyFits]);
+
+  const visible = useMemo(() => list.slice(0, shown), [list, shown]);
+  const hasMore = shown < list.length;
+
+  const goToSelection = () => {
+    document
+      .getElementById('select')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   const fitCount = vehicle
     ? products.filter((p) => isCompatible(p, vehicle)).length
     : products.length;
@@ -159,7 +177,8 @@ const Catalog = ({ vehicle, onReset }: Props) => {
 
       <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-12">
         <aside className="hidden lg:col-span-3 lg:block">
-          <div className="sticky top-[150px] my-6 bg-surface p-5 shadow-panel">
+          {/* Фильтр выше экрана — прокручиваем его сам, иначе нижние поля недоступны */}
+          <div className="sticky top-[150px] my-6 max-h-[calc(100vh-170px)] overflow-y-auto overscroll-contain bg-surface p-5 shadow-panel">
             {filtersNode}
           </div>
         </aside>
@@ -238,11 +257,37 @@ const Catalog = ({ vehicle, onReset }: Props) => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 py-12 sm:grid-cols-2 xl:grid-cols-3">
-              {list.map((p) => (
-                <ProductCard key={p.id} product={p} vehicle={vehicle} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-6 py-12 sm:grid-cols-2 xl:grid-cols-3">
+                {visible.map((p) => (
+                  <ProductCard key={p.id} product={p} vehicle={vehicle} />
+                ))}
+              </div>
+
+              {hasMore && (
+                <div className="flex flex-col items-center gap-5 pb-12">
+                  <p className="text-[0.82rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Показано {visible.length} из {list.length}
+                  </p>
+                  <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+                    <button
+                      onClick={() => setShown((n) => n + PAGE_SIZE)}
+                      className="flex items-center justify-center gap-3 border-2 border-foreground px-8 py-4 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Icon name="Plus" size={17} />
+                      Загрузить ещё
+                    </button>
+                    <button
+                      onClick={goToSelection}
+                      className="flex items-center justify-center gap-3 bg-primary px-8 py-4 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground"
+                    >
+                      <Icon name="Car" size={17} />
+                      Подобрать под автомобиль
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

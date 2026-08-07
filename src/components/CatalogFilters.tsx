@@ -1,5 +1,7 @@
 import Icon from '@/components/ui/icon';
 import { formatPrice } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
+import { FilterBlockKey } from '@/lib/site-settings';
 
 export type SortKey = 'popular' | 'price-asc' | 'price-desc' | 'name';
 
@@ -72,6 +74,8 @@ const CatalogFilters = ({
   onChange,
   onReset,
 }: Props) => {
+  const { filterBlocks } = useCatalog();
+  const shows = (key: FilterBlockKey) => filterBlocks.includes(key);
   const toggleIn = (key: 'categories' | 'mounts' | 'warranties', value: string) => {
     const list = state[key];
     onChange({
@@ -93,6 +97,7 @@ const CatalogFilters = ({
         </button>
       </div>
 
+      {shows('categories') && (
       <Group title="Категория">
         {categories.map((c) => (
           <Check
@@ -104,7 +109,9 @@ const CatalogFilters = ({
           />
         ))}
       </Group>
+      )}
 
+      {shows('price') && (
       <Group title="Цена">
         <div className="flex items-center gap-3">
           <input
@@ -139,7 +146,9 @@ const CatalogFilters = ({
           <span>{formatPrice(bounds.max)}</span>
         </div>
       </Group>
+      )}
 
+      {shows('badges') && (
       <Group title="Отметки">
         <Check
           label="Только хиты"
@@ -152,8 +161,9 @@ const CatalogFilters = ({
           onToggle={() => onChange({ ...state, onlySale: !state.onlySale })}
         />
       </Group>
+      )}
 
-      {mounts.length > 0 && (
+      {shows('mounts') && mounts.length > 0 && (
         <Group title="Крепление">
           <div className="max-h-52 overflow-y-auto pr-1">
             {mounts.map((m) => (
@@ -168,7 +178,7 @@ const CatalogFilters = ({
         </Group>
       )}
 
-      {warranties.length > 0 && (
+      {shows('warranties') && warranties.length > 0 && (
         <Group title="Гарантия">
           {warranties.map((w) => (
             <Check
