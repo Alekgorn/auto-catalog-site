@@ -720,7 +720,7 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if method == 'GET':
                 cur.execute(
-                    f"SELECT c.name, c.sort_order, c.is_active, "
+                    f"SELECT c.name, c.sort_order, c.is_active, c.spec_fields, "
                     f"(SELECT COUNT(*) FROM {schema()}.products p WHERE p.category = c.name) AS products "
                     f"FROM {schema()}.categories c WHERE c.is_active "
                     f"ORDER BY c.sort_order, c.name"
@@ -730,6 +730,7 @@ def handler(event: dict, context) -> dict:
                         'name': r['name'],
                         'sortOrder': r['sort_order'],
                         'products': int(r['products']),
+                        'specFields': r['spec_fields'] or [],
                     }
                     for r in cur.fetchall()
                 ]
@@ -746,6 +747,11 @@ def handler(event: dict, context) -> dict:
                         continue
                     old = str(item.get('oldName', '')).strip()[:128]
                     order = (i + 1) * 10
+                    fields = [
+                        str(f).strip()[:64]
+                        for f in (item.get('specFields') or [])
+                        if str(f).strip()
+                    ]
                     if old and old != name:
                         # Переименование — тянем за собой товары
                         cur.execute(
@@ -754,7 +760,8 @@ def handler(event: dict, context) -> dict:
                         )
                         cur.execute(
                             f"UPDATE {schema()}.categories SET name = {q(name)}, "
-                            f"sort_order = {order}, is_active = TRUE WHERE name = {q(old)}"
+                            f"sort_order = {order}, is_active = TRUE, "
+                            f"spec_fields = {qjson(fields)} WHERE name = {q(old)}"
                         )
                         continue
                     cur.execute(
@@ -763,13 +770,15 @@ def handler(event: dict, context) -> dict:
                     if cur.fetchone():
                         cur.execute(
                             f"UPDATE {schema()}.categories SET sort_order = {order}, "
-                            f"is_active = TRUE WHERE name = {q(name)}"
+                            f"is_active = TRUE, spec_fields = {qjson(fields)} "
+                            f"WHERE name = {q(name)}"
                         )
                     else:
                         slug = 'cat-' + uuid.uuid4().hex[:8]
                         cur.execute(
-                            f"INSERT INTO {schema()}.categories (slug, name, sort_order) "
-                            f"VALUES ({q(slug)}, {q(name)}, {order})"
+                            f"INSERT INTO {schema()}.categories "
+                            f"(slug, name, sort_order, spec_fields) "
+                            f"VALUES ({q(slug)}, {q(name)}, {order}, {qjson(fields)})"
                         )
                 conn.commit()
                 cur.close()

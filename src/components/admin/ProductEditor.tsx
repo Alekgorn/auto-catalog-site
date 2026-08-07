@@ -51,6 +51,7 @@ export const emptyProduct = (): AdminProduct => ({
 interface Props {
   product: AdminProduct;
   categories: string[];
+  categorySpecs?: Record<string, string[]>;
   brands: AdminBrand[];
   onClose: () => void;
   onSave: (p: AdminProduct) => void;
@@ -60,7 +61,14 @@ const label = 'eyebrow block mb-1';
 const field =
   'w-full border-b border-border bg-transparent py-2 outline-none transition-colors focus:border-primary';
 
-const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) => {
+const ProductEditor = ({
+  product,
+  categories,
+  categorySpecs = {},
+  brands,
+  onClose,
+  onSave,
+}: Props) => {
   const [form, setForm] = useState<AdminProduct>({
     ...product,
     description: product.description?.length ? product.description : [''],
@@ -134,6 +142,11 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
       return { ...f, fits };
     });
   };
+
+  // Поля, заданные для категории, но ещё не заполненные у товара
+  const missingFields = (categorySpecs[form.category] ?? []).filter(
+    (f) => !form.specs.some(([k]) => k.trim().toLowerCase() === f.trim().toLowerCase()),
+  );
 
   const submit = () => {
     if (!form.name.trim()) return setError('Укажите название');
@@ -381,6 +394,27 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
 
               <div>
                 <span className={label}>Характеристики</span>
+
+                {missingFields.length > 0 && (
+                  <div className="mb-4 border border-border bg-surface-muted p-3">
+                    <div className="text-[0.78rem] text-muted-foreground">
+                      Для категории «{form.category}» не заполнены:
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {missingFields.map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => set('specs', [...form.specs, [f, '']])}
+                          className="flex items-center gap-1.5 border border-foreground px-2.5 py-1.5 text-[0.78rem] transition-colors hover:border-primary hover:text-primary"
+                        >
+                          <Icon name="Plus" size={13} />
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {form.specs.map(([k, v], i) => (
                   <div key={i} className="mb-2 flex gap-2">
                     <input

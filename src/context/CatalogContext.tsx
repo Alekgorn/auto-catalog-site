@@ -22,6 +22,7 @@ export interface PrerenderData {
   products?: Product[];
   brands?: Brand[];
   categories?: string[];
+  categorySpecs?: Record<string, string[]>;
   guides?: Guide[];
   settings?: {
     card_fields?: string[];
@@ -37,6 +38,7 @@ interface CatalogValue {
   brands: Brand[];
   guides: Guide[];
   categories: string[];
+  categorySpecs: Record<string, string[]>;
   cardFields: string[];
   contacts: SiteContacts;
   faq: FaqItem[];
@@ -97,6 +99,9 @@ export const CatalogProvider = ({
   const [catalogCategories, setCatalogCategories] = useState<string[]>(
     seed?.categories ?? [],
   );
+  const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>(
+    seed?.categorySpecs ?? {},
+  );
   const [loading, setLoading] = useState(!seed && !isPrerender);
   const [tick, setTick] = useState(0);
 
@@ -119,6 +124,9 @@ export const CatalogProvider = ({
         }
         if (Array.isArray(data.categories)) {
           setCatalogCategories(data.categories);
+        }
+        if (data.categorySpecs && typeof data.categorySpecs === 'object') {
+          setCategorySpecs(data.categorySpecs);
         }
         if (Array.isArray(data.settings?.card_fields)) {
           setCardFields(data.settings.card_fields);
@@ -161,6 +169,7 @@ export const CatalogProvider = ({
     brands,
     guides,
     categories,
+    categorySpecs,
     cardFields,
     contacts,
     faq,

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import FitsBrief from '@/components/FitsBrief';
 import {
   CARD_FIELDS,
   Product,
@@ -63,6 +64,8 @@ const ProductCard = ({ product, vehicle }: Props) => {
           {product.name}
         </Link>
       </h3>
+
+      <FitsBrief product={product} />
 
       {rows.length > 0 && (
         <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">

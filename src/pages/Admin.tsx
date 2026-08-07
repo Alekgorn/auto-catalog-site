@@ -29,6 +29,7 @@ const Admin = () => {
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
   const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
+  const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>({});
   const [selected, setSelected] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
@@ -57,11 +58,18 @@ const Admin = () => {
       await loadGuides();
       await adminFetch('?action=categories')
         .then((r) => r.json())
-        .then((d) =>
-          setCatalogCategories(
-            ((d.categories ?? []) as { name: string }[]).map((c) => c.name),
-          ),
-        )
+        .then((d) => {
+          const list = (d.categories ?? []) as {
+            name: string;
+            specFields?: string[];
+          }[];
+          setCatalogCategories(list.map((c) => c.name));
+          setCategorySpecs(
+            Object.fromEntries(
+              list.filter((c) => c.specFields?.length).map((c) => [c.name, c.specFields!]),
+            ),
+          );
+        })
         .catch(() => undefined);
     } finally {
       setLoading(false);
@@ -544,6 +552,7 @@ const Admin = () => {
         <ProductEditor
           product={editing}
           categories={categories}
+          categorySpecs={categorySpecs}
           brands={brands}
           onClose={() => setEditing(null)}
           onSave={save}

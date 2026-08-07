@@ -8,6 +8,8 @@ interface Row {
   /** Имя до правки — по нему бэкенд переносит товары */
   oldName: string;
   products: number;
+  /** Характеристики, общие для товаров этой категории */
+  specFields: string[];
 }
 
 interface Props {
@@ -18,21 +20,33 @@ const CategoriesEditor = ({ onSaved }: Props) => {
   const { toast } = useToast();
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
+  const [openSpecs, setOpenSpecs] = useState<number | null>(null);
 
   const load = () => {
     adminFetch('?action=categories')
       .then((r) => r.json())
       .then((d) => {
-        const list = (d.categories ?? []) as { name: string; products: number }[];
-        setRows(list.map((c) => ({ name: c.name, oldName: c.name, products: c.products })));
+        const list = (d.categories ?? []) as {
+          name: string;
+          products: number;
+          specFields?: string[];
+        }[];
+        setRows(
+          list.map((c) => ({
+            name: c.name,
+            oldName: c.name,
+            products: c.products,
+            specFields: c.specFields ?? [],
+          })),
+        );
       })
       .catch(() => undefined);
   };
 
   useEffect(load, []);
 
-  const setAt = (i: number, name: string) =>
-    setRows((list) => list.map((r, idx) => (idx === i ? { ...r, name } : r)));
+  const setAt = (i: number, patch: Partial<Row>) =>
+    setRows((list) => list.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
 
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
@@ -65,7 +79,11 @@ const CategoriesEditor = ({ onSaved }: Props) => {
     const res = await adminFetch('?action=categories', {
       method: 'PUT',
       body: JSON.stringify({
-        categories: clean.map((r) => ({ name: r.name.trim(), oldName: r.oldName })),
+        categories: clean.map((r) => ({
+          name: r.name.trim(),
+          oldName: r.oldName,
+          specFields: r.specFields.filter((f) => f.trim()),
+        })),
       }),
     });
     setBusy(false);
@@ -97,7 +115,12 @@ const CategoriesEditor = ({ onSaved }: Props) => {
           </p>
 
           <button
-            onClick={() => setRows((l) => [...l, { name: '', oldName: '', products: 0 }])}
+            onClick={() =>
+              setRows((l) => [
+                ...l,
+                { name: '', oldName: '', products: 0, specFields: [] },
+              ])
+            }
             className="mt-6 flex items-center gap-2 border border-foreground px-5 py-3 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
           >
             <Icon name="Plus" size={15} />
@@ -108,10 +131,8 @@ const CategoriesEditor = ({ onSaved }: Props) => {
         <div className="lg:col-span-7 lg:col-start-6">
           <div className="border-t border-foreground">
             {rows.map((r, i) => (
-              <div
-                key={`${r.oldName}-${i}`}
-                className="flex items-center gap-3 border-b border-border py-3"
-              >
+              <div key={`${r.oldName}-${i}`} className="border-b border-border py-3">
+                <div className="flex items-center gap-3">
                 <span className="w-7 flex-none font-head text-[0.8rem] text-muted-foreground">
                   {String(i + 1).padStart(2, '0')}
                 </span>
@@ -119,7 +140,7 @@ const CategoriesEditor = ({ onSaved }: Props) => {
                 <input
                   value={r.name}
                   placeholder="Название категории"
-                  onChange={(e) => setAt(i, e.target.value)}
+                  onChange={(e) => setAt(i, { name: e.target.value })}
                   className="min-w-0 flex-1 border-b border-transparent bg-transparent py-1.5 text-[0.95rem] outline-none transition-colors focus:border-primary"
                 />
 
@@ -151,6 +172,67 @@ const CategoriesEditor = ({ onSaved }: Props) => {
                   >
                     <Icon name="Trash2" size={15} />
                   </button>
+                </div>
+                </div>
+
+                <div className="ml-10 mt-2">
+                  <button
+                    onClick={() => setOpenSpecs(openSpecs === i ? null : i)}
+                    className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    <Icon
+                      name={openSpecs === i ? 'ChevronDown' : 'ChevronRight'}
+                      size={13}
+                    />
+                    Характеристики категории
+                    {r.specFields.length > 0 && ` · ${r.specFields.length}`}
+                  </button>
+
+                  {openSpecs === i && (
+                    <div className="mt-3 border-l-2 border-border pl-4">
+                      <p className="max-w-[36em] text-[0.8rem] text-muted-foreground">
+                        Названия полей для товаров этой категории — например «Экран»,
+                        «Память». Значения заполняются в карточке каждого товара и
+                        показываются внизу его страницы.
+                      </p>
+
+                      {r.specFields.map((f, fi) => (
+                        <div key={fi} className="mt-2 flex items-center gap-2">
+                          <input
+                            value={f}
+                            placeholder="Название характеристики"
+                            onChange={(e) =>
+                              setAt(i, {
+                                specFields: r.specFields.map((x, xi) =>
+                                  xi === fi ? e.target.value : x,
+                                ),
+                              })
+                            }
+                            className="min-w-0 flex-1 border-b border-border bg-transparent py-1.5 text-[0.9rem] outline-none transition-colors focus:border-primary"
+                          />
+                          <button
+                            onClick={() =>
+                              setAt(i, {
+                                specFields: r.specFields.filter((_, xi) => xi !== fi),
+                              })
+                            }
+                            aria-label="Убрать"
+                            className="p-1 text-muted-foreground transition-colors hover:text-primary"
+                          >
+                            <Icon name="X" size={15} />
+                          </button>
+                        </div>
+                      ))}
+
+                      <button
+                        onClick={() => setAt(i, { specFields: [...r.specFields, ''] })}
+                        className="mt-3 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <Icon name="Plus" size={13} />
+                        Добавить характеристику
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

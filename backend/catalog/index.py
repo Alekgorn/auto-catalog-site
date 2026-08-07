@@ -73,10 +73,14 @@ def handler(event: dict, context) -> dict:
         links = cur.fetchall()
 
         cur.execute(
-            f"SELECT name FROM {schema}.categories WHERE is_active "
+            f"SELECT name, spec_fields FROM {schema}.categories WHERE is_active "
             f"ORDER BY sort_order, name"
         )
-        category_rows = [c['name'] for c in cur.fetchall()]
+        cat_rows = cur.fetchall()
+        category_rows = [c['name'] for c in cat_rows]
+        category_specs = {
+            c['name']: (c['spec_fields'] or []) for c in cat_rows if c['spec_fields']
+        }
 
         cur.execute(f"SELECT key, value FROM {schema}.settings")
         settings = {s['key']: s['value'] for s in cur.fetchall()}
@@ -117,6 +121,7 @@ def handler(event: dict, context) -> dict:
                 'products': products,
                 'brands': brands,
                 'categories': category_rows,
+                'categorySpecs': category_specs,
                 'guides': guides,
                 'settings': settings,
             },
