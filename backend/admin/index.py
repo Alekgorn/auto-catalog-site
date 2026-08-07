@@ -682,6 +682,40 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'Некорректный файл'})
             return resp(200, {'url': upload_image(data_url)})
 
+        if action == 'bulk' and method == 'POST':
+            ids = [int(i) for i in (body.get('ids') or []) if str(i).isdigit()]
+            if not ids:
+                return resp(400, {'error': 'Не выбрано ни одного товара'})
+            id_list = ','.join(str(i) for i in ids)
+            op = str(body.get('op', ''))
+            cur = conn.cursor()
+
+            if op == 'category':
+                category = str(body.get('category', '')).strip()[:64]
+                if not category:
+                    cur.close()
+                    return resp(400, {'error': 'Не указана категория'})
+                cur.execute(
+                    f"UPDATE {schema()}.products SET category = {q(category)}, "
+                    f"updated_at = NOW() WHERE id IN ({id_list})"
+                )
+            elif op == 'delete':
+                cur.execute(f"DELETE FROM {schema()}.product_guides WHERE product_id IN ({id_list})")
+                cur.execute(f"DELETE FROM {schema()}.products WHERE id IN ({id_list})")
+            elif op in ('show', 'hide'):
+                flag = 'TRUE' if op == 'show' else 'FALSE'
+                cur.execute(
+                    f"UPDATE {schema()}.products SET is_active = {flag}, "
+                    f"updated_at = NOW() WHERE id IN ({id_list})"
+                )
+            else:
+                cur.close()
+                return resp(400, {'error': 'Неизвестное действие'})
+
+            conn.commit()
+            cur.close()
+            return resp(200, {'ok': True, 'affected': len(ids)})
+
         if action == 'categories':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if method == 'GET':

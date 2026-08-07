@@ -10,6 +10,7 @@ import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEdi
 import SettingsPanel from '@/components/admin/SettingsPanel';
 import SitePanel from '@/components/admin/SitePanel';
 import CategoriesEditor from '@/components/admin/CategoriesEditor';
+import BulkBar from '@/components/admin/BulkBar';
 
 const Admin = () => {
   const { toast } = useToast();
@@ -28,6 +29,8 @@ const Admin = () => {
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
   const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
   const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
 
@@ -183,6 +186,43 @@ const Admin = () => {
       ),
     [products, search],
   );
+
+  // Сменили вкладку или поиск — выделение больше не относится к тому, что на экране
+  useEffect(() => {
+    setSelected([]);
+  }, [tab, search]);
+
+  const visibleIds = filtered.map((p) => p.id).filter((id): id is number => !!id);
+  const allChecked = visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
+  const someChecked = visibleIds.some((id) => selected.includes(id));
+
+  const toggleOne = (id?: number) => {
+    if (!id) return;
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  };
+
+  const bulk = async (payload: Record<string, unknown>, done: string) => {
+    setBulkBusy(true);
+    const res = await adminFetch('?action=bulk', {
+      method: 'POST',
+      body: JSON.stringify({ ids: selected, ...payload }),
+    });
+    const data = await res.json().catch(() => ({}));
+    setBulkBusy(false);
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: data.error ?? 'Не получилось' });
+      return;
+    }
+    toast({ title: done, description: `Товаров: ${data.affected ?? selected.length}` });
+    setSelected([]);
+    load();
+  };
+
+  const bulkDelete = () => {
+    if (!window.confirm(`Удалить ${selected.length} товаров? Отменить будет нельзя.`))
+      return;
+    bulk({ op: 'delete' }, 'Товары удалены');
+  };
 
   // Справочник категорий; категория старого товара тоже остаётся в списке
   const categories = useMemo(() => {
@@ -407,11 +447,39 @@ const Admin = () => {
               </div>
             ) : (
               <div className="border-t border-foreground">
+                <label className="flex cursor-pointer items-center gap-4 border-b border-border py-3">
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    ref={(el) => {
+                      if (el) el.indeterminate = someChecked && !allChecked;
+                    }}
+                    onChange={() =>
+                      setSelected(
+                        allChecked
+                          ? []
+                          : filtered.map((p) => p.id).filter((id): id is number => !!id),
+                      )
+                    }
+                    className="h-4 w-4 cursor-pointer accent-primary"
+                  />
+                  <span className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    {allChecked ? 'Снять выделение' : `Выбрать все — ${filtered.length}`}
+                  </span>
+                </label>
+
                 {filtered.map((p) => (
                   <div
                     key={p.id}
                     className="flex flex-wrap items-center gap-4 border-b border-border py-4"
                   >
+                    <input
+                      type="checkbox"
+                      checked={!!p.id && selected.includes(p.id)}
+                      onChange={() => toggleOne(p.id)}
+                      aria-label={`Выбрать ${p.name}`}
+                      className="h-4 w-4 flex-none cursor-pointer accent-primary"
+                    />
                     <img
                       src={p.images?.[0] ?? ''}
                       alt=""
@@ -456,6 +524,18 @@ const Admin = () => {
                 ))}
               </div>
             )}
+
+            <BulkBar
+              count={selected.length}
+              categories={categories}
+              busy={bulkBusy}
+              onMove={(category) => bulk({ op: 'category', category }, 'Товары перенесены')}
+              onVisibility={(op) =>
+                bulk({ op }, op === 'show' ? 'Показаны на сайте' : 'Скрыты с сайта')
+              }
+              onDelete={bulkDelete}
+              onClear={() => setSelected([])}
+            />
           </>
         )}
       </main>
