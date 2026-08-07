@@ -141,6 +141,16 @@ const Product = () => {
   const fits = isCompatible(product, vehicle);
   const brands = Object.entries(product.fits);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
+
+  // Гарантия и артикул показываются только здесь — дублировать их у кнопок не нужно
+  const specs = useMemo(() => {
+    const base = productSpecs(product);
+    const has = (k: string) => base.some(([n]) => n.toLowerCase() === k);
+    const extra: [string, string][] = [];
+    if (!has('гарантия')) extra.push(['Гарантия', product.warranty]);
+    if (!has('артикул')) extra.push(['Артикул', productSku(product)]);
+    return [...base, ...extra];
+  }, [product]);
   const related = productsByCategory(product, products);
   const productGuides = guides.filter((g) => g.products?.includes(product.id));
 
@@ -169,11 +179,11 @@ const Product = () => {
           <div className="rule" />
 
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 py-10 lg:grid-cols-12 lg:py-14">
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-5">
               <ProductGallery images={productImages(product)} alt={product.name} />
             </div>
 
-            <div className="lg:col-span-5 lg:col-start-8">
+            <div className="lg:col-span-6 lg:col-start-7">
               <div className="flex items-center justify-between gap-4">
                 <Link
                   to={`/catalog/${slugify(product.category)}`}
@@ -305,17 +315,6 @@ const Product = () => {
                 </button>
               )}
 
-              <dl className="mt-8 space-y-2 text-[0.85rem]">
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted-foreground">Гарантия</dt>
-                  <dd className="text-right">{product.warranty}</dd>
-                </div>
-                <div className="flex justify-between gap-4 border-b border-border pb-2">
-                  <dt className="text-muted-foreground">Артикул</dt>
-                  <dd className="text-right">{productSku(product)}</dd>
-                </div>
-              </dl>
-
             </div>
           </div>
         </section>
@@ -360,7 +359,7 @@ const Product = () => {
                 Технические данные
               </h2>
               <dl className="mt-6 text-[0.9rem]">
-                {productSpecs(product).map(([k, v]) => (
+                {specs.map(([k, v]) => (
                   <div
                     key={k}
                     className="flex justify-between gap-6 border-b border-border py-3"

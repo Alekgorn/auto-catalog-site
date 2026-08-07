@@ -14,12 +14,12 @@ const ProductGallery = ({ images, alt }: Props) => {
         <img
           src={images[active]}
           alt={`${alt} — фото ${active + 1}`}
-          className="aspect-[4/3] w-full object-contain p-4"
+          className="aspect-[4/3] max-h-[420px] w-full object-contain p-4"
         />
       </div>
 
       {images.length > 1 && (
-        <div className="mt-4 grid grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-5 gap-2">
           {images.map((src, i) => (
             <button
               key={src + i}
@@ -32,7 +32,7 @@ const ProductGallery = ({ images, alt }: Props) => {
               <img
                 src={src}
                 alt={`${alt} — миниатюра ${i + 1}`}
-                className="aspect-square w-full object-contain p-1.5"
+                className="aspect-square w-full object-contain p-1"
               />
             </button>
           ))}
