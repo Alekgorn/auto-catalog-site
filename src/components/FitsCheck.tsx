@@ -9,7 +9,7 @@ import { saveVehicle } from '@/lib/vehicle';
 interface Props {
   product: Product;
   vehicle: Vehicle | null;
-  onVehicle: (v: Vehicle) => void;
+  onVehicle: (v: Vehicle | null) => void;
   onRequest: () => void;
 }
 
@@ -32,6 +32,14 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
     () => BRANDS.find((b) => b.name === brand)?.models ?? [],
     [brand, BRANDS],
   );
+
+  const reset = () => {
+    saveVehicle(null);
+    onVehicle(null);
+    setBrand('');
+    setModel('');
+    setYear('');
+  };
 
   const check = () => {
     if (!brand || !model || !year) return;
@@ -73,14 +81,24 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               {vehicle.brand} {vehicle.model}, {vehicle.year} г.
             </span>
           </span>
-          {!fits && (
+          <span className="flex flex-none items-center gap-3">
+            {!fits && (
+              <button
+                onClick={onRequest}
+                className="text-[0.8rem] uppercase tracking-[0.08em] underline underline-offset-4 transition-colors hover:text-primary"
+              >
+                Подобрать аналог
+              </button>
+            )}
             <button
-              onClick={onRequest}
-              className="text-[0.8rem] uppercase tracking-[0.08em] underline underline-offset-4 transition-colors hover:text-primary"
+              onClick={reset}
+              title="Проверить другую машину"
+              className="flex items-center gap-1.5 border border-border bg-surface px-3 py-2 text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
             >
-              Подобрать аналог
+              <Icon name="RefreshCw" size={13} />
+              Другая
             </button>
-          )}
+          </span>
         </div>
       ) : (
         <div className="px-5 py-4">
