@@ -60,9 +60,15 @@ const ProductCard = ({ product, vehicle }: Props) => {
         )}
       </div>
 
-      <Link
-        to={`/product/${product.id}`}
-        className="relative mt-4 block overflow-hidden bg-surface-muted"
+      <button
+        type="button"
+        onClick={() =>
+          window.dispatchEvent(
+            new CustomEvent('quickview:open', { detail: product.id }),
+          )
+        }
+        aria-label={`Быстрый просмотр: ${product.name}`}
+        className="relative mt-4 block w-full overflow-hidden bg-surface-muted text-left"
       >
         <img
           src={productImages(product)[0]}
@@ -70,13 +76,25 @@ const ProductCard = ({ product, vehicle }: Props) => {
           loading="lazy"
           className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
         />
+
+        {/* Подсказка: фото открывает характеристики, а не страницу товара */}
+        {/* На телефоне — компактный значок в углу, на широком экране — полоса при наведении */}
+        <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1.5 bg-foreground/85 px-2 py-1.5 text-[0.62rem] font-medium uppercase tracking-[0.08em] text-background sm:hidden">
+          <Icon name="Eye" size={12} />
+          Обзор
+        </span>
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 hidden items-center justify-center gap-2 bg-foreground/80 py-2 text-[0.7rem] font-medium uppercase tracking-[0.1em] text-background opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:flex">
+          <Icon name="Eye" size={14} />
+          Быстрый просмотр
+        </span>
+
         {vehicle && fits && (
           <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-success-foreground sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
             <Icon name="Check" size={12} strokeWidth={3} />
             Подходит
           </span>
         )}
-      </Link>
+      </button>
 
       <h3 className="mt-3 font-head text-[0.98rem] font-medium leading-tight tracking-tight sm:mt-4 sm:text-xl">
         <Link to={`/product/${product.id}`} className="transition-colors hover:text-primary">

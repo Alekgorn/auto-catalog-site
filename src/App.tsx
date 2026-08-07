@@ -7,6 +7,7 @@ import AppRoutes from './AppRoutes';
 import { CartProvider } from '@/context/CartContext';
 import { CatalogProvider } from '@/context/CatalogContext';
 import CartDrawer from '@/components/CartDrawer';
+import QuickViewHost from '@/components/QuickViewHost';
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <CartProvider>
             <AppRoutes />
             <CartDrawer />
+            <QuickViewHost />
           </CartProvider>
         </CatalogProvider>
       </BrowserRouter>
