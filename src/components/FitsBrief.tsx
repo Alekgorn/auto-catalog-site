@@ -29,8 +29,8 @@ const FitsBrief = ({ product }: Props) => {
 
   if (universal) {
     return (
-      <div className="mt-4 flex items-center gap-2 text-[0.8rem]">
-        <span className="flex items-center gap-1.5 border border-border px-2 py-1 text-muted-foreground">
+      <div className="mt-3 flex items-center gap-2 text-[0.7rem] sm:mt-4 sm:text-[0.8rem]">
+        <span className="flex items-center gap-1.5 border border-border px-1.5 py-0.5 text-muted-foreground sm:px-2 sm:py-1">
           <Icon name="Check" size={13} className="text-success" />
           Совместим с любым авто
         </span>
@@ -42,10 +42,10 @@ const FitsBrief = ({ product }: Props) => {
   const hidden = models.length - visible.length;
 
   return (
-    <div className="mt-4">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[0.8rem] text-muted-foreground">
+    <div className="mt-3 sm:mt-4">
+      <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[0.7rem] text-muted-foreground sm:gap-x-2 sm:gap-y-1.5 sm:text-[0.8rem]">
         {visible.map((m) => (
-          <span key={m} className="border border-border px-2 py-1">
+          <span key={m} className="max-w-full truncate border border-border px-1.5 py-0.5 sm:px-2 sm:py-1">
             {m}
           </span>
         ))}
@@ -58,7 +58,7 @@ const FitsBrief = ({ product }: Props) => {
               e.preventDefault();
               setOpen((v) => !v);
             }}
-            className="flex items-center gap-1 border border-foreground px-2 py-1 text-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex items-center gap-1 border border-foreground px-1.5 py-0.5 text-foreground transition-colors hover:border-primary hover:text-primary sm:px-2 sm:py-1"
           >
             {open ? 'Свернуть' : `Ещё ${hidden}`}
             <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={13} />

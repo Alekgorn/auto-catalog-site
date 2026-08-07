@@ -263,7 +263,7 @@ const CategoryPage = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-6 py-8 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 py-8 sm:gap-6 xl:grid-cols-3">
                 {list.map((p) => (
                   <ProductCard key={p.id} product={p} vehicle={vehicle} />
                 ))}

@@ -37,7 +37,7 @@ const CatalogGroup = ({ category, products, vehicle }: Props) => {
         </span>
       </div>
 
-      <div className="mt-7 grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-7 grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-3">
         {visible.map((p) => (
           <ProductCard key={p.id} product={p} vehicle={vehicle} />
         ))}

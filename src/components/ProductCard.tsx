@@ -45,11 +45,11 @@ const ProductCard = ({ product, vehicle }: Props) => {
   })();
 
   return (
-    <article className="group flex flex-col bg-surface p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+    <article className="group flex flex-col bg-surface p-3 shadow-card transition-shadow duration-300 hover:shadow-card-hover sm:p-5">
       <div className="flex items-start justify-between gap-4">
         <Link
           to={`/catalog/${slugify(product.category)}`}
-          className="eyebrow transition-colors hover:text-primary"
+          className="eyebrow truncate transition-colors hover:text-primary"
         >
           {product.category}
         </Link>
@@ -71,14 +71,14 @@ const ProductCard = ({ product, vehicle }: Props) => {
           className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
         />
         {vehicle && fits && (
-          <span className="absolute left-0 top-3 flex items-center gap-2 bg-success px-3 py-2 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-success-foreground">
-            <Icon name="Check" size={14} strokeWidth={3} />
+          <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-success-foreground sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
+            <Icon name="Check" size={12} strokeWidth={3} />
             Подходит
           </span>
         )}
       </Link>
 
-      <h3 className="mt-4 font-head text-xl font-medium leading-tight tracking-tight">
+      <h3 className="mt-3 font-head text-[0.98rem] font-medium leading-tight tracking-tight sm:mt-4 sm:text-xl">
         <Link to={`/product/${product.id}`} className="transition-colors hover:text-primary">
           {product.name}
         </Link>
@@ -87,7 +87,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
       <FitsBrief product={product} />
 
       {rows.length > 0 && (
-        <dl className="mt-5 space-y-2 text-[0.82rem] text-muted-foreground">
+        <dl className="mt-5 hidden space-y-2 text-[0.82rem] text-muted-foreground sm:block">
           {rows.map((r) => (
             <div
               key={r.label}
@@ -101,7 +101,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
       )}
 
       {categoryRows.length > 0 && (
-        <dl className="mt-4 space-y-2 text-[0.82rem] text-muted-foreground">
+        <dl className="mt-4 hidden space-y-2 text-[0.82rem] text-muted-foreground sm:block">
           {categoryRows.map((r) => (
             <div
               key={r.label}
@@ -115,11 +115,11 @@ const ProductCard = ({ product, vehicle }: Props) => {
       )}
 
       {vehicle && fits ? (
-        <div className="mt-5 flex items-start gap-3 border border-success bg-success-soft px-4 py-3">
+        <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
             <Icon name="Check" size={13} strokeWidth={3} />
           </span>
-          <span className="text-[0.85rem] font-medium leading-snug text-success">
+          <span className="text-[0.78rem] font-medium leading-snug text-success sm:text-[0.85rem]">
             Подходит к вашему автомобилю
             <span className="block font-normal">
               {vehicle.brand} {vehicle.model}, {vehicle.year} г.
@@ -135,27 +135,27 @@ const ProductCard = ({ product, vehicle }: Props) => {
         )
       )}
 
-      <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-4 pt-6">
+      <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-4 sm:pt-6">
         <div className="flex-none">
           {product.oldPrice && (
             <div className="text-[0.8rem] text-muted-foreground line-through">
               {formatPrice(product.oldPrice)}
             </div>
           )}
-          <div className="whitespace-nowrap font-head text-2xl font-bold tracking-tight">
+          <div className="whitespace-nowrap font-head text-xl font-bold tracking-tight sm:text-2xl">
             {formatPrice(product.price)}
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2">
+        <div className="flex w-full flex-none items-center gap-2 sm:w-auto">
           <Link
             to={`/product/${product.id}`}
-            className="border border-border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-foreground"
+            className="hidden border border-border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-foreground sm:block"
           >
             Подробнее
           </Link>
           <button
             onClick={() => add(product)}
-            className={`flex items-center gap-2 border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors ${
+            className={`flex w-full items-center justify-center gap-2 border px-4 py-2.5 font-head text-[0.75rem] font-medium uppercase tracking-[0.08em] transition-colors sm:w-auto sm:py-3 sm:text-[0.78rem] ${
               inCart
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'

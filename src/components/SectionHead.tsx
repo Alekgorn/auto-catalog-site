@@ -15,7 +15,7 @@ const SectionHead = ({ index, eyebrow, title, note, action }: Props) => (
       </span>
       <div>
         <div className="eyebrow">{eyebrow}</div>
-        <h2 className="mt-3 font-head text-3xl font-bold uppercase leading-[1.05] tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+        <h2 className="mt-3 hyphens-auto break-words font-head text-[1.75rem] font-bold uppercase leading-[1.05] tracking-[-0.03em] sm:text-4xl lg:text-5xl">
           {title}
         </h2>
         {action && <div className="mt-5">{action}</div>}
