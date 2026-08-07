@@ -193,7 +193,7 @@ const Product = () => {
               </h1>
 
               <div className="mt-3 text-[0.8rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Артикул {productSku(product)} · {modelCount} совместимых моделей
+                {modelCount} совместимых моделей
               </div>
 
               {vehicle && fits ? (
