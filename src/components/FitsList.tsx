@@ -7,7 +7,62 @@ interface Props {
   vehicle: Vehicle | null;
 }
 
-const VISIBLE = 4;
+const VISIBLE = 6;
+/** Столько моделей марки показываем сразу — дальше по кнопке */
+const MODELS_VISIBLE = 12;
+
+/** Модели одной марки: плотной строкой, длинный список сворачиваем. */
+const BrandRow = ({
+  brand,
+  models,
+  vehicle,
+}: {
+  brand: string;
+  models: string[];
+  vehicle: Vehicle | null;
+}) => {
+  const [open, setOpen] = useState(false);
+  const long = models.length > MODELS_VISIBLE;
+  const shown = open || !long ? models : models.slice(0, MODELS_VISIBLE);
+
+  return (
+    <div className="break-inside-avoid border-t border-border py-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
+          {brand}
+        </div>
+        <span className="flex-none text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
+          {models.length}
+        </span>
+      </div>
+
+      <div className="mt-2 flex flex-wrap gap-x-1.5 gap-y-1 text-[0.85rem] leading-snug">
+        {shown.map((m, i) => {
+          const current = vehicle && vehicle.brand === brand && vehicle.model === m;
+          return (
+            <span
+              key={m}
+              className={current ? 'font-medium text-primary' : 'text-muted-foreground'}
+            >
+              {current && <Icon name="Check" size={12} className="mr-0.5 inline" />}
+              {m}
+              {i < shown.length - 1 && <span className="text-border">,</span>}
+            </span>
+          );
+        })}
+
+        {long && (
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="ml-1 text-[0.8rem] text-foreground underline underline-offset-2 transition-colors hover:text-primary"
+          >
+            {open ? 'свернуть' : `ещё ${models.length - MODELS_VISIBLE}`}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 /** Список совместимых марок. Длинный перечень скрываем под кнопку. */
 const FitsList = ({ brands, vehicle }: Props) => {
@@ -25,39 +80,10 @@ const FitsList = ({ brands, vehicle }: Props) => {
 
   return (
     <div>
-      <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+      {/* Колонки заполняются по высоте — марки с разным числом моделей ложатся плотно */}
+      <div className="sm:columns-2 sm:gap-x-8">
         {visible.map(([brand, models]) => (
-          <div key={brand} className="border-t border-foreground py-5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="font-head text-lg font-bold uppercase tracking-tight">
-                {brand}
-              </div>
-              <span className="text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground">
-                {models.length} мод.
-              </span>
-            </div>
-            <ul className="mt-3 space-y-1.5">
-              {models.map((m) => {
-                const current =
-                  vehicle && vehicle.brand === brand && vehicle.model === m;
-                return (
-                  <li
-                    key={m}
-                    className={`flex items-center gap-2 text-[0.88rem] ${
-                      current ? 'text-primary' : 'text-muted-foreground'
-                    }`}
-                  >
-                    <Icon
-                      name={current ? 'CircleCheck' : 'Minus'}
-                      size={13}
-                      className="flex-none"
-                    />
-                    {m}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <BrandRow key={brand} brand={brand} models={models} vehicle={vehicle} />
         ))}
       </div>
 

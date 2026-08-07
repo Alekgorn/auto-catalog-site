@@ -1,5 +1,7 @@
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
+import { slugify } from '@/lib/slug';
 import ProductCard from '@/components/ProductCard';
 import { Product, Vehicle } from '@/data/catalog';
 
@@ -22,7 +24,12 @@ const CatalogGroup = ({ category, products, vehicle }: Props) => {
     <div className="border-t border-foreground py-10">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
         <h3 className="font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em]">
-          {category}
+          <Link
+            to={`/catalog/${slugify(category)}`}
+            className="transition-colors hover:text-primary"
+          >
+            {category}
+          </Link>
         </h3>
         <span className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
           {products.length}{' '}

@@ -21,6 +21,7 @@ import {
 } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
 import { SITE_URL } from '@/lib/seo';
+import { slugify } from '@/lib/slug';
 import { useSeo } from '@/hooks/use-seo';
 import FitsList from '@/components/FitsList';
 import { useCart } from '@/context/CartContext';
@@ -157,7 +158,12 @@ const Product = () => {
               Каталог
             </Link>
             <Icon name="ChevronRight" size={13} />
-            <span className="text-foreground">{product.category}</span>
+            <Link
+              to={`/catalog/${slugify(product.category)}`}
+              className="text-foreground transition-colors hover:text-primary"
+            >
+              {product.category}
+            </Link>
           </div>
 
           <div className="rule" />
@@ -169,7 +175,12 @@ const Product = () => {
 
             <div className="lg:col-span-5 lg:col-start-8">
               <div className="flex items-center justify-between gap-4">
-                <span className="eyebrow">{product.category}</span>
+                <Link
+                  to={`/catalog/${slugify(product.category)}`}
+                  className="eyebrow transition-colors hover:text-primary"
+                >
+                  {product.category}
+                </Link>
                 {product.badge && (
                   <span className="bg-primary px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.12em] text-primary-foreground">
                     {product.badge}

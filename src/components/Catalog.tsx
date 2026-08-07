@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { slugify } from '@/lib/slug';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import ProductCard from '@/components/ProductCard';
@@ -29,6 +31,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
   const { products, categories } = useCatalog();
+  const navigate = useNavigate();
   const [sort, setSort] = useState<SortKey>('popular');
   const [mobileOpen, setMobileOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -51,6 +54,26 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
   });
 
   const [filters, setFilters] = useState<FilterState>(emptyState);
+
+  /**
+   * Одна категория и больше ничего — у такой выборки есть собственная страница.
+   * Уводим на неё: ссылкой можно поделиться, и её видят поисковики.
+   */
+  const applyFilters = (next: FilterState) => {
+    const onlyCategory =
+      next.categories.length === 1 &&
+      !next.warranties.length &&
+      !next.onlyHits &&
+      !next.onlySale &&
+      next.priceMin <= bounds.min &&
+      next.priceMax >= bounds.max;
+
+    if (onlyCategory && !vehicle) {
+      navigate(`/catalog/${slugify(next.categories[0])}`);
+      return;
+    }
+    setFilters(next);
+  };
 
   useEffect(() => {
     setFilters((f) => ({
@@ -205,7 +228,7 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
       categories={categories}
       warranties={warranties}
       counts={counts}
-      onChange={setFilters}
+      onChange={applyFilters}
       onReset={() => setFilters(emptyState())}
     />
   );
