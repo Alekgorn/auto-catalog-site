@@ -483,7 +483,7 @@ const Admin = () => {
                     <img
                       src={p.images?.[0] ?? ''}
                       alt=""
-                      className="h-14 w-14 flex-none bg-card object-cover"
+                      className="h-14 w-14 flex-none bg-card object-contain p-1"
                     />
                     <div className="min-w-[200px] flex-1">
                       <div className="font-head text-[1rem] font-medium leading-tight">

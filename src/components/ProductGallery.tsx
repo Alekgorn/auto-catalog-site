@@ -14,7 +14,7 @@ const ProductGallery = ({ images, alt }: Props) => {
         <img
           src={images[active]}
           alt={`${alt} — фото ${active + 1}`}
-          className="aspect-[4/3] w-full object-cover"
+          className="aspect-[4/3] w-full object-contain p-4"
         />
       </div>
 
@@ -32,7 +32,7 @@ const ProductGallery = ({ images, alt }: Props) => {
               <img
                 src={src}
                 alt={`${alt} — миниатюра ${i + 1}`}
-                className="aspect-square w-full object-cover"
+                className="aspect-square w-full object-contain p-1.5"
               />
             </button>
           ))}

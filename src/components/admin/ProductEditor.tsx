@@ -310,7 +310,7 @@ const ProductEditor = ({ product, categories, brands, onClose, onSave }: Props) 
                 <div className="mt-2 flex flex-wrap gap-3">
                   {form.images.map((src, i) => (
                     <div key={src + i} className="relative">
-                      <img src={src} alt="" className="h-24 w-24 bg-card object-cover" />
+                      <img src={src} alt="" className="h-24 w-24 bg-card object-contain p-1" />
                       <button
                         onClick={() =>
                           set(

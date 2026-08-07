@@ -48,7 +48,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
           src={productImages(product)[0]}
           alt={product.name}
           loading="lazy"
-          className="aspect-[4/3] w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+          className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
         />
         {vehicle && fits && (
           <span className="absolute left-0 top-3 flex items-center gap-2 bg-success px-3 py-2 text-[0.7rem] font-bold uppercase tracking-[0.1em] text-success-foreground">
@@ -91,12 +91,12 @@ const ProductCard = ({ product, vehicle }: Props) => {
           </span>
         </div>
       ) : (
-        <div className="mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-          <Icon name={vehicle ? 'CircleSlash' : 'Info'} size={15} />
-          {vehicle
-            ? 'Не подходит к выбранной машине'
-            : `${product.years[0]}—${product.years[1]}`}
-        </div>
+        vehicle && (
+          <div className="mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+            <Icon name="CircleSlash" size={15} />
+            Не подходит к выбранной машине
+          </div>
+        )
       )}
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-4 pt-6">

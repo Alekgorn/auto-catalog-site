@@ -121,7 +121,7 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
                     <img
                       src={productImages(p)[0]}
                       alt=""
-                      className="h-12 w-12 flex-none bg-surface-muted object-cover"
+                      className="h-12 w-12 flex-none bg-surface-muted object-contain p-1"
                     />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-head text-[0.95rem] font-medium">

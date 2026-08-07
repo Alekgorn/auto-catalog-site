@@ -125,7 +125,7 @@ const CartDrawer = () => {
                         <img
                           src={productImages(product)[0]}
                           alt={product.name}
-                          className="h-full w-full object-cover"
+                          className="h-full w-full object-contain p-1.5"
                         />
                       </Link>
                       <div className="min-w-0 flex-1">
