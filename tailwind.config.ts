@@ -20,6 +20,7 @@ export default {
 		extend: {
 			fontFamily: {
 				head: ['Rubik', 'sans-serif'],
+				logo: ['Oswald', 'Rubik', 'sans-serif'],
 				body: ['Inter', 'sans-serif']
 			},
 			boxShadow: {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import LogoMark from '@/components/ui/logo-mark';
 import { useCatalog } from '@/context/CatalogContext';
 import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
@@ -70,10 +71,12 @@ const Header = () => {
             }
           }}
           aria-label="ШТАТНО — на главную"
-          className="flex items-center gap-3 font-head text-xl font-bold uppercase tracking-[-0.02em]"
+          className="group flex items-center gap-2.5"
         >
-          <span className="block h-4 w-4 flex-none bg-primary" />
-          Штатно
+          <LogoMark className="h-8 w-[34px] flex-none transition-transform duration-300 group-hover:-translate-y-0.5" />
+          <span className="wordmark text-[1.55rem]">
+            Штат<span className="text-primary">но</span>
+          </span>
         </Link>
 
         <nav className="hidden gap-6 lg:flex xl:gap-8">

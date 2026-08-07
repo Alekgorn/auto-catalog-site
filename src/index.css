@@ -167,6 +167,12 @@
     @apply scroll-mt-[76px] lg:scroll-mt-[140px];
   }
 
+  /* Логотип: узкий плотный гротеск, слог «но» акцентом */
+  .wordmark {
+    @apply font-logo font-bold uppercase leading-none;
+    letter-spacing: 0.01em;
+  }
+
   .link-underline {
     @apply relative border-b border-transparent transition-colors hover:border-primary hover:text-primary;
   }
