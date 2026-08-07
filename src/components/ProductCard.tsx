@@ -8,7 +8,6 @@ import {
   formatPrice,
   isCompatible,
   productImages,
-  productSku,
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
@@ -47,9 +46,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
   return (
     <article className="group flex flex-col bg-surface p-5 shadow-card transition-shadow duration-300 hover:shadow-card-hover">
       <div className="flex items-start justify-between gap-4">
-        <span className="eyebrow">
-          {product.category} · {productSku(product)}
-        </span>
+        <span className="eyebrow">{product.category}</span>
         {product.badge && (
           <span className="bg-primary px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.12em] text-primary-foreground">
             {product.badge}
