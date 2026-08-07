@@ -82,9 +82,11 @@ const SearchSelect = ({
 
   return (
     <div ref={boxRef} className="relative flex flex-col justify-center gap-1.5">
-      <label className="eyebrow" htmlFor={id}>
-        {label}
-      </label>
+      {label && (
+        <label className="eyebrow" htmlFor={id}>
+          {label}
+        </label>
+      )}
       <div className="flex items-center gap-2">
         <input
           id={id}

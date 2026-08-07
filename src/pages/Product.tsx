@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductGallery from '@/components/ProductGallery';
+import FitsCheck from '@/components/FitsCheck';
 import ProductCard from '@/components/ProductCard';
 import RequestDialog from '@/components/RequestDialog';
 import GuideContent from '@/components/GuideContent';
@@ -11,7 +12,6 @@ import {
   Product as ProductType,
   Vehicle,
   formatPrice,
-  isCompatible,
   productDescription,
   productImages,
   productKit,
@@ -23,7 +23,6 @@ import { loadVehicle } from '@/lib/vehicle';
 import { SITE_URL } from '@/lib/seo';
 import { slugify } from '@/lib/slug';
 import { useSeo } from '@/hooks/use-seo';
-import FitsList from '@/components/FitsList';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -138,7 +137,6 @@ const Product = () => {
     );
   }
 
-  const fits = isCompatible(product, vehicle);
   const brands = Object.entries(product.fits);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
 
@@ -206,35 +204,6 @@ const Product = () => {
                 {modelCount} совместимых моделей
               </div>
 
-              {vehicle && fits ? (
-                <div className="mt-6 flex items-center gap-4 border-2 border-success bg-success-soft px-5 py-4">
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
-                    <Icon name="Check" size={20} strokeWidth={3} />
-                  </span>
-                  <span>
-                    <span className="block font-head text-[1.05rem] font-bold uppercase tracking-tight text-success">
-                      Подходит к вашему автомобилю
-                    </span>
-                    <span className="mt-0.5 block text-[0.9rem] text-success">
-                      {vehicle.brand} {vehicle.model}, {vehicle.year} г.
-                    </span>
-                  </span>
-                </div>
-              ) : (
-                <div className="mt-6 flex items-start gap-3 border border-border px-4 py-3 text-[0.85rem] text-muted-foreground">
-                  <Icon
-                    name={vehicle ? 'CircleSlash' : 'Info'}
-                    size={17}
-                    className="mt-px flex-none"
-                  />
-                  <span>
-                    {vehicle
-                      ? `Не подходит к ${vehicle.brand} ${vehicle.model}, ${vehicle.year} г. — подберём аналог по вашему кузову.`
-                      : 'Выберите машину в подборе, чтобы увидеть отметку совместимости.'}
-                  </span>
-                </div>
-              )}
-
               <div className="mt-8 flex items-end gap-4">
                 {product.oldPrice && (
                   <span className="pb-1 text-base text-muted-foreground line-through">
@@ -245,6 +214,13 @@ const Product = () => {
                   {formatPrice(product.price)}
                 </span>
               </div>
+
+              <FitsCheck
+                product={product}
+                vehicle={vehicle}
+                onVehicle={setVehicle}
+                onRequest={() => openRequest(product)}
+              />
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <div className="flex items-center border border-foreground">
@@ -373,32 +349,6 @@ const Product = () => {
           </div>
         </section>
 
-        <section className="section-pad">
-          <div className="rule" />
-          <div className="grid grid-cols-1 gap-x-6 gap-y-8 py-12 lg:grid-cols-12">
-            <div className="lg:col-span-5">
-              <div className="eyebrow">Совместимость</div>
-              <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em] sm:text-3xl">
-                Подходит к {modelCount} моделям
-              </h2>
-              <p className="mt-5 max-w-[32em] text-muted-foreground">
-                Список собран по штатным разъёмам и типу проводки. Если вашей модели
-                нет в списке — оставьте заявку, проверим по VIN и предложим аналог.
-              </p>
-              <button
-                onClick={() => openRequest(product)}
-                className="mt-7 inline-flex items-center gap-2 border border-foreground px-6 py-4 font-head text-[0.85rem] font-medium uppercase tracking-[0.08em] transition-colors hover:bg-primary hover:border-primary hover:text-primary-foreground"
-              >
-                Проверить мою машину
-                <Icon name="ArrowRight" size={16} />
-              </button>
-            </div>
-
-            <div className="lg:col-span-6 lg:col-start-7">
-              <FitsList brands={brands} vehicle={vehicle} />
-            </div>
-          </div>
-        </section>
 
         {productGuides.length > 0 && (
           <section id="guide" className="section-pad anchor-offset">
