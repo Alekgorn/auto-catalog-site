@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import ShortcutsEditor from '@/components/admin/ShortcutsEditor';
+import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
@@ -97,6 +98,10 @@ const SitePanel = ({ onSaved, categories }: Props) => {
 
   return (
     <div className="py-8">
+      <div className="mb-12">
+        <ImageOptimizer />
+      </div>
+
       <div className="grid grid-cols-1 gap-x-6 gap-y-12 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <div className="eyebrow">Контакты</div>

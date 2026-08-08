@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import boto3
 import psycopg2
 import psycopg2.extras
+from image_optimizer import optimize
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -73,6 +74,15 @@ def check_token(conn, token: str) -> bool:
     return ok
 
 
+def _s3():
+    return boto3.client(
+        's3',
+        endpoint_url='https://bucket.poehali.dev',
+        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    )
+
+
 def upload_image(data_url: str) -> str:
     header, _, payload = data_url.partition(',')
     ext = 'jpg'
@@ -82,17 +92,59 @@ def upload_image(data_url: str) -> str:
         ext = 'webp'
     elif 'svg' in header:
         ext = 'svg'
-    content_type = f"image/{'jpeg' if ext == 'jpg' else ext}"
-    body = base64.b64decode(payload)
+    raw = base64.b64decode(payload)
+    body, ext, content_type = optimize(raw, ext)
     key = f"catalog/{uuid.uuid4().hex}.{ext}"
-    s3 = boto3.client(
-        's3',
-        endpoint_url='https://bucket.poehali.dev',
-        aws_access_key_id=os.environ['AWS_ACCESS_KEY_ID'],
-        aws_secret_access_key=os.environ['AWS_SECRET_ACCESS_KEY'],
+    s3 = _s3()
+    s3.put_object(
+        Bucket='files',
+        Key=key,
+        Body=body,
+        ContentType=content_type,
+        CacheControl='public, max-age=31536000, immutable',
     )
-    s3.put_object(Bucket='files', Key=key, Body=body, ContentType=content_type)
     return f"https://cdn.poehali.dev/projects/{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+
+
+CDN_PREFIX = 'https://cdn.poehali.dev/projects/'
+
+
+def _is_own_cdn(url: str) -> bool:
+    key = os.environ.get('AWS_ACCESS_KEY_ID', '')
+    return url.startswith(f'{CDN_PREFIX}{key}/bucket/')
+
+
+def _cdn_key(url: str) -> str:
+    key = os.environ.get('AWS_ACCESS_KEY_ID', '')
+    return url.split(f'{CDN_PREFIX}{key}/bucket/', 1)[1].split('?')[0]
+
+
+def reoptimize_url(url: str) -> str:
+    """Скачивает картинку с CDN, пережимает в WebP и кладёт рядом новым файлом."""
+    if not _is_own_cdn(url) or url.lower().split('?')[0].endswith(('.webp', '.svg')):
+        return url
+
+    src_key = _cdn_key(url)
+    s3 = _s3()
+    try:
+        raw = s3.get_object(Bucket='files', Key=src_key)['Body'].read()
+    except Exception:
+        return url
+
+    ext = src_key.rsplit('.', 1)[-1].lower()
+    data, new_ext, content_type = optimize(raw, ext)
+    if new_ext != 'webp':
+        return url
+
+    new_key = f"catalog/{uuid.uuid4().hex}.webp"
+    s3.put_object(
+        Bucket='files',
+        Key=new_key,
+        Body=data,
+        ContentType=content_type,
+        CacheControl='public, max-age=31536000, immutable',
+    )
+    return f"{CDN_PREFIX}{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{new_key}"
 
 
 def row_to_product(r: dict) -> dict:
@@ -772,6 +824,43 @@ def handler(event: dict, context) -> dict:
             if not data_url.startswith('data:'):
                 return resp(400, {'error': 'Некорректный файл'})
             return resp(200, {'url': upload_image(data_url)})
+
+        if action == 'optimize-images':
+            """Пережимает фото товаров в WebP порциями, чтобы уложиться в таймаут."""
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"SELECT id, images FROM {schema()}.products "
+                f"WHERE images::text ~* '\\.(png|jpe?g)' ORDER BY id"
+            )
+            rows = cur.fetchall()
+            left = len(rows)
+
+            if method == 'GET':
+                cur.close()
+                return resp(200, {'left': left})
+
+            done = 0
+            saved = 0
+            for r in rows[:1]:
+                urls = r['images'] or []
+                new_urls = []
+                changed = False
+                for u in urls:
+                    nu = reoptimize_url(u)
+                    if nu != u:
+                        changed = True
+                        saved += 1
+                    new_urls.append(nu)
+                if changed:
+                    cur.execute(
+                        f"UPDATE {schema()}.products SET images = {qjson(new_urls)} "
+                        f"WHERE id = {r['id']}"
+                    )
+                    conn.commit()
+                done += 1
+
+            cur.close()
+            return resp(200, {'done': done, 'saved': saved, 'left': max(left - done, 0)})
 
         if action == 'bulk' and method == 'POST':
             ids = [int(i) for i in (body.get('ids') or []) if str(i).isdigit()]
