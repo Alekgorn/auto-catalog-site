@@ -833,34 +833,37 @@ def handler(event: dict, context) -> dict:
                 f"WHERE images::text ~* '\\.(png|jpe?g)' ORDER BY id"
             )
             rows = cur.fetchall()
-            left = len(rows)
+
+            def heavy(u: str) -> bool:
+                return u.lower().split('?')[0].endswith(('.png', '.jpg', '.jpeg'))
+
+            left = sum(len([u for u in (r['images'] or []) if heavy(u)]) for r in rows)
 
             if method == 'GET':
                 cur.close()
                 return resp(200, {'left': left})
 
-            done = 0
+            # За один вызов пережимаем ровно одно фото — лимит функции 2 секунды
             saved = 0
-            for r in rows[:1]:
+            for r in rows:
                 urls = r['images'] or []
-                new_urls = []
-                changed = False
-                for u in urls:
-                    nu = reoptimize_url(u)
-                    if nu != u:
-                        changed = True
-                        saved += 1
-                    new_urls.append(nu)
-                if changed:
-                    cur.execute(
-                        f"UPDATE {schema()}.products SET images = {qjson(new_urls)} "
-                        f"WHERE id = {r['id']}"
-                    )
-                    conn.commit()
-                done += 1
+                idx = next((i for i, u in enumerate(urls) if heavy(u)), None)
+                if idx is None:
+                    continue
+                new_url = reoptimize_url(urls[idx])
+                if new_url == urls[idx]:
+                    continue
+                urls[idx] = new_url
+                cur.execute(
+                    f"UPDATE {schema()}.products SET images = {qjson(urls)} "
+                    f"WHERE id = {r['id']}"
+                )
+                conn.commit()
+                saved = 1
+                break
 
             cur.close()
-            return resp(200, {'done': done, 'saved': saved, 'left': max(left - done, 0)})
+            return resp(200, {'done': saved, 'saved': saved, 'left': max(left - saved, 0)})
 
         if action == 'bulk' and method == 'POST':
             ids = [int(i) for i in (body.get('ids') or []) if str(i).isdigit()]

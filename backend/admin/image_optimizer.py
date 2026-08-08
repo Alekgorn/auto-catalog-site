@@ -36,7 +36,7 @@ def optimize(raw: bytes, ext: str) -> tuple[bytes, str, str]:
         img.thumbnail((MAX_SIDE, MAX_SIDE), Image.LANCZOS)
 
     buf = io.BytesIO()
-    img.save(buf, format='WEBP', quality=QUALITY, method=6)
+    img.save(buf, format='WEBP', quality=QUALITY, method=3)
     data = buf.getvalue()
 
     if len(data) >= len(raw) * MIN_GAIN and ext in ('jpg', 'jpeg', 'webp'):

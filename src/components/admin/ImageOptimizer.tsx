@@ -39,8 +39,9 @@ const ImageOptimizer = ({ onDone }: Props) => {
 
     let remaining = start;
     let converted = 0;
+    let stuck = 0;
 
-    while (remaining > 0 && !stop.current) {
+    while (remaining > 0 && !stop.current && stuck < 3) {
       const res = await adminFetch('?action=optimize-images', { method: 'POST' });
       if (!res.ok) {
         toast({
@@ -55,7 +56,7 @@ const ImageOptimizer = ({ onDone }: Props) => {
       converted += data.saved ?? 0;
       setLeft(remaining);
       setSaved(converted);
-      if (!data.done) break;
+      stuck = data.saved ? 0 : stuck + 1;
     }
 
     setRunning(false);
@@ -90,7 +91,7 @@ const ImageOptimizer = ({ onDone }: Props) => {
             <div className="mt-3 text-[0.88rem]">
               {pending > 0 ? (
                 <span>
-                  Ждут обработки: <b>{pending}</b> товаров
+                  Ждут обработки: <b>{pending}</b> фото
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-success">
