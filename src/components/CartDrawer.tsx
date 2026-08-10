@@ -11,10 +11,13 @@ import { sendOrder } from '@/lib/api';
 
 const CartDrawer = () => {
   const { items, count, open, setOpen, remove, setQty, clear } = useCart();
-  const { priceOf } = usePrice();
+  const { dealer, priceOf, profitOf } = usePrice();
 
   // Сумма с учётом дилерского режима
   const total = items.reduce((a, i) => a + priceOf(i.product) * i.qty, 0);
+  /** Розничная стоимость набора и выгода дилера с перепродажи */
+  const retail = items.reduce((a, i) => a + i.product.price * i.qty, 0);
+  const profit = items.reduce((a, i) => a + profitOf(i.product) * i.qty, 0);
   const { toast } = useToast();
   const vehicle = loadVehicle();
 
@@ -198,6 +201,19 @@ const CartDrawer = () => {
             </div>
 
             <div className="border-t border-foreground px-6 py-5">
+              {dealer && profit > 0 && (
+                <div className="mb-4 border border-primary bg-surface px-4 py-3">
+                  <div className="flex items-center justify-between text-[0.85rem]">
+                    <span className="text-muted-foreground">В рознице</span>
+                    <span>{formatPrice(retail)}</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-[0.9rem] font-medium text-primary">
+                    <span>Ваша выгода</span>
+                    <span>{formatPrice(profit)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-end justify-between">
                 <span className="eyebrow">Итого</span>
                 <span className="font-head text-3xl font-bold tracking-tight">

@@ -6,13 +6,12 @@ import {
   CARD_FIELDS,
   Product,
   Vehicle,
-  formatPrice,
   isCompatible,
   productImages,
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
-import { usePrice } from '@/hooks/use-price';
+import PriceBlock from '@/components/PriceBlock';
 import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
@@ -21,7 +20,6 @@ interface Props {
 }
 
 const ProductCard = ({ product, vehicle }: Props) => {
-  const { dealer, priceOf, strikeOf } = usePrice();
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
   const { cardFields, categorySpecs } = useCatalog();
@@ -157,21 +155,7 @@ const ProductCard = ({ product, vehicle }: Props) => {
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-4 sm:pt-6">
         <div className="flex-none">
-          {strikeOf(product) && (
-            <div className="text-[0.8rem] text-muted-foreground line-through">
-              {formatPrice(strikeOf(product) as number)}
-            </div>
-          )}
-          <div className="flex items-center gap-2">
-            <div className="whitespace-nowrap font-head text-xl font-bold tracking-tight sm:text-2xl">
-              {formatPrice(priceOf(product))}
-            </div>
-            {dealer && product.proPrice && (
-              <span className="flex-none bg-primary px-1.5 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-primary-foreground">
-                Дилер
-              </span>
-            )}
-          </div>
+          <PriceBlock product={product} />
         </div>
         <div className="flex w-full flex-none items-center gap-2 sm:w-auto">
           <Link
