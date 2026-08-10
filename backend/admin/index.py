@@ -2,6 +2,7 @@ import base64
 import hashlib
 import io
 import json
+import re
 import os
 import secrets
 import uuid
@@ -974,6 +975,72 @@ def handler(event: dict, context) -> dict:
 
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
+
+        if action == 'dealers':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT id, phone, name, comment, is_active, last_login, created_at "
+                    f"FROM {schema()}.dealers ORDER BY created_at DESC"
+                )
+                items = [
+                    {
+                        'id': r['id'],
+                        'phone': r['phone'],
+                        'name': r['name'],
+                        'comment': r['comment'],
+                        'isActive': r['is_active'],
+                        'lastLogin': r['last_login'].isoformat() if r['last_login'] else None,
+                        'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
+                    }
+                    for r in cur.fetchall()
+                ]
+                cur.close()
+                return resp(200, {'dealers': items})
+
+            if method == 'POST':
+                phone = re.sub(r'\D', '', str(body.get('phone', '')))
+                if phone.startswith('8'):
+                    phone = '7' + phone[1:]
+                if len(phone) == 10:
+                    phone = '7' + phone
+                if len(phone) != 11:
+                    cur.close()
+                    return resp(400, {'error': 'Введите номер полностью'})
+
+                name = str(body.get('name', ''))[:160]
+                comment = str(body.get('comment', ''))[:255]
+                cur.execute(
+                    f"INSERT INTO {schema()}.dealers (phone, name, comment) "
+                    f"VALUES ({q(phone)}, {q(name)}, {q(comment)}) "
+                    f"ON CONFLICT (phone) DO UPDATE SET name = EXCLUDED.name, "
+                    f"comment = EXCLUDED.comment, is_active = TRUE"
+                )
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            if method == 'DELETE':
+                dealer_id = int(body.get('id') or 0)
+                if dealer_id:
+                    cur.execute(f"DELETE FROM {schema()}.dealers WHERE id = {dealer_id}")
+                    conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            if method == 'PUT':
+                dealer_id = int(body.get('id') or 0)
+                active = 'TRUE' if body.get('isActive') else 'FALSE'
+                if dealer_id:
+                    cur.execute(
+                        f"UPDATE {schema()}.dealers SET is_active = {active} WHERE id = {dealer_id}"
+                    )
+                    conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            cur.close()
 
         if action == 'brands' and method == 'PUT':
             brands = body.get('brands', [])

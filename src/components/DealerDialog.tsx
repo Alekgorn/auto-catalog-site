@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import { useDealer } from '@/context/DealerContext';
 
 interface Props {
   open: boolean;
@@ -29,14 +30,17 @@ const digitsOf = (value: string) => value.replace(/\D/g, '');
  * Заявку обрабатывает менеджер — после подтверждения дилер видит свои цены.
  */
 const DealerDialog = ({ open, onOpenChange }: Props) => {
+  const { active, dealer, login, logout } = useDealer();
   const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setSent(false);
+      setError('');
       setTimeout(() => inputRef.current?.focus(), 80);
     }
   }, [open]);
@@ -60,10 +64,15 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
 
   const valid = digitsOf(phone).length === 11;
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!valid) return;
-    setSent(true);
+    if (!valid || busy) return;
+    setBusy(true);
+    setError('');
+    const message = await login(phone);
+    setBusy(false);
+    if (message) setError(message);
+    else setSent(true);
   };
 
   return (
@@ -83,23 +92,52 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
           <Icon name="X" size={20} />
         </button>
 
-        {sent ? (
-          <div className="py-4 text-center">
+        {active && !sent ? (
+          <div className="py-2 text-center">
             <span className="mx-auto flex h-14 w-14 items-center justify-center border border-foreground bg-primary text-primary-foreground">
-              <Icon name="Check" size={28} />
+              <Icon name="BadgePercent" fallback="Tag" size={26} />
             </span>
             <h2 className="mt-5 font-head text-xl font-bold uppercase tracking-tight">
-              Заявка принята
+              Дилерский режим включён
             </h2>
             <p className="mt-3 text-[0.9rem] leading-relaxed text-muted-foreground">
-              Свяжемся с вами по номеру {phone} в рабочее время. После
-              подтверждения откроем дилерские цены.
+              {dealer?.name ? `${dealer.name}. ` : ''}Во всём каталоге показаны
+              дилерские цены.
             </p>
             <button
               onClick={() => onOpenChange(false)}
               className="mt-6 w-full bg-foreground py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
             >
-              Понятно
+              Перейти к покупкам
+            </button>
+            <button
+              onClick={() => {
+                logout();
+                setPhone('');
+                onOpenChange(false);
+              }}
+              className="mt-3 w-full border border-border py-3 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Выйти из режима
+            </button>
+          </div>
+        ) : sent ? (
+          <div className="py-4 text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center border border-foreground bg-primary text-primary-foreground">
+              <Icon name="Check" size={28} />
+            </span>
+            <h2 className="mt-5 font-head text-xl font-bold uppercase tracking-tight">
+              Дилерский режим включён
+            </h2>
+            <p className="mt-3 text-[0.9rem] leading-relaxed text-muted-foreground">
+              {dealer?.name ? `${dealer.name}, добро пожаловать. ` : ''}
+              Теперь в каталоге показаны ваши цены.
+            </p>
+            <button
+              onClick={() => onOpenChange(false)}
+              className="mt-6 w-full bg-foreground py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              Перейти к покупкам
             </button>
           </div>
         ) : (
@@ -112,9 +150,8 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
               Вход для дилеров
             </h2>
             <p className="mt-3 text-[0.9rem] leading-relaxed text-muted-foreground">
-              Оставьте номер телефона — менеджер свяжется и откроет доступ к
-              дилерским ценам. Работаем с установщиками, автосервисами и
-              магазинами.
+              Введите номер телефона, привязанный к вашей учётной записи — в
+              каталоге включатся дилерские цены.
             </p>
 
             <form onSubmit={submit} className="mt-6">
@@ -132,31 +169,25 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
                 className="w-full border-2 border-foreground bg-surface px-4 py-3.5 font-head text-lg font-medium tracking-tight outline-none transition-colors focus:border-primary"
               />
 
-              <label className="eyebrow mb-2 mt-4 block" htmlFor="dealer-name">
-                Название компании или имя
-                <span className="ml-1 normal-case tracking-normal text-muted-foreground">
-                  необязательно
-                </span>
-              </label>
-              <input
-                id="dealer-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Автосервис «Пример»"
-                className="w-full border border-border bg-surface px-4 py-3 outline-none transition-colors focus:border-primary"
-              />
+              {error && (
+                <p className="mt-3 flex items-start gap-2 text-[0.85rem] leading-relaxed text-primary">
+                  <Icon name="CircleAlert" size={16} className="mt-0.5 flex-none" />
+                  {error}
+                </p>
+              )}
 
               <button
                 type="submit"
-                disabled={!valid}
+                disabled={!valid || busy}
                 className="mt-6 flex w-full items-center justify-between bg-primary px-5 py-4 font-head text-[0.85rem] font-bold uppercase tracking-[0.08em] text-primary-foreground transition-colors hover:bg-foreground disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Получить доступ
-                <Icon name="ArrowRight" size={18} />
+                {busy ? 'Проверяем…' : 'Войти'}
+                <Icon name={busy ? 'Loader' : 'ArrowRight'} size={18} />
               </button>
 
               <p className="mt-3 text-[0.75rem] leading-relaxed text-muted-foreground">
-                Нажимая кнопку, вы соглашаетесь на обработку персональных данных.
+                Нет доступа? Позвоните нам — подключим вашу компанию к дилерским
+                ценам.
               </p>
             </form>
           </>

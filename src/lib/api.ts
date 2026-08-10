@@ -3,6 +3,7 @@ import funcUrls from '../../backend/func2url.json';
 export const CATALOG_URL = (funcUrls as Record<string, string>).catalog;
 export const ADMIN_URL = (funcUrls as Record<string, string>).admin;
 export const ORDERS_URL = (funcUrls as Record<string, string>).orders;
+export const DEALERS_URL = (funcUrls as Record<string, string>).dealers;
 
 export interface OrderItemPayload {
   slug: string;

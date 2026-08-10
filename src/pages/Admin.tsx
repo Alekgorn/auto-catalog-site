@@ -6,6 +6,7 @@ import { formatPrice } from '@/data/catalog';
 import ProductEditor, { AdminProduct, emptyProduct } from '@/components/admin/ProductEditor';
 import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
 import OrdersPanel from '@/components/admin/OrdersPanel';
+import DealersPanel from '@/components/admin/DealersPanel';
 import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
 import SettingsPanel from '@/components/admin/SettingsPanel';
 import SitePanel from '@/components/admin/SitePanel';
@@ -24,7 +25,7 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [tab, setTab] = useState<
-    'products' | 'guides' | 'orders' | 'brands' | 'categories' | 'site' | 'settings'
+    'products' | 'guides' | 'orders' | 'dealers' | 'brands' | 'categories' | 'site' | 'settings'
   >('orders');
   const [search, setSearch] = useState('');
   const [newOrders, setNewOrders] = useState(0);
@@ -324,6 +325,7 @@ const Admin = () => {
               ['guides', `Инструкции (${guides.length})`],
               ['brands', `Марки (${brands.length})`],
               ['categories', `Категории (${categories.length})`],
+              ['dealers', 'Дилеры'],
               ['site', 'Сайт'],
               ['settings', 'Настройки'],
             ] as const
@@ -343,6 +345,8 @@ const Admin = () => {
         </div>
 
         {tab === 'orders' && <OrdersPanel />}
+
+        {tab === 'dealers' && <DealersPanel />}
 
         {tab === 'guides' && (
           <>

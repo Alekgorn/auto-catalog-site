@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Product } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
+import { useDealer } from '@/context/DealerContext';
 
 const KEY = 'shtatno.cart';
 
@@ -100,10 +101,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     [lines, products],
   );
 
+  const { active: dealerActive } = useDealer();
+
   const count = useMemo(() => items.reduce((a, i) => a + i.qty, 0), [items]);
   const total = useMemo(
-    () => items.reduce((a, i) => a + i.product.price * i.qty, 0),
-    [items],
+    () =>
+      items.reduce(
+        (a, i) => a + (dealerActive && i.product.proPrice ? i.product.proPrice : i.product.price) * i.qty,
+        0,
+      ),
+    [items, dealerActive],
   );
 
   const value: CartValue = {

@@ -24,6 +24,7 @@ import { SITE_URL } from '@/lib/seo';
 import { slugify } from '@/lib/slug';
 import { useSeo } from '@/hooks/use-seo';
 import { useCart } from '@/context/CartContext';
+import { usePrice } from '@/hooks/use-price';
 import { useCatalog } from '@/context/CatalogContext';
 
 const Product = () => {
@@ -35,6 +36,7 @@ const Product = () => {
   );
 
   const { add } = useCart();
+  const { dealer, priceOf, strikeOf } = usePrice();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -205,14 +207,19 @@ const Product = () => {
               </div>
 
               <div className="mt-8 flex items-end gap-4">
-                {product.oldPrice && (
+                {strikeOf(product) && (
                   <span className="pb-1 text-base text-muted-foreground line-through">
-                    {formatPrice(product.oldPrice)}
+                    {formatPrice(strikeOf(product) as number)}
                   </span>
                 )}
                 <span className="font-head text-4xl font-bold tracking-tight">
-                  {formatPrice(product.price)}
+                  {formatPrice(priceOf(product))}
                 </span>
+                {dealer && product.proPrice && (
+                  <span className="mb-1.5 bg-primary px-2 py-1 text-[0.68rem] font-bold uppercase tracking-[0.08em] text-primary-foreground">
+                    Цена дилера
+                  </span>
+                )}
               </div>
 
               <FitsCheck

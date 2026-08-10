@@ -8,6 +8,8 @@ export interface Product {
   category: Category;
   price: number;
   oldPrice?: number;
+  /** Цена для дилеров — показывается в дилерском режиме */
+  proPrice?: number | null;
   install: string;
   warranty: string;
   fits: Record<string, string[]>; // марка -> модели
