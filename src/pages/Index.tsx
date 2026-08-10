@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
 import Selection from '@/components/Selection';
@@ -15,6 +15,7 @@ import { useCatalog } from '@/context/CatalogContext';
 
 const Index = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { brands: BRANDS } = useCatalog();
   const saved = loadVehicle();
 
@@ -79,28 +80,22 @@ const Index = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [activeProduct] = useState<Product | null>(null);
 
+  /**
+   * Подобрали машину — открываем каталог со всем оборудованием.
+   * Каталог теперь живёт в сценарии, а не на главной.
+   */
   const applyVehicle = () => {
-    setVehicle({ brand, model, year: Number(year) });
-    setTimeout(
-      () =>
-        document
-          .getElementById('catalog')
-          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
-      40,
-    );
-  };
-
-  // Смена машины из каталога: список обновляется на месте, страница не прыгает
-  const changeVehicle = (next: Vehicle) => {
-    setBrand(next.brand);
-    setModel(next.model);
-    setYear(String(next.year));
+    const next = { brand, model, year: Number(year) };
     setVehicle(next);
+    saveVehicle(next);
+    navigate('/scenario/vse-po-mashine');
   };
 
+  /** Клик по марке в списке — открываем каталог с фильтром по ней */
   const pickBrand = (b: string) => {
     setBrand(b);
     setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
+    navigate(`/scenario/vse-po-mashine?brand=${encodeURIComponent(b)}`);
   };
 
   const selectorProps = {
