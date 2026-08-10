@@ -23,3 +23,17 @@ export const findBySlug = <T>(
   slug: string,
   name: (item: T) => string,
 ): T | undefined => items.find((item) => slugify(name(item)) === slug);
+
+/** Латиница идёт первой, затем кириллица — как в полосе букв. */
+export const compareNames = (a: string, b: string): number => {
+  const rank = (v: string) => {
+    const c = v.trim().charAt(0).toUpperCase();
+    if (/[A-Z]/.test(c)) return 0;
+    if (/[А-ЯЁ]/.test(c)) return 1;
+    return 2;
+  };
+  const ra = rank(a);
+  const rb = rank(b);
+  if (ra !== rb) return ra - rb;
+  return a.localeCompare(b, 'ru');
+};

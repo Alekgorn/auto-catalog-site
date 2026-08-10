@@ -52,7 +52,11 @@ export const BRANDS: Brand[] = [
   { name: "Renault", models: ["Duster", "Logan", "Arkana", "Kaptur"] },
 ];
 
-export const YEARS: number[] = Array.from({ length: 17 }, (_, i) => 2026 - i);
+/** Годы выпуска: с 2026 до 1989, от новых к старым. */
+export const YEARS: number[] = Array.from(
+  { length: 2026 - 1989 + 1 },
+  (_, i) => 2026 - i,
+);
 
 export const CATEGORIES: Category[] = [
   "Android-магнитолы",

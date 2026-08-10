@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 
 /**
@@ -16,8 +16,19 @@ interface Props {
   placeholder?: string;
   emptyText?: string;
   disabled?: boolean;
+  /**
+   * Показывать боковую полосу с буквами. Нужна для длинных списков —
+   * марок и моделей, где иначе приходится долго листать.
+   */
+  alphabet?: boolean;
   onChange: (value: string) => void;
 }
+
+/** Первая буква названия: цифры и прочее сводим в «#». */
+const firstLetter = (value: string): string => {
+  const ch = value.trim().charAt(0).toUpperCase();
+  return /[A-ZА-ЯЁ]/.test(ch) ? ch : '#';
+};
 
 const SearchSelect = ({
   id,
@@ -27,6 +38,7 @@ const SearchSelect = ({
   placeholder = 'Выберите',
   emptyText = 'Ничего не найдено',
   disabled = false,
+  alphabet = false,
   onChange,
 }: Props) => {
   const [open, setOpen] = useState(false);
@@ -43,6 +55,43 @@ const SearchSelect = ({
   }, []);
 
   const filtered = options;
+
+  /** Буквы, которые реально встречаются в списке */
+  const letters = useMemo(() => {
+    if (!alphabet) return [];
+    const set: string[] = [];
+    options.forEach((o) => {
+      const l = firstLetter(o);
+      if (!set.includes(l)) set.push(l);
+    });
+    // Латиница, затем кириллица, «#» в конец
+    return set.sort((a, b) => {
+      if (a === '#') return 1;
+      if (b === '#') return -1;
+      const la = /[A-Z]/.test(a);
+      const lb = /[A-Z]/.test(b);
+      if (la !== lb) return la ? -1 : 1;
+      return a.localeCompare(b, 'ru');
+    });
+  }, [options, alphabet]);
+
+  /** Первый элемент каждой буквы — к нему прокручиваем */
+  const anchors = useMemo(() => {
+    const map: Record<string, number> = {};
+    options.forEach((o, i) => {
+      const l = firstLetter(o);
+      if (!(l in map)) map[l] = i;
+    });
+    return map;
+  }, [options]);
+
+  const jumpTo = (letter: string) => {
+    const index = anchors[letter];
+    if (index === undefined || !listRef.current) return;
+    const el = listRef.current.children[index] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: 'start' });
+    setHighlight(index);
+  };
 
   // При открытии подсвечиваем текущее значение
   useEffect(() => {
@@ -109,12 +158,12 @@ const SearchSelect = ({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 top-full z-30 mt-2 border border-foreground bg-surface shadow-card-hover">
+        <div className="absolute left-0 right-0 top-full z-30 mt-2 flex border border-foreground bg-surface shadow-card-hover">
           <ul
             id={`${id}-list`}
             ref={listRef}
             role="listbox"
-            className="max-h-64 overflow-y-auto"
+            className="max-h-64 flex-1 overflow-y-auto"
           >
             {filtered.length === 0 ? (
               <li className="px-4 py-4 text-[0.88rem] text-muted-foreground">
@@ -143,6 +192,24 @@ const SearchSelect = ({
               ))
             )}
           </ul>
+
+          {alphabet && letters.length > 3 && (
+            <div className="flex max-h-64 flex-none flex-col items-center overflow-y-auto border-l border-border bg-background px-1 py-1">
+              {letters.map((l) => (
+                <button
+                  key={l}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    jumpTo(l);
+                  }}
+                  className="w-6 py-[3px] text-[0.68rem] font-medium leading-none text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

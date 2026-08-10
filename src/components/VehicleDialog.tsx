@@ -86,6 +86,7 @@ const VehicleDialog = ({ open, vehicle, onClose, onApply }: Props) => {
               value={brand}
               options={BRANDS.map((b) => b.name)}
               placeholder="Выберите марку"
+            alphabet
               emptyText="Такой марки нет — напишите нам"
               onChange={(b) => {
                 setBrand(b);
@@ -101,6 +102,7 @@ const VehicleDialog = ({ open, vehicle, onClose, onApply }: Props) => {
               value={model}
               options={models}
               placeholder="Выберите модель"
+            alphabet
               emptyText="Модель не найдена"
               onChange={setModel}
             />

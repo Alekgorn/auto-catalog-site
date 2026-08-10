@@ -47,6 +47,7 @@ const VehicleSelector = ({
           value={brand}
           options={BRANDS.map((b) => b.name)}
           placeholder="Выберите марку"
+            alphabet
           emptyText="Такой марки нет — напишите нам"
           onChange={(b) => {
             onBrand(b);
@@ -62,6 +63,7 @@ const VehicleSelector = ({
           value={model}
           options={models}
           placeholder="Выберите модель"
+            alphabet
           emptyText="Модель не найдена"
           onChange={onModel}
         />

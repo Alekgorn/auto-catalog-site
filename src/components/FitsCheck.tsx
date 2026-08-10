@@ -114,6 +114,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               value={brand}
               options={BRANDS.map((b) => b.name)}
               placeholder="Марка"
+              alphabet
               emptyText="Такой марки нет"
               onChange={(b) => {
                 setBrand(b);
@@ -126,6 +127,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               value={model}
               options={models}
               placeholder="Модель"
+              alphabet
               emptyText="Сначала выберите марку"
               onChange={setModel}
             />

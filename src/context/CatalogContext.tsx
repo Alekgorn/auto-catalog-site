@@ -7,6 +7,7 @@ import {
   Product,
 } from '@/data/catalog';
 import { CATALOG_URL } from '@/lib/api';
+import { compareNames } from '@/lib/slug';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
@@ -122,7 +123,15 @@ export const CatalogProvider = ({
           setProducts(data.products);
         }
         if (Array.isArray(data.brands) && data.brands.length) {
-          setBrands(data.brands);
+          // Марки и модели — по алфавиту, чтобы работала прокрутка по буквам
+          setBrands(
+            [...data.brands]
+              .sort((a, b) => compareNames(a.name, b.name))
+              .map((b) => ({
+                ...b,
+                models: [...(b.models ?? [])].sort(compareNames),
+              })),
+          );
         }
         if (Array.isArray(data.guides)) {
           setGuides(data.guides);

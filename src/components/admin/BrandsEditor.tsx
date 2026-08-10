@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { compareNames } from '@/lib/slug';
 
 export interface AdminBrand {
   name: string;
@@ -170,6 +171,23 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
 
       <div className="mt-6 flex flex-wrap gap-3">
         <button
+          onClick={() =>
+            setList((l) =>
+              [...l]
+                .sort((a, b) => compareNames(a.name, b.name))
+                .map((b) => ({
+                  ...b,
+                  models: [...b.models].sort(compareNames),
+                })),
+            )
+          }
+          title="Расставить марки и модели по алфавиту"
+          className="flex items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
+        >
+          <Icon name="ArrowDownAZ" fallback="ArrowDown" size={16} />
+          По алфавиту
+        </button>
+        <button
           onClick={() => setList((l) => [...l, { name: '', models: [] }])}
           className="flex items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
         >
@@ -179,12 +197,17 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
         <button
           onClick={() =>
             onSave(
+              // Сохраняем сразу по алфавиту — так работает прокрутка по буквам
               list
                 .filter((b) => b.name.trim())
                 .map((b) => ({
                   name: b.name.trim(),
-                  models: b.models.filter((m) => m.trim()),
-                })),
+                  models: b.models
+                    .map((m) => m.trim())
+                    .filter(Boolean)
+                    .sort(compareNames),
+                }))
+                .sort((a, b) => compareNames(a.name, b.name)),
             )
           }
           className="flex items-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
