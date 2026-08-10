@@ -18,12 +18,12 @@ const Hero = () => {
     <div className="rule" />
 
     <div className="grid grid-cols-1 items-center gap-x-6 md:grid-cols-12">
-      <div className="flex min-h-0 flex-col pb-6 pt-8 md:col-span-6 md:pb-8 md:pr-8">
+      <div className="flex min-h-0 flex-col pb-5 pt-6 md:col-span-6 md:pb-8 md:pr-8 md:pt-8">
         <div className="eyebrow rise ml-0 md:ml-4" style={{ animationDelay: '.05s' }}>
           Автоэлектроника для вашей машины
         </div>
         <h1
-          className="rise ml-0 mt-4 font-head text-[11vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 lg:text-[58px]"
+          className="rise ml-0 mt-3 font-head text-[9.5vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 md:mt-4 lg:text-[58px]"
           style={{ animationDelay: '.15s' }}
         >
           Всё для
@@ -33,7 +33,7 @@ const Hero = () => {
           автомобиля
         </h1>
         <p
-          className="rise ml-0 mt-5 max-w-[26em] leading-relaxed text-muted-foreground md:ml-4"
+          className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
           style={{ animationDelay: '.25s' }}
         >
           Автоэлектроника, аксессуары и оборудование{' '}
@@ -67,18 +67,44 @@ const Hero = () => {
         )}
       </div>
 
-      <div className="relative flex h-[240px] flex-col py-4 md:col-span-6 md:h-[320px] md:py-6 md:pl-4">
+      <div className="relative hidden h-[240px] flex-col py-4 md:col-span-6 md:flex md:h-[320px] md:py-6 md:pl-4">
         <MountPlan />
       </div>
     </div>
 
     <div className="rule" />
 
-    <div className="py-8 md:py-10">
+    <div className="py-6 md:py-10">
+      <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
+          1
+        </span>
+        <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
+          Опишите, что нужно
+        </span>
+        <span className="text-[0.85rem] text-muted-foreground">
+          своими словами — «магнитола для Тойоты» или артикул с коробки
+        </span>
+      </div>
+
       <HeroSearch />
     </div>
 
     <div className="rule-hair" />
+
+    <div className="pt-6 md:pt-8">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <span className="flex h-6 w-6 flex-none items-center justify-center bg-foreground text-[0.72rem] font-bold text-background">
+          2
+        </span>
+        <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
+          Или выберите готовую задачу
+        </span>
+        <span className="text-[0.85rem] text-muted-foreground">
+          не знаете, что искать — начните отсюда
+        </span>
+      </div>
+    </div>
 
     <Scenarios />
 
