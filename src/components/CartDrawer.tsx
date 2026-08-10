@@ -4,12 +4,17 @@ import Icon from '@/components/ui/icon';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
+import { usePrice } from '@/hooks/use-price';
 import { formatPrice, isCompatible, productImages } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
 import { sendOrder } from '@/lib/api';
 
 const CartDrawer = () => {
-  const { items, count, total, open, setOpen, remove, setQty, clear } = useCart();
+  const { items, count, open, setOpen, remove, setQty, clear } = useCart();
+  const { priceOf } = usePrice();
+
+  // Сумма с учётом дилерского режима
+  const total = items.reduce((a, i) => a + priceOf(i.product) * i.qty, 0);
   const { toast } = useToast();
   const vehicle = loadVehicle();
 
@@ -47,7 +52,7 @@ const CartDrawer = () => {
       items: items.map(({ product, qty }) => ({
         slug: product.id,
         name: product.name,
-        price: product.price,
+        price: priceOf(product),
         qty,
       })),
     });
@@ -137,7 +142,7 @@ const CartDrawer = () => {
                           {product.name}
                         </Link>
                         <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-                          {formatPrice(product.price)} / шт
+                          {formatPrice(priceOf(product))} / шт
                         </div>
                         {vehicle && !fits && (
                           <div className="mt-1 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-primary">
@@ -176,7 +181,7 @@ const CartDrawer = () => {
                         </button>
                       </div>
                       <div className="font-head text-lg font-bold tracking-tight">
-                        {formatPrice(product.price * qty)}
+                        {formatPrice(priceOf(product) * qty)}
                       </div>
                     </div>
                   </div>
@@ -230,7 +235,7 @@ const CartDrawer = () => {
                   <dt className="text-muted-foreground">
                     {product.name} × {qty}
                   </dt>
-                  <dd className="flex-none">{formatPrice(product.price * qty)}</dd>
+                  <dd className="flex-none">{formatPrice(priceOf(product) * qty)}</dd>
                 </div>
               ))}
               <div className="flex justify-between gap-4 pt-2">

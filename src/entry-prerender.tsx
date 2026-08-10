@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import AppRoutes from './AppRoutes';
 import { CartProvider } from '@/context/CartContext';
+import { DealerProvider } from '@/context/DealerContext';
 import { CatalogProvider, PrerenderData } from '@/context/CatalogContext';
 import { clearSeo, takeSeo } from '@/lib/seo';
 import './index.css';
@@ -23,11 +24,13 @@ export const render = (url: string, data: PrerenderData): string => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <StaticRouter location={url}>
-          <CatalogProvider initialData={data}>
-            <CartProvider>
-              <AppRoutes />
-            </CartProvider>
-          </CatalogProvider>
+          <DealerProvider>
+            <CatalogProvider initialData={data}>
+              <CartProvider>
+                <AppRoutes />
+              </CartProvider>
+            </CatalogProvider>
+          </DealerProvider>
         </StaticRouter>
       </TooltipProvider>
     </QueryClientProvider>,

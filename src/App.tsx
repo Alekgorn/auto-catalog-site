@@ -18,15 +18,15 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <CatalogProvider>
-          <DealerProvider>
-          <CartProvider>
-            <AppRoutes />
-            <CartDrawer />
-            <QuickViewHost />
-          </CartProvider>
-          </DealerProvider>
-        </CatalogProvider>
+        <DealerProvider>
+          <CatalogProvider>
+            <CartProvider>
+              <AppRoutes />
+              <CartDrawer />
+              <QuickViewHost />
+            </CartProvider>
+          </CatalogProvider>
+        </DealerProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

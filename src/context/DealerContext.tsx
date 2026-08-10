@@ -24,6 +24,15 @@ interface DealerState {
 
 const KEY = 'shtatno.dealer';
 
+/** Сколько помним вход дилера — 7 дней */
+const TTL_DAYS = 7;
+const TTL_MS = TTL_DAYS * 24 * 60 * 60 * 1000;
+
+interface Stored extends Dealer {
+  /** Время окончания доступа */
+  until: number;
+}
+
 const DealerContext = createContext<DealerState>({
   active: false,
   dealer: null,
@@ -34,12 +43,19 @@ const DealerContext = createContext<DealerState>({
 export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
   const [dealer, setDealer] = useState<Dealer | null>(null);
 
+  // Восстанавливаем вход, если срок ещё не вышел
   useEffect(() => {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) setDealer(JSON.parse(raw) as Dealer);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Stored;
+      if (!saved?.until || saved.until < Date.now()) {
+        localStorage.removeItem(KEY);
+        return;
+      }
+      setDealer({ phone: saved.phone, name: saved.name });
     } catch {
-      /* noop */
+      localStorage.removeItem(KEY);
     }
   }, []);
 
@@ -56,7 +72,11 @@ export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
 
       const next = { phone: data.phone as string, name: (data.name as string) ?? '' };
       setDealer(next);
-      localStorage.setItem(KEY, JSON.stringify(next));
+      // Запоминаем на 7 дней — повторно вводить номер не нужно
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ ...next, until: Date.now() + TTL_MS }),
+      );
       return null;
     } catch {
       return 'Не удалось связаться с сервером. Попробуйте ещё раз.';
