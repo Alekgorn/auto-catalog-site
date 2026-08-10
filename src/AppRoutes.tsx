@@ -7,11 +7,13 @@ import Guides from './pages/Guides';
 import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import GuidePage from './pages/GuidePage';
+import SearchPage from './pages/Search';
 
 const AppRoutes = () => (
   <Routes>
     <Route path="/" element={<Index />} />
     <Route path="/product/:id" element={<Product />} />
+    <Route path="/search" element={<SearchPage />} />
     <Route path="/catalog/:slug" element={<CategoryPage />} />
     <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />

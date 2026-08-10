@@ -1,0 +1,274 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import Icon from '@/components/ui/icon';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import ProductCard from '@/components/ProductCard';
+import { Vehicle } from '@/data/catalog';
+import { loadVehicle } from '@/lib/vehicle';
+import { SITE_URL } from '@/lib/seo';
+import { slugify } from '@/lib/slug';
+import { useSeo } from '@/hooks/use-seo';
+import { useCatalog } from '@/context/CatalogContext';
+import { describeQuery, parseQuery, smartSearch } from '@/lib/smart-search';
+
+type SortKey = 'relevance' | 'price-asc' | 'price-desc' | 'name';
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: 'relevance', label: 'по совпадению' },
+  { key: 'price-asc', label: 'сначала дешёвые' },
+  { key: 'price-desc', label: 'сначала дорогие' },
+  { key: 'name', label: 'по названию' },
+];
+
+const PAGE_SIZE = 12;
+
+const SearchPage = () => {
+  const [params, setParams] = useSearchParams();
+  const query = params.get('q') ?? '';
+  const { products, loading } = useCatalog();
+
+  const [input, setInput] = useState(query);
+  const [sort, setSort] = useState<SortKey>('relevance');
+  const [category, setCategory] = useState('');
+  const [shown, setShown] = useState(PAGE_SIZE);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+
+  useEffect(() => setInput(query), [query]);
+  useEffect(() => setVehicle(loadVehicle()), []);
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+    setCategory('');
+  }, [query]);
+
+  const hits = useMemo(
+    () => smartSearch(products, query),
+    [products, query],
+  );
+
+  const parsed = useMemo(
+    () => parseQuery(query, products),
+    [query, products],
+  );
+
+  const understood = useMemo(() => describeQuery(parsed), [parsed]);
+
+  const categories = useMemo(() => {
+    const map: Record<string, number> = {};
+    hits.forEach((h) => {
+      map[h.product.category] = (map[h.product.category] ?? 0) + 1;
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [hits]);
+
+  const list = useMemo(() => {
+    let out = category
+      ? hits.filter((h) => h.product.category === category)
+      : hits;
+    if (sort !== 'relevance') {
+      out = [...out].sort((a, b) => {
+        if (sort === 'price-asc') return a.product.price - b.product.price;
+        if (sort === 'price-desc') return b.product.price - a.product.price;
+        return a.product.name.localeCompare(b.product.name, 'ru');
+      });
+    }
+    return out;
+  }, [hits, category, sort]);
+
+  useSeo({
+    title: query
+      ? `${query} — поиск по каталогу · ШТАТНО`
+      : 'Поиск по каталогу · ШТАТНО',
+    description: query
+      ? `Результаты поиска «${query}»: автоэлектроника, переходники, разъёмы и аксессуары с подбором по марке и модели авто.`
+      : 'Поиск по каталогу автоэлектроники: магнитолы, камеры, переходники и штатные разъёмы.',
+    canonical: `${SITE_URL}/search`,
+  });
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = input.trim();
+    if (q) setParams({ q });
+  };
+
+  const visible = list.slice(0, shown);
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+
+      <main className="section-pad">
+        <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+          <Link to="/" className="transition-colors hover:text-primary">
+            Главная
+          </Link>
+          <Icon name="ChevronRight" size={13} />
+          <span className="text-foreground">Поиск</span>
+        </div>
+
+        <div className="rule" />
+
+        <div className="grid grid-cols-1 gap-x-6 py-8 md:grid-cols-12 md:py-10">
+          <div className="md:col-span-7">
+            <div className="eyebrow">Результаты поиска</div>
+            <h1 className="mt-3 font-head text-3xl font-bold uppercase leading-tight tracking-tight md:text-[42px]">
+              {query ? `«${query}»` : 'Что ищем?'}
+            </h1>
+            {understood && (
+              <p className="mt-3 text-[0.85rem] text-muted-foreground">
+                Поняли запрос как:{' '}
+                <span className="text-foreground">{understood}</span>
+              </p>
+            )}
+          </div>
+
+          <div className="mt-6 md:col-span-5 md:mt-0">
+            <form
+              onSubmit={submit}
+              className="flex items-center gap-3 border border-foreground bg-surface px-4 py-3 transition-colors focus-within:border-primary"
+            >
+              <Icon
+                name="Search"
+                size={18}
+                className="flex-none text-muted-foreground"
+              />
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Магнитола Kia Rio, камера или артикул"
+                className="w-full min-w-0 border-0 bg-transparent text-[0.95rem] outline-none placeholder:text-muted-foreground"
+              />
+              <button
+                type="submit"
+                className="flex-none text-muted-foreground transition-colors hover:text-primary"
+                aria-label="Найти"
+              >
+                <Icon name="ArrowRight" size={17} />
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="rule-hair" />
+
+        {loading ? (
+          <div className="py-20 text-center text-muted-foreground">
+            Загружаем каталог…
+          </div>
+        ) : !query ? (
+          <div className="py-20 text-center text-muted-foreground">
+            Введите название, марку авто или артикул.
+          </div>
+        ) : hits.length === 0 ? (
+          <div className="py-16 text-center">
+            <div className="font-head text-xl font-bold">Ничего не нашлось</div>
+            <p className="mx-auto mt-3 max-w-[34em] text-[0.9rem] leading-relaxed text-muted-foreground">
+              Попробуйте короче — «магнитола», «разъём Honda» или артикул с
+              коробки. Если нужного пока нет в каталоге, позвоните — подберём и
+              привезём под заказ.
+            </p>
+            <Link
+              to="/"
+              className="mt-6 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-[0.8rem] uppercase tracking-[0.1em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+            >
+              Открыть каталог
+              <Icon name="ArrowRight" size={15} />
+            </Link>
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-4 py-5">
+              <div className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+                Найдено: {list.length}
+              </div>
+              <label className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+                Сортировка
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as SortKey)}
+                  className="border border-border bg-surface px-3 py-2 text-[0.8rem] normal-case tracking-normal text-foreground outline-none transition-colors hover:border-primary"
+                >
+                  {SORTS.map((s) => (
+                    <option key={s.key} value={s.key}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {categories.length > 1 && (
+              <div className="flex flex-wrap gap-2 pb-6">
+                <button
+                  onClick={() => setCategory('')}
+                  className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
+                    category
+                      ? 'border-border bg-surface hover:border-primary hover:text-primary'
+                      : 'border-foreground bg-foreground text-background'
+                  }`}
+                >
+                  Все ({hits.length})
+                </button>
+                {categories.map(([c, n]) => (
+                  <button
+                    key={c}
+                    onClick={() => setCategory(c)}
+                    className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
+                      category === c
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-border bg-surface hover:border-primary hover:text-primary'
+                    }`}
+                  >
+                    {c} ({n})
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {parsed.brands.length > 0 && (
+              <div className="flex flex-wrap gap-2 pb-6 text-[0.78rem]">
+                <span className="py-2 text-muted-foreground">
+                  Страницы по марке:
+                </span>
+                {parsed.brands.map((b) => (
+                  <Link
+                    key={b}
+                    to={`/brand/${slugify(b)}`}
+                    className="border border-border bg-surface px-3.5 py-2 transition-colors hover:border-primary hover:text-primary"
+                  >
+                    {b}
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3 pb-10 md:gap-4 lg:grid-cols-3">
+              {visible.map((h) => (
+                <ProductCard
+                  key={h.product.id}
+                  product={h.product}
+                  vehicle={vehicle}
+                />
+              ))}
+            </div>
+
+            {shown < list.length && (
+              <div className="pb-14 text-center">
+                <button
+                  onClick={() => setShown((s) => s + PAGE_SIZE)}
+                  className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+                >
+                  Показать ещё
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </main>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default SearchPage;

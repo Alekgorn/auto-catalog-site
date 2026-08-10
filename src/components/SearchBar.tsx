@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { useCatalog } from '@/context/CatalogContext';
-import { formatPrice, productImages, productSku, searchProducts } from '@/data/catalog';
+import { formatPrice, productImages, productSku } from '@/data/catalog';
+import { smartSearch } from '@/lib/smart-search';
 
 interface Props {
   autoFocus?: boolean;
@@ -30,10 +31,8 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const results = useMemo(
-    () => searchProducts(products, query).slice(0, 6),
-    [products, query],
-  );
+  const hits = useMemo(() => smartSearch(products, query), [products, query]);
+  const results = useMemo(() => hits.slice(0, 6).map((h) => h.product), [hits]);
 
   useEffect(() => setHighlight(0), [query]);
 
@@ -44,9 +43,18 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
     navigate(`/product/${slug}`);
   };
 
+  /** Enter — открываем страницу со всеми находками */
+  const showAll = () => {
+    const q = query.trim();
+    if (!q) return;
+    setOpen(false);
+    onDone?.();
+    navigate(`/search?q=${encodeURIComponent(q)}`);
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (results[highlight]) goTo(results[highlight].id);
+    showAll();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -138,6 +146,20 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
                 </li>
               ))}
             </ul>
+          )}
+
+          {hits.length > results.length && (
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                showAll();
+              }}
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:text-primary"
+            >
+              Показать все {hits.length}
+              <Icon name="ArrowRight" size={15} />
+            </button>
           )}
         </div>
       )}
