@@ -5,6 +5,7 @@ import LogoMark from '@/components/ui/logo-mark';
 import { useCatalog } from '@/context/CatalogContext';
 import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
+import DealerDialog from '@/components/DealerDialog';
 
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог' },
@@ -24,6 +25,7 @@ const Header = () => {
   const { count, setOpen: setCartOpen } = useCart();
   const [open, setOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
+  const [dealerOpen, setDealerOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setStuck(window.scrollY > 40);
@@ -105,6 +107,16 @@ const Header = () => {
           <button
             onClick={() => {
               setOpen(false);
+              setDealerOpen(true);
+            }}
+            className="hidden items-center gap-2 border border-foreground px-3.5 py-2 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary lg:flex"
+          >
+            <Icon name="BadgePercent" fallback="Tag" size={16} />
+            Я дилер
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
               setCartOpen(true);
             }}
             aria-label="Заказ"
@@ -150,14 +162,29 @@ const Header = () => {
               </Link>
             ))}
           </nav>
+          <button
+            onClick={() => {
+              setOpen(false);
+              setDealerOpen(true);
+            }}
+            className="mt-6 flex w-full items-center justify-between border border-foreground px-5 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
+          >
+            <span className="flex items-center gap-2">
+              <Icon name="BadgePercent" fallback="Tag" size={18} />
+              Я дилер
+            </span>
+            <Icon name="ArrowRight" size={18} className="text-primary" />
+          </button>
+
           <a
             href={telHref(contacts.phone)}
-            className="mt-8 block font-head text-2xl font-bold text-primary"
+            className="mt-6 block font-head text-2xl font-bold text-primary"
           >
             {contacts.phone}
           </a>
         </div>
       )}
+      <DealerDialog open={dealerOpen} onOpenChange={setDealerOpen} />
     </header>
   );
 };
