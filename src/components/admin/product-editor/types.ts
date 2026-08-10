@@ -9,6 +9,10 @@ export interface AdminProduct {
   oldPrice: number | null;
   /** Цена для дилеров */
   proPrice: number | null;
+  /** Ссылка на товар в Ozon */
+  ozonUrl: string;
+  /** Ссылка на товар в Wildberries */
+  wbUrl: string;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -31,6 +35,8 @@ export const emptyProduct = (): AdminProduct => ({
   price: 0,
   oldPrice: null,
   proPrice: null,
+  ozonUrl: '',
+  wbUrl: '',
   install: '',
   warranty: '',
   yearFrom: 2015,

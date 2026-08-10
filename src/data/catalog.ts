@@ -10,6 +10,10 @@ export interface Product {
   oldPrice?: number;
   /** Цена для дилеров — показывается в дилерском режиме */
   proPrice?: number | null;
+  /** Ссылка на товар в Ozon */
+  ozonUrl?: string;
+  /** Ссылка на товар в Wildberries */
+  wbUrl?: string;
   install: string;
   warranty: string;
   fits: Record<string, string[]>; // марка -> модели

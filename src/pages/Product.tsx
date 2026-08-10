@@ -24,6 +24,7 @@ import { slugify } from '@/lib/slug';
 import { useSeo } from '@/hooks/use-seo';
 import { useCart } from '@/context/CartContext';
 import PriceBlock from '@/components/PriceBlock';
+import MarketButtons from '@/components/MarketButtons';
 import { useCatalog } from '@/context/CatalogContext';
 
 const Product = () => {
@@ -259,6 +260,8 @@ const Product = () => {
                   Позвонить
                 </a>
               </div>
+
+              <MarketButtons product={product} />
 
               {productGuides.length > 0 && (
                 <button

@@ -87,6 +87,24 @@ const MainSection = ({ form, categories, set }: Props) => (
         className={field}
       />
     </div>
+    <div className="md:col-span-2">
+      <span className={label}>Ссылка на Ozon</span>
+      <input
+        value={form.ozonUrl}
+        onChange={(e) => set('ozonUrl', e.target.value)}
+        placeholder="https://www.ozon.ru/product/..."
+        className={field}
+      />
+    </div>
+    <div className="md:col-span-2">
+      <span className={label}>Ссылка на Wildberries</span>
+      <input
+        value={form.wbUrl}
+        onChange={(e) => set('wbUrl', e.target.value)}
+        placeholder="https://www.wildberries.ru/catalog/..."
+        className={field}
+      />
+    </div>
     <div>
       <span className={label}>Гарантия</span>
       <input

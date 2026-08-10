@@ -15,6 +15,8 @@ export interface AdminProduct {
   oldPrice: number | null;
   /** Цена для дилеров — видна в админке и выгрузке */
   proPrice: number | null;
+  ozonUrl: string;
+  wbUrl: string;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -37,6 +39,8 @@ export const emptyProduct = (): AdminProduct => ({
   price: 0,
   oldPrice: null,
   proPrice: null,
+  ozonUrl: '',
+  wbUrl: '',
   install: '',
   warranty: '',
   yearFrom: 2015,
@@ -280,6 +284,24 @@ const ProductEditor = ({
                   onChange={(e) =>
                     set('proPrice', e.target.value ? Number(e.target.value) : null)
                   }
+                  className={field}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <span className={label}>Ссылка на Ozon</span>
+                <input
+                  value={form.ozonUrl}
+                  onChange={(e) => set('ozonUrl', e.target.value)}
+                  placeholder="https://www.ozon.ru/product/..."
+                  className={field}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <span className={label}>Ссылка на Wildberries</span>
+                <input
+                  value={form.wbUrl}
+                  onChange={(e) => set('wbUrl', e.target.value)}
+                  placeholder="https://www.wildberries.ru/catalog/..."
                   className={field}
                 />
               </div>
