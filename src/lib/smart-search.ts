@@ -354,7 +354,9 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
       const c = CONCEPT_BY_ID.get(id);
       if (!c) return;
       if ((c.categories ?? []).includes(item.product.category)) {
-        semantic += 80;
+        // Совпал сам раздел — это сильнее, чем похожее слово в названии
+        // сопутствующего товара («переходник для Андроид магнитолы»)
+        semantic += 220;
         reasons.push(item.product.category);
       }
       (c.keywords ?? []).forEach((k) => {
@@ -403,15 +405,20 @@ export const smartSearch = (
   const exact = hits.filter((h) => h.score >= 10000);
   if (exact.length) return exact;
 
-  // Пожелание по цене — переставляем внутри близких по релевантности
+  // Пожелание по цене переставляет только товары, близкие по смыслу к запросу.
+  // Иначе дешёвый кабель обгонит магнитолу, которую и просили.
   if (q.priceOrder && hits.length > 1) {
-    const top = hits.slice(0, 40);
-    top.sort((a, b) =>
-      q.priceOrder === 'asc'
-        ? a.product.price - b.product.price
-        : b.product.price - a.product.price,
-    );
-    hits.splice(0, top.length, ...top);
+    const best = hits[0].score;
+    const limit = best * 0.6;
+    const top = hits.filter((h) => h.score >= limit);
+    if (top.length > 1) {
+      top.sort((a, b) =>
+        q.priceOrder === 'asc'
+          ? a.product.price - b.product.price
+          : b.product.price - a.product.price,
+      );
+      hits.splice(0, top.length, ...top);
+    }
   }
 
   return limit ? hits.slice(0, limit) : hits;
