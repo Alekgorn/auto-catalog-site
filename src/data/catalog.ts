@@ -373,5 +373,33 @@ export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
   return v.year >= product.years[0] && v.year <= product.years[1];
 };
 
+/**
+ * Универсальный товар — подходит почти любой машине (расходники, кабели,
+ * шумоизоляция). Такие не отсеиваем при подборе по авто: даже если конкретной
+ * модели нет в списке, товар всё равно подойдёт.
+ */
+export const isUniversal = (product: Product, totalBrands: number): boolean => {
+  const brands = Object.keys(product.fits ?? {}).length;
+  if (!brands) return true;
+  if (!totalBrands) return false;
+  return brands / totalBrands >= 0.8;
+};
+
+/**
+ * Подходит ли товар машине с учётом универсальных позиций.
+ * Возвращает 'exact' — прямое совпадение, 'universal' — подходит как
+ * универсальный, null — не подходит.
+ */
+export const matchVehicle = (
+  product: Product,
+  v: Vehicle | null,
+  totalBrands: number,
+): 'exact' | 'universal' | null => {
+  if (!v) return 'exact';
+  if (isCompatible(product, v)) return 'exact';
+  if (isUniversal(product, totalBrands)) return 'universal';
+  return null;
+};
+
 export const formatPrice = (n: number): string =>
   n.toLocaleString('ru-RU') + ' ₽';

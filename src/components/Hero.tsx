@@ -2,6 +2,7 @@ import Icon from '@/components/ui/icon';
 import MountPlan from '@/components/MountPlan';
 import VehicleSelector from '@/components/VehicleSelector';
 import Scenarios from '@/components/Scenarios';
+import HeroSearch from '@/components/HeroSearch';
 import { useCatalog } from '@/context/CatalogContext';
 
 /** Открывает каталог с отмеченной категорией. Пустая — весь каталог */
@@ -89,6 +90,12 @@ const Hero = (props: Props) => {
     <div className="rule" />
 
     <VehicleSelector {...props} />
+
+    <div className="rule-hair" />
+
+    <div className="py-8 md:py-10">
+      <HeroSearch />
+    </div>
 
     <div className="rule-hair" />
 

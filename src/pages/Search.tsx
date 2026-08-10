@@ -4,8 +4,9 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
-import { Vehicle } from '@/data/catalog';
-import { loadVehicle } from '@/lib/vehicle';
+import VehicleFilterBar from '@/components/VehicleFilterBar';
+import { Vehicle, matchVehicle } from '@/data/catalog';
+import { loadVehicle, saveVehicle } from '@/lib/vehicle';
 import { SITE_URL } from '@/lib/seo';
 import { slugify } from '@/lib/slug';
 import { useSeo } from '@/hooks/use-seo';
@@ -26,7 +27,7 @@ const PAGE_SIZE = 12;
 const SearchPage = () => {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
-  const { products, loading } = useCatalog();
+  const { products, brands, loading } = useCatalog();
 
   const [input, setInput] = useState(query);
   const [sort, setSort] = useState<SortKey>('relevance');
@@ -41,10 +42,18 @@ const SearchPage = () => {
     setCategory('');
   }, [query]);
 
-  const hits = useMemo(
-    () => smartSearch(products, query),
-    [products, query],
-  );
+  const found = useMemo(() => smartSearch(products, query), [products, query]);
+
+  /**
+   * Подбор по машине: оставляем совместимые товары и универсальные —
+   * те, что подходят почти любому авто.
+   */
+  const hits = useMemo(() => {
+    if (!vehicle) return found;
+    return found.filter(
+      (h) => matchVehicle(h.product, vehicle, brands.length) !== null,
+    );
+  }, [found, vehicle, brands.length]);
 
   const parsed = useMemo(
     () => parseQuery(query, products),
@@ -52,6 +61,23 @@ const SearchPage = () => {
   );
 
   const understood = useMemo(() => describeQuery(parsed), [parsed]);
+
+  /**
+   * Марка названа прямо в запросе («для Toyota») — сразу подставляем её
+   * в подбор по машине, чтобы не выбирать вручную.
+   */
+  useEffect(() => {
+    if (!parsed.brands.length || vehicle) return;
+    const brand = parsed.brands[0];
+    const known = brands.find((b) => b.name === brand);
+    if (!known) return;
+    const model = parsed.models.find((m) => known.models.includes(m));
+    if (!model) return;
+    const next = { brand, model, year: new Date().getFullYear() - 4 };
+    setVehicle(next);
+    saveVehicle(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsed.brands.join(), parsed.models.join(), brands.length]);
 
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
@@ -84,6 +110,18 @@ const SearchPage = () => {
       : 'Поиск по каталогу автоэлектроники: магнитолы, камеры, переходники и штатные разъёмы.',
     canonical: `${SITE_URL}/search`,
   });
+
+  const applyVehicle = (v: Vehicle) => {
+    setVehicle(v);
+    saveVehicle(v);
+    setShown(PAGE_SIZE);
+  };
+
+  const resetVehicle = () => {
+    setVehicle(null);
+    saveVehicle(null);
+    setShown(PAGE_SIZE);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,6 +188,23 @@ const SearchPage = () => {
         </div>
 
         <div className="rule-hair" />
+
+        {query && !loading && (
+          <div className="py-5">
+            <VehicleFilterBar
+              vehicle={vehicle}
+              onApply={applyVehicle}
+              onReset={resetVehicle}
+              count={hits.length}
+            />
+            {vehicle && found.length > hits.length && (
+              <p className="mt-2 text-[0.78rem] text-muted-foreground">
+                Скрыто несовместимых: {found.length - hits.length}. Универсальные
+                товары остаются в списке.
+              </p>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="py-20 text-center text-muted-foreground">
