@@ -7,6 +7,8 @@ export interface AdminProduct {
   category: string;
   price: number;
   oldPrice: number | null;
+  /** Цена для дилеров */
+  proPrice: number | null;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -28,6 +30,7 @@ export const emptyProduct = (): AdminProduct => ({
   category: '',
   price: 0,
   oldPrice: null,
+  proPrice: null,
   install: '',
   warranty: '',
   yearFrom: 2015,

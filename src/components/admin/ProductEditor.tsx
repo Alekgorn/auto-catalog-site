@@ -13,6 +13,8 @@ export interface AdminProduct {
   category: string;
   price: number;
   oldPrice: number | null;
+  /** Цена для дилеров — видна в админке и выгрузке */
+  proPrice: number | null;
   install: string;
   warranty: string;
   yearFrom: number;
@@ -34,6 +36,7 @@ export const emptyProduct = (): AdminProduct => ({
   category: '',
   price: 0,
   oldPrice: null,
+  proPrice: null,
   install: '',
   warranty: '',
   yearFrom: 2015,
@@ -265,6 +268,17 @@ const ProductEditor = ({
                   value={form.oldPrice ?? ''}
                   onChange={(e) =>
                     set('oldPrice', e.target.value ? Number(e.target.value) : null)
+                  }
+                  className={field}
+                />
+              </div>
+              <div>
+                <span className={label}>Цена дилера, ₽</span>
+                <input
+                  type="number"
+                  value={form.proPrice ?? ''}
+                  onChange={(e) =>
+                    set('proPrice', e.target.value ? Number(e.target.value) : null)
                   }
                   className={field}
                 />

@@ -79,6 +79,15 @@ const MainSection = ({ form, categories, set }: Props) => (
       />
     </div>
     <div>
+      <span className={label}>Цена дилера, ₽</span>
+      <input
+        type="number"
+        value={form.proPrice ?? ''}
+        onChange={(e) => set('proPrice', e.target.value ? Number(e.target.value) : null)}
+        className={field}
+      />
+    </div>
+    <div>
       <span className={label}>Гарантия</span>
       <input
         value={form.warranty}
