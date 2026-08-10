@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import Hero from '@/components/Hero';
-import Catalog from '@/components/Catalog';
 import Selection from '@/components/Selection';
 import Faq from '@/components/Faq';
 import Contacts from '@/components/Contacts';
@@ -119,11 +118,6 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
-        <Catalog
-          vehicle={vehicle}
-          onReset={() => setVehicle(null)}
-          onChangeVehicle={changeVehicle}
-        />
         <Selection {...selectorProps} onPickBrand={pickBrand} />
         <Faq />
         <Contacts />

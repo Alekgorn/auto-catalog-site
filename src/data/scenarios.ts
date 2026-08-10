@@ -24,6 +24,8 @@ export interface Scenario {
   hint?: string;
   /** Частые вопросы по теме сценария */
   faq: { q: string; a: string }[];
+  /** Показывать весь каталог целиком, а не выборку по запросу */
+  fullCatalog?: boolean;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -342,6 +344,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'vse-po-mashine',
+    fullCatalog: true,
     icon: 'LayoutGrid',
     title: 'Вот пристали, покажите всё по моей машине',
     text: 'Ничего не скрывая — покажем всё, что подходит.',

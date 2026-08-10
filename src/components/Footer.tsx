@@ -127,7 +127,7 @@ const Footer = () => {
               {brands.map((b) => (
                 <li key={b.name}>
                   <Link
-                    to={`/brand/${slugify(b.name)}`}
+                    to={`/scenario/vse-po-mashine?brand=${encodeURIComponent(b.name)}`}
                     onClick={() => window.scrollTo({ top: 0 })}
                     className="text-muted-foreground transition-colors hover:text-primary"
                   >

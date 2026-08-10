@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -18,6 +18,7 @@ import { SITE_URL } from '@/lib/seo';
 import { useSeo } from '@/hooks/use-seo';
 import { useCatalog } from '@/context/CatalogContext';
 import { smartSearch } from '@/lib/smart-search';
+import CatalogFilters, { FilterState } from '@/components/CatalogFilters';
 
 type SortKey = 'relevance' | 'price-asc' | 'price-desc' | 'name';
 
@@ -32,7 +33,11 @@ const PAGE_SIZE = 12;
 
 const ScenarioPage = () => {
   const { slug = '' } = useParams();
+  const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
+
+  /** Марка из ссылки — «популярные марки» в футере ведут сюда */
+  const brandFilter = params.get('brand') ?? '';
   const { products, brands, loading } = useCatalog();
   const scenario = findScenario(slug);
 
@@ -40,6 +45,39 @@ const ScenarioPage = () => {
   const [sort, setSort] = useState<SortKey>('relevance');
   const [category, setCategory] = useState('');
   const [shown, setShown] = useState(PAGE_SIZE);
+  const [mobileFilters, setMobileFilters] = useState(false);
+
+  const bounds = useMemo(() => {
+    const prices = products.map((p) => p.price);
+    return {
+      min: prices.length ? Math.floor(Math.min(...prices) / 100) * 100 : 0,
+      max: prices.length ? Math.ceil(Math.max(...prices) / 100) * 100 : 100000,
+    };
+  }, [products]);
+
+  const emptyFilters = (): FilterState => ({
+    categories: [],
+    priceMin: bounds.min,
+    priceMax: bounds.max,
+    onlyHits: false,
+    onlySale: false,
+    warranties: [],
+  });
+
+  const [filters, setFilters] = useState<FilterState>(emptyFilters);
+
+  useEffect(() => {
+    setFilters(emptyFilters());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bounds.min, bounds.max, slug]);
+
+  const warranties = useMemo(() => {
+    const set: string[] = [];
+    products.forEach((p) => {
+      if (p.warranty && !set.includes(p.warranty)) set.push(p.warranty);
+    });
+    return set.sort();
+  }, [products]);
 
   useEffect(() => setVehicle(loadVehicle()), []);
   useEffect(() => {
@@ -48,18 +86,41 @@ const ScenarioPage = () => {
     window.scrollTo({ top: 0 });
   }, [slug]);
 
-  const found = useMemo(
-    () => (scenario ? smartSearch(products, scenario.query) : []),
-    [products, scenario],
-  );
+  /**
+   * Обычный сценарий — подборка по смыслу запроса.
+   * Сценарий «покажите всё» — весь каталог целиком, как раньше на главной.
+   */
+  const found = useMemo(() => {
+    if (!scenario) return [];
+    if (scenario.fullCatalog) {
+      return [...products]
+        .sort((a, b) => {
+          const ba = a.badge === 'Хит' ? 1 : 0;
+          const bb = b.badge === 'Хит' ? 1 : 0;
+          if (ba !== bb) return bb - ba;
+          return (b.popularity ?? 0) - (a.popularity ?? 0);
+        })
+        .map((p) => ({ product: p, score: 0, reason: '' }));
+    }
+    return smartSearch(products, scenario.query);
+  }, [products, scenario]);
 
   /** Подбор по машине: совместимые плюс универсальные товары */
   const hits = useMemo(() => {
-    if (!vehicle) return found;
-    return found.filter(
+    let out = found;
+
+    // Пришли по ссылке с маркой — оставляем только её оборудование
+    if (brandFilter) {
+      out = out.filter(
+        (h) => (h.product.fits?.[brandFilter] ?? []).length > 0,
+      );
+    }
+
+    if (!vehicle) return out;
+    return out.filter(
       (h) => matchVehicle(h.product, vehicle, brands.length) !== null,
     );
-  }, [found, vehicle, brands.length]);
+  }, [found, vehicle, brands.length, brandFilter]);
 
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
@@ -69,10 +130,40 @@ const ScenarioPage = () => {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [hits]);
 
+  const allCategories = useMemo(() => {
+    const set: string[] = [];
+    products.forEach((p) => {
+      if (!set.includes(p.category)) set.push(p.category);
+    });
+    return set;
+  }, [products]);
+
+  const catalogCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    hits.forEach((h) => {
+      map[h.product.category] = (map[h.product.category] ?? 0) + 1;
+    });
+    return map;
+  }, [hits]);
+
   const list = useMemo(() => {
     let out = category
       ? hits.filter((h) => h.product.category === category)
       : hits;
+
+    // Полный каталог — работают развёрнутые фильтры слева
+    if (scenario?.fullCatalog) {
+      out = out.filter(({ product: p }) => {
+        if (filters.categories.length && !filters.categories.includes(p.category))
+          return false;
+        if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
+        if (filters.onlyHits && p.badge !== 'Хит') return false;
+        if (filters.onlySale && !p.oldPrice) return false;
+        if (filters.warranties.length && !filters.warranties.includes(p.warranty))
+          return false;
+        return true;
+      });
+    }
     if (sort !== 'relevance') {
       out = [...out].sort((a, b) => {
         if (sort === 'price-asc') return a.product.price - b.product.price;
@@ -81,7 +172,7 @@ const ScenarioPage = () => {
       });
     }
     return out;
-  }, [hits, category, sort]);
+  }, [hits, category, sort, filters, scenario]);
 
   useSeo(
     scenario
@@ -202,6 +293,28 @@ const ScenarioPage = () => {
 
         <div className="rule-hair" />
 
+        {/* Пришли по ссылке с маркой */}
+        {brandFilter && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-primary bg-surface px-5 py-4">
+            <div className="flex items-center gap-3">
+              <Icon name="Tag" size={20} className="flex-none text-primary" />
+              <div className="font-head text-[1.05rem] font-bold tracking-tight">
+                Оборудование для {brandFilter}
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.delete('brand');
+                setParams(next);
+              }}
+              className="border border-border px-4 py-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              Показать все марки
+            </button>
+          </div>
+        )}
+
         {/* Подбор по машине */}
         <div className="py-6">
           <VehicleFilterBar
@@ -261,7 +374,7 @@ const ScenarioPage = () => {
               </label>
             </div>
 
-            {categories.length > 1 && (
+            {categories.length > 1 && !scenario.fullCatalog && (
               <div className="flex flex-wrap gap-2 pb-6">
                 <button
                   onClick={() => setCategory('')}
@@ -289,26 +402,59 @@ const ScenarioPage = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-3">
-              {visible.map((h) => (
-                <ProductCard
-                  key={h.product.id}
-                  product={h.product}
-                  vehicle={vehicle}
-                />
-              ))}
-            </div>
+            <div className={scenario.fullCatalog ? 'grid grid-cols-1 gap-x-6 lg:grid-cols-12' : ''}>
+              {scenario.fullCatalog && (
+                <>
+                  {/* Кнопка фильтров на телефоне */}
+                  <button
+                    onClick={() => setMobileFilters((v) => !v)}
+                    className="mb-4 flex items-center justify-between border border-foreground px-4 py-3 text-[0.8rem] uppercase tracking-[0.1em] lg:hidden"
+                  >
+                    Фильтры
+                    <Icon name={mobileFilters ? 'X' : 'SlidersHorizontal'} size={17} />
+                  </button>
 
-            {shown < list.length && (
-              <div className="pb-10 text-center">
-                <button
-                  onClick={() => setShown((s) => s + PAGE_SIZE)}
-                  className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
-                >
-                  Показать ещё
-                </button>
+                  <aside
+                    className={`lg:col-span-3 ${mobileFilters ? 'block' : 'hidden lg:block'}`}
+                  >
+                    <div className="border border-border bg-surface p-4 lg:sticky lg:top-[100px]">
+                      <CatalogFilters
+                        state={filters}
+                        bounds={bounds}
+                        categories={allCategories}
+                        warranties={warranties}
+                        counts={catalogCounts}
+                        onChange={setFilters}
+                        onReset={() => setFilters(emptyFilters())}
+                      />
+                    </div>
+                  </aside>
+                </>
+              )}
+
+              <div className={scenario.fullCatalog ? 'lg:col-span-9' : ''}>
+                <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-3">
+                  {visible.map((h) => (
+                    <ProductCard
+                      key={h.product.id}
+                      product={h.product}
+                      vehicle={vehicle}
+                    />
+                  ))}
+                </div>
+
+                {shown < list.length && (
+                  <div className="pb-10 text-center">
+                    <button
+                      onClick={() => setShown((s) => s + PAGE_SIZE)}
+                      className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+                    >
+                      Показать ещё
+                    </button>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </>
         )}
 
