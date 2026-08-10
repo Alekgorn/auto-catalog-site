@@ -9,6 +9,7 @@ import { DealerProvider } from '@/context/DealerContext';
 import { CatalogProvider } from '@/context/CatalogContext';
 import CartDrawer from '@/components/CartDrawer';
 import QuickViewHost from '@/components/QuickViewHost';
+import DealerToggle from '@/components/DealerToggle';
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
               <AppRoutes />
               <CartDrawer />
               <QuickViewHost />
+              <DealerToggle />
             </CartProvider>
           </CatalogProvider>
         </DealerProvider>
