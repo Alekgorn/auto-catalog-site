@@ -108,6 +108,11 @@ export interface ParsedQuery {
   models: string[];
   /** Смысловые группы: магнитола, камера, шумоизоляция… */
   concepts: string[];
+  /**
+   * Группы, попавшие сюда только по узкому слову («gps», «usb»).
+   * Раздел целиком по ним не показываем — ищем конкретный товар.
+   */
+  narrowConcepts: string[];
   /** Категории каталога, вытекающие из смысла */
   categories: string[];
   /** Пожелание по цене */
@@ -172,9 +177,11 @@ export const parseQuery = (
 
   /* смысловые группы */
   const concepts: string[] = [];
+  const narrowConcepts: string[] = [];
   const categories: string[] = [];
-  CONCEPTS.forEach((c) => {
-    const hit = c.words.some((w) => {
+
+  const matches = (list: string[]) =>
+    list.some((w) => {
       const wn = normalize(w);
       if (wn.includes(' ')) return cleaned.includes(wn);
       const ws = stem(wn);
@@ -185,11 +192,17 @@ export const parseQuery = (
         fuzzyHit(wn, words)
       );
     });
-    if (hit) {
+
+  CONCEPTS.forEach((c) => {
+    if (matches(c.words)) {
+      // Широкое слово — показываем раздел целиком
       concepts.push(c.id);
       (c.categories ?? []).forEach((cat) => {
         if (!categories.includes(cat)) categories.push(cat);
       });
+    } else if (c.narrow && matches(c.narrow)) {
+      // Узкое слово — только подсказка, раздел целиком не открываем
+      narrowConcepts.push(c.id);
     }
   });
 
@@ -207,7 +220,17 @@ export const parseQuery = (
     }
   }
 
-  return { raw: query, words, stems, brands, models, concepts, categories, priceOrder };
+  return {
+    raw: query,
+    words,
+    stems,
+    brands,
+    models,
+    concepts,
+    narrowConcepts,
+    categories,
+    priceOrder,
+  };
 };
 
 /* ---------- индекс товара ---------- */
@@ -290,49 +313,73 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
 
   /* --- 2. Классический поиск по словам --- */
   let wordHits = 0;
+  let nameHits = 0;
   q.stems.forEach((s, i) => {
     const word = q.words[i];
     if (!word || word.length < 2) return;
 
+    // Слово стоит в названии товара — самый весомый сигнал
+    if (item.nameWords.includes(word)) {
+      score += 200;
+      wordHits += 1;
+      nameHits += 1;
+      return;
+    }
     if (item.name.includes(word)) {
-      score += 60;
+      score += 150;
       wordHits += 1;
+      nameHits += 1;
       return;
     }
-    if (item.nameWords.some((w) => w.startsWith(s) || s.startsWith(w))) {
-      score += 45;
+    // Совпадение по началу слова — только для достаточно длинных основ,
+    // иначе «360» цепляется за «3» из «разъём 3,5 мм»
+    if (
+      s.length >= 4 &&
+      item.nameWords.some(
+        (w) => w.length >= 4 && (w.startsWith(s) || s.startsWith(w)),
+      )
+    ) {
+      score += 110;
       wordHits += 1;
+      nameHits += 1;
       return;
     }
+    // Дальше — только описание и характеристики: сигнал заметно слабее
     if (item.text.includes(word)) {
-      score += 22;
+      score += 20;
       wordHits += 1;
       return;
     }
     if (item.textWords.some((w) => w.startsWith(s))) {
-      score += 16;
+      score += 14;
       wordHits += 1;
       return;
     }
-    // опечатка
     if (fuzzyHit(word, item.textWords)) {
-      score += 12;
+      score += 10;
       wordHits += 1;
     }
   });
 
-  if (wordHits && wordHits === q.words.length && q.words.length > 1) score += 40;
-  if (q.raw.trim().length > 2 && item.name.includes(normalize(q.raw))) score += 120;
+  // Нашлись все слова запроса — заметный бонус
+  if (wordHits && wordHits === q.words.length && q.words.length > 1) score += 60;
+  if (nameHits === q.words.length && q.words.length > 1) score += 120;
+  if (q.raw.trim().length > 2 && item.name.includes(normalize(q.raw))) score += 200;
 
   /* --- 3. Марка авто --- */
   if (q.brands.length) {
     const match = q.brands.filter((b) => item.brands.includes(b));
-    if (match.length) {
+    const inName = q.brands.some((b) => item.name.includes(normalize(b)));
+
+    if (inName) {
+      // Марка прямо в названии — это именно то, что искали
+      score += 320;
+      reasons.push(`Подходит для ${q.brands.join(', ')}`);
+    } else if (match.length) {
       score += 90;
       reasons.push(`Подходит для ${match.join(', ')}`);
     } else if (q.concepts.length || wordHits) {
-      // запрос про конкретную марку, а товар не для неё
-      score -= 45;
+      score -= 60;
     } else {
       return null;
     }
@@ -354,19 +401,24 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
       const c = CONCEPT_BY_ID.get(id);
       if (!c) return;
       if ((c.categories ?? []).includes(item.product.category)) {
-        // Совпал сам раздел — это сильнее, чем похожее слово в названии
-        // сопутствующего товара («переходник для Андроид магнитолы»)
-        semantic += 220;
+        // Совпал сам раздел: «магнитола» показывает магнитолы, а не переходники
+        semantic += 240;
         reasons.push(item.product.category);
       }
       (c.keywords ?? []).forEach((k) => {
         const kn = normalize(k);
-        if (item.name.includes(kn)) semantic += 30;
-        else if (item.text.includes(kn)) semantic += 10;
+        if (item.name.includes(kn)) semantic += 40;
+        else if (item.text.includes(kn)) semantic += 8;
       });
     });
     score += semantic;
     if (!semantic && !wordHits) return null;
+  }
+
+  /* --- 5б. Узкое слово: «gps», «usb» — только точные товары --- */
+  if (q.narrowConcepts.length && !q.concepts.length) {
+    // Раздел целиком не открываем: без слова в названии товар не подходит
+    if (!nameHits) return null;
   }
 
   if (score <= 0) return null;
@@ -405,23 +457,42 @@ export const smartSearch = (
   const exact = hits.filter((h) => h.score >= 10000);
   if (exact.length) return exact;
 
+  /*
+   * Отсекаем «хвост»: товары, которые заметно слабее лучшего результата.
+   * Иначе к трём нужным позициям прицепляются десятки случайных, где слово
+   * мелькнуло лишь в описании.
+   */
+  let result = hits;
+  if (hits.length > 3) {
+    const best = hits[0].score;
+    const floor = Math.max(best * 0.18, 40);
+    const strong = hits.filter((h) => h.score >= floor);
+    if (strong.length >= 3) result = strong;
+  }
+
   // Пожелание по цене переставляет только товары, близкие по смыслу к запросу.
   // Иначе дешёвый кабель обгонит магнитолу, которую и просили.
-  if (q.priceOrder && hits.length > 1) {
-    const best = hits[0].score;
-    const limit = best * 0.6;
-    const top = hits.filter((h) => h.score >= limit);
+  if (q.priceOrder && result.length > 1) {
+    const best = result[0].score;
+    const edge = best * 0.6;
+    // Если из запроса ясен раздел — цену сортируем только внутри него,
+    // иначе дешёвый переходник обгонит магнитолу, которую и просили
+    const top = result.filter(
+      (h) =>
+        h.score >= edge &&
+        (!q.categories.length || q.categories.includes(h.product.category)),
+    );
     if (top.length > 1) {
       top.sort((a, b) =>
         q.priceOrder === 'asc'
           ? a.product.price - b.product.price
           : b.product.price - a.product.price,
       );
-      hits.splice(0, top.length, ...top);
+      result = [...top, ...result.slice(top.length)];
     }
   }
 
-  return limit ? hits.slice(0, limit) : hits;
+  return limit ? result.slice(0, limit) : result;
 };
 
 /** Короткая подсказка «что мы поняли из запроса». */
