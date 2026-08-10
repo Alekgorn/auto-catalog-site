@@ -152,6 +152,7 @@ const resetShell = (html) =>
       '<!--prerender--><!--/prerender-->',
     )
     .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/g, '')
+    .replace(/\s*<script>\(function\(\)\{var d=document;function heal[\s\S]*?<\/script>/g, '')
     .replace(
       /\s*<script type="application\/ld\+json" id="seo-json-ld">[\s\S]*?<\/script>/g,
       '',
@@ -200,6 +201,17 @@ const main = async () => {
   await cleanOld();
 
   const bootScript = `<script>window.__CATALOG__=${safeJson(data)}</script>`;
+
+  /**
+   * Страховка от белого экрана.
+   *
+   * Внутри готовой страницы записана ссылка на файл кода, а его имя меняется
+   * при каждой правке. Если страница осталась со старой ссылкой, браузер не
+   * находит файл и показывает пустоту. Здесь ловим такую ошибку, берём адрес
+   * актуального файла из главной страницы и подключаем его.
+   */
+  const selfHealScript = `<script>(function(){var d=document,done=false;function heal(){if(done)return;done=true;fetch('/?_='+Date.now()).then(function(r){return r.text()}).then(function(t){var m=t.match(/\\/assets\\/index-[A-Za-z0-9_-]+\\.js/);var c=t.match(/\\/assets\\/index-[A-Za-z0-9_-]+\\.css/);if(!m)return;if(c&&!d.querySelector('link[href=\"'+c[0]+'\"]')){var l=d.createElement('link');l.rel='stylesheet';l.href=c[0];d.head.appendChild(l)}if(d.querySelector('script[src=\"'+m[0]+'\"]'))return;var s=d.createElement('script');s.type='module';s.crossOrigin='';s.src=m[0];d.head.appendChild(s)}).catch(function(){})}d.querySelectorAll('script[src^=\"/assets/index-\"]').forEach(function(s){s.addEventListener('error',heal)})})()</script>`;
+
   const generated = [];
 
   for (const url of routes) {
@@ -219,7 +231,7 @@ const main = async () => {
     let html = applySeoToHtml(template, seo, url);
     html = html.replace(
       EMPTY_ROOT,
-      `<div id="root"><!--prerender-->${appHtml}<!--/prerender--></div>\n${bootScript}`,
+      `<div id="root"><!--prerender-->${appHtml}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
     );
 
     const target = path.join(PUBLIC, url.replace(/^\//, ''), 'index.html');
@@ -239,7 +251,7 @@ const main = async () => {
     root = applySeoToHtml(root, homeSeo, '/');
     root = root.replace(
       EMPTY_ROOT,
-      `<div id="root"><!--prerender-->${homeHtml}<!--/prerender--></div>\n${bootScript}`,
+      `<div id="root"><!--prerender-->${homeHtml}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
     );
     await fs.writeFile(source, root, 'utf-8');
     generated.push('/');
