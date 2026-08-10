@@ -4,6 +4,12 @@ import Icon from '@/components/ui/icon';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ProductCard from '@/components/ProductCard';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import VehicleFilterBar from '@/components/VehicleFilterBar';
 import { Vehicle, matchVehicle } from '@/data/catalog';
 import { SCENARIOS, findScenario } from '@/data/scenarios';
@@ -83,6 +89,18 @@ const ScenarioPage = () => {
           title: `${scenario.heading} · ШТАТНО`,
           description: scenario.intro.slice(0, 300),
           canonical: `${SITE_URL}/scenario/${scenario.slug}`,
+          // Разметка вопросов — поисковики показывают их прямо в выдаче
+          jsonLd: scenario.faq.length
+            ? {
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: scenario.faq.map((item) => ({
+                  '@type': 'Question',
+                  name: item.q,
+                  acceptedAnswer: { '@type': 'Answer', text: item.a },
+                })),
+              }
+            : null,
         }
       : { title: 'Сценарий не найден · ШТАТНО' },
   );
@@ -305,6 +323,43 @@ const ScenarioPage = () => {
               />
               {scenario.hint}
             </p>
+          </>
+        )}
+
+        {/* Частые вопросы */}
+        {scenario.faq.length > 0 && (
+          <>
+            <div className="rule" />
+            <div className="grid grid-cols-1 gap-x-6 py-9 md:grid-cols-12">
+              <div className="md:col-span-4">
+                <div className="eyebrow">Вопросы и ответы</div>
+                <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-tight">
+                  Частые вопросы
+                </h2>
+                <p className="mt-3 max-w-[24em] text-[0.87rem] leading-relaxed text-muted-foreground">
+                  Не нашли свой вопрос? Позвоните — подскажем по вашей машине.
+                </p>
+              </div>
+
+              <div className="mt-6 md:col-span-8 md:mt-0">
+                <Accordion type="single" collapsible className="w-full">
+                  {scenario.faq.map((item, i) => (
+                    <AccordionItem
+                      key={item.q}
+                      value={`q-${i}`}
+                      className="border-t border-foreground border-b-0"
+                    >
+                      <AccordionTrigger className="py-4 text-left font-head text-[1.05rem] font-medium tracking-tight hover:no-underline">
+                        {item.q}
+                      </AccordionTrigger>
+                      <AccordionContent className="max-w-[46em] pb-5 text-[0.92rem] leading-relaxed text-muted-foreground">
+                        {item.a}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </div>
+            </div>
           </>
         )}
 
