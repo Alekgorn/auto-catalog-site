@@ -91,13 +91,6 @@ const Index = () => {
     navigate('/scenario/vse-po-mashine');
   };
 
-  /** Клик по марке в списке — открываем каталог с фильтром по ней */
-  const pickBrand = (b: string) => {
-    setBrand(b);
-    setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
-    navigate(`/scenario/vse-po-mashine?brand=${encodeURIComponent(b)}`);
-  };
-
   const selectorProps = {
     brand,
     model,
@@ -113,7 +106,7 @@ const Index = () => {
       <Header />
       <main>
         <Hero />
-        <Selection {...selectorProps} onPickBrand={pickBrand} />
+        <Selection {...selectorProps} />
         <Faq />
         <Contacts />
       </main>

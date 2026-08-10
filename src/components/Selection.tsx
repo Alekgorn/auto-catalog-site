@@ -1,7 +1,5 @@
 import SectionHead from '@/components/SectionHead';
 import VehicleSelector from '@/components/VehicleSelector';
-import Icon from '@/components/ui/icon';
-import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   brand: string;
@@ -11,7 +9,6 @@ interface Props {
   onModel: (v: string) => void;
   onYear: (v: string) => void;
   onSubmit: () => void;
-  onPickBrand: (brand: string) => void;
 }
 
 const STEPS = [
@@ -32,10 +29,7 @@ const STEPS = [
   },
 ];
 
-const Selection = ({ onPickBrand, ...selector }: Props) => {
-  const { brands: BRANDS } = useCatalog();
-
-  return (
+const Selection = (selector: Props) => (
   <section id="select" className="section-pad anchor-offset bg-surface">
     <div className="rule" />
     <SectionHead
@@ -61,30 +55,11 @@ const Selection = ({ onPickBrand, ...selector }: Props) => {
       ))}
     </div>
 
-    <div className="rule-hair" />
-
-    <div className="py-8">
-      <div className="eyebrow mb-5">Популярные марки</div>
-      <div className="flex flex-wrap gap-x-3 gap-y-3">
-        {BRANDS.map((b) => (
-          <button
-            key={b.name}
-            onClick={() => onPickBrand(b.name)}
-            className="flex items-center gap-2 border border-border bg-background px-4 py-3 font-head text-[0.95rem] font-medium tracking-tight transition-colors hover:border-primary hover:text-primary"
-          >
-            <Icon name="Car" size={16} />
-            {b.name}
-          </button>
-        ))}
-      </div>
-    </div>
-
     <div className="rule" />
     <VehicleSelector {...selector} buttonLabel="Подобрать" idPrefix="sel2" />
     <div className="rule-hair" />
     <div className="h-6" />
   </section>
-  );
-};
+);
 
 export default Selection;
