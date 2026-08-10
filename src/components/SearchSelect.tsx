@@ -1,6 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 
+/**
+ * Выбор из списка без поля ввода.
+ *
+ * Раньше здесь была текстовая строка с поиском, но на телефоне при нажатии
+ * выезжала клавиатура и закрывала сам список. Теперь это кнопка: нажал —
+ * открылся перечень, выбрал — закрылся.
+ */
 interface Props {
   id: string;
   label: string;
@@ -17,37 +24,32 @@ const SearchSelect = ({
   label,
   value,
   options,
-  placeholder = 'Начните вводить',
+  placeholder = 'Выберите',
   emptyText = 'Ничего не найдено',
   disabled = false,
   onChange,
 }: Props) => {
   const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
-      if (!boxRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery('');
-      }
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter((o) => o.toLowerCase().includes(q));
-  }, [options, query]);
+  const filtered = options;
 
+  // При открытии подсвечиваем текущее значение
   useEffect(() => {
-    setHighlight(0);
-  }, [query, open]);
+    if (!open) return;
+    const i = options.indexOf(value);
+    setHighlight(i >= 0 ? i : 0);
+  }, [open, options, value]);
 
   useEffect(() => {
     if (!open || !listRef.current) return;
@@ -58,7 +60,6 @@ const SearchSelect = ({
   const pick = (option: string) => {
     onChange(option);
     setOpen(false);
-    setQuery('');
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -76,7 +77,6 @@ const SearchSelect = ({
       }
     } else if (e.key === 'Escape') {
       setOpen(false);
-      setQuery('');
     }
   };
 
@@ -87,34 +87,26 @@ const SearchSelect = ({
           {label}
         </label>
       )}
-      <div className="flex items-center gap-2">
-        <input
-          id={id}
-          type="text"
-          autoComplete="off"
-          role="combobox"
-          aria-expanded={open}
-          aria-controls={`${id}-list`}
-          disabled={disabled}
-          value={open ? query : value}
-          placeholder={value || placeholder}
-          onFocus={() => {
-            setOpen(true);
-            setQuery('');
-          }}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setOpen(true);
-          }}
-          onKeyDown={onKeyDown}
-          className="w-full min-w-0 cursor-pointer border-0 bg-transparent font-head text-lg font-medium tracking-tight text-foreground outline-none placeholder:text-foreground focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 disabled:opacity-50"
-        />
+      <button
+        id={id}
+        type="button"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${id}-list`}
+        disabled={disabled}
+        onClick={() => setOpen((v) => !v)}
+        onKeyDown={onKeyDown}
+        className="flex w-full items-center justify-between gap-2 border-0 bg-transparent text-left font-head text-lg font-medium tracking-tight text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 disabled:opacity-50"
+      >
+        <span className={`min-w-0 truncate ${value ? '' : 'text-muted-foreground'}`}>
+          {value || placeholder}
+        </span>
         <Icon
           name={open ? 'ChevronUp' : 'ChevronDown'}
           size={16}
           className="flex-none text-muted-foreground"
         />
-      </div>
+      </button>
 
       {open && (
         <div className="absolute left-0 right-0 top-full z-30 mt-2 border border-foreground bg-surface shadow-card-hover">
