@@ -1,32 +1,17 @@
+import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import MountPlan from '@/components/MountPlan';
-import VehicleSelector from '@/components/VehicleSelector';
 import Scenarios from '@/components/Scenarios';
 import HeroSearch from '@/components/HeroSearch';
 import { useCatalog } from '@/context/CatalogContext';
 
-/** Открывает каталог с отмеченной категорией. Пустая — весь каталог */
-const goToCategory = (category: string) => {
-  window.dispatchEvent(
-    new CustomEvent('catalog:filter-category', { detail: category }),
-  );
-  document
-    .getElementById('catalog')
-    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
-
-interface Props {
-  brand: string;
-  model: string;
-  year: string;
-  onBrand: (v: string) => void;
-  onModel: (v: string) => void;
-  onYear: (v: string) => void;
-  onSubmit: () => void;
-}
-
-const Hero = (props: Props) => {
+const Hero = () => {
+  const navigate = useNavigate();
   const { shortcuts, shortcutsHidden } = useCatalog();
+
+  /** Быстрая ссылка ведёт на страницу поиска — там же подбор по машине */
+  const goToCategory = (category: string, label: string) =>
+    navigate(`/search?q=${encodeURIComponent(category || label)}`);
 
   return (
   <section className="section-pad flex flex-col">
@@ -63,7 +48,7 @@ const Hero = (props: Props) => {
           {shortcuts.map((s, i) => (
             <button
               key={`${s.label}-${i}`}
-              onClick={() => goToCategory(s.category)}
+              onClick={() => goToCategory(s.category, s.label)}
               className={`flex items-center gap-2 border px-3.5 py-2.5 text-[0.78rem] transition-colors ${
                 s.category
                   ? 'border-border bg-surface hover:border-primary hover:text-primary'
@@ -88,10 +73,6 @@ const Hero = (props: Props) => {
     </div>
 
     <div className="rule" />
-
-    <VehicleSelector {...props} />
-
-    <div className="rule-hair" />
 
     <div className="py-8 md:py-10">
       <HeroSearch />

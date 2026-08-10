@@ -118,7 +118,7 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <Hero {...selectorProps} />
+        <Hero />
         <Catalog
           vehicle={vehicle}
           onReset={() => setVehicle(null)}

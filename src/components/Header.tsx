@@ -5,7 +5,6 @@ import LogoMark from '@/components/ui/logo-mark';
 import { useCatalog } from '@/context/CatalogContext';
 import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
-import SearchBar from '@/components/SearchBar';
 
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог' },
@@ -24,7 +23,6 @@ const Header = () => {
   const { contacts } = useCatalog();
   const { count, setOpen: setCartOpen } = useCart();
   const [open, setOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
 
   useEffect(() => {
@@ -105,13 +103,6 @@ const Header = () => {
             {contacts.phone}
           </a>
           <button
-            onClick={() => setSearchOpen((v) => !v)}
-            aria-label="Поиск"
-            className="transition-colors hover:text-primary lg:hidden"
-          >
-            <Icon name="Search" size={22} />
-          </button>
-          <button
             onClick={() => {
               setOpen(false);
               setCartOpen(true);
@@ -135,16 +126,6 @@ const Header = () => {
           </button>
         </div>
       </div>
-
-      <div className="hidden pb-4 lg:block">
-        <SearchBar />
-      </div>
-
-      {searchOpen && !open && (
-        <div className="animate-fade-in pb-4 lg:hidden">
-          <SearchBar autoFocus onDone={() => setSearchOpen(false)} />
-        </div>
-      )}
 
       {open && (
         <div className="fixed inset-x-0 bottom-0 top-[76px] z-40 animate-fade-in bg-background section-pad lg:hidden">
