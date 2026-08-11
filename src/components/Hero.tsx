@@ -36,8 +36,9 @@ const Hero = () => {
           className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
           style={{ animationDelay: '.25s' }}
         >
-          Автоэлектроника, аксессуары и оборудование{' '}
-          <b className="font-medium text-foreground">с подбором по модели</b>.
+          <b className="font-medium text-foreground">Умный каталог</b> сам
+          подберёт, что подойдёт: найдите поиском, выберите готовую задачу или
+          сразу укажите свою машину.
         </p>
 
         {!shortcutsHidden && shortcuts.length > 0 && (

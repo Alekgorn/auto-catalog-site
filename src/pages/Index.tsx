@@ -93,15 +93,6 @@ const Index = () => {
     navigate("/scenario/vse-po-mashine");
   };
 
-  const applyPhotoVehicle = (v: Vehicle) => {
-    setBrand(v.brand);
-    setModel(v.model);
-    setYear(String(v.year));
-    setVehicle(v);
-    saveVehicle(v);
-    navigate("/scenario/vse-po-mashine");
-  };
-
   const selectorProps = {
     brand,
     model,
@@ -110,7 +101,6 @@ const Index = () => {
     onModel: setModel,
     onYear: setYear,
     onSubmit: applyVehicle,
-    onPhoto: applyPhotoVehicle,
   };
 
   return (

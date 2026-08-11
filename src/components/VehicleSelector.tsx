@@ -2,8 +2,6 @@ import { useMemo } from 'react';
 import { YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import SearchSelect from '@/components/SearchSelect';
-import PhotoRecognize from '@/components/PhotoRecognize';
-import { Vehicle } from '@/data/catalog';
 
 interface Props {
   brand: string;
@@ -15,8 +13,6 @@ interface Props {
   onSubmit: () => void;
   buttonLabel?: string;
   idPrefix?: string;
-  /** Применить машину, распознанную по фото */
-  onPhoto?: (v: Vehicle) => void;
 }
 
 const VehicleSelector = ({
@@ -29,7 +25,6 @@ const VehicleSelector = ({
   onSubmit,
   buttonLabel = 'Показать оборудование',
   idPrefix = 'sel',
-  onPhoto,
 }: Props) => {
   const { brands: BRANDS } = useCatalog();
   const models = useMemo(
@@ -94,14 +89,6 @@ const VehicleSelector = ({
         <span aria-hidden>→</span>
       </button>
 
-      {onPhoto && (
-        <div className="mb-2 md:col-span-4">
-          <PhotoRecognize onApply={onPhoto} />
-          <p className="mt-2 text-center text-[0.8rem] text-muted-foreground">
-            Не знаете модель? Снимите торпедо или магнитолу — подскажем.
-          </p>
-        </div>
-      )}
     </form>
   );
 };
