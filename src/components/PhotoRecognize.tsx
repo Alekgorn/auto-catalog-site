@@ -10,6 +10,8 @@ interface Props {
   onManual?: () => void;
   /** Компактная кнопка для панели фильтра */
   compact?: boolean;
+  /** Акцентная кнопка — для строки поиска на главной */
+  accent?: boolean;
 }
 
 const CONF_TEXT: Record<string, string> = {
@@ -22,7 +24,7 @@ const CONF_TEXT: Record<string, string> = {
  * Подбор по фото торпедо или штатной магнитолы.
  * ИИ определяет марку и модель — результат всегда предлагается подтвердить.
  */
-const PhotoRecognize = ({ onApply, onManual, compact }: Props) => {
+const PhotoRecognize = ({ onApply, onManual, compact, accent }: Props) => {
   const ref = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -87,16 +89,18 @@ const PhotoRecognize = ({ onApply, onManual, compact }: Props) => {
         disabled={busy}
         title="Подобрать по фото торпедо или магнитолы"
         className={
-          compact
-            ? `flex items-center gap-2 border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors disabled:opacity-60 ${
-                result ? 'border-primary text-primary' : 'border-foreground hover:border-primary hover:text-primary'
-              }`
-            : 'flex w-full items-center justify-center gap-2 border border-foreground px-5 py-4 font-head text-[0.85rem] uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary disabled:opacity-60'
+          accent
+            ? 'flex flex-none items-center gap-2 bg-primary px-3 py-3 font-head text-[0.75rem] uppercase tracking-[0.1em] text-primary-foreground transition-colors hover:bg-foreground hover:text-background disabled:opacity-60 md:px-4'
+            : compact
+              ? `flex items-center gap-2 border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors disabled:opacity-60 ${
+                  result ? 'border-primary text-primary' : 'border-foreground hover:border-primary hover:text-primary'
+                }`
+              : 'flex w-full items-center justify-center gap-2 border border-foreground px-5 py-4 font-head text-[0.85rem] uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary disabled:opacity-60'
         }
       >
         <Icon name={busy ? 'Loader' : 'Camera'} size={19} className={busy ? 'animate-spin' : ''} />
-        <span className={compact ? 'hidden sm:inline' : ''}>
-          {busy ? 'Смотрю фото…' : 'Определить по фото'}
+        <span className={compact || accent ? 'hidden sm:inline' : ''}>
+          {busy ? 'Смотрю фото…' : accent ? 'По фото' : 'Определить по фото'}
         </span>
       </button>
 

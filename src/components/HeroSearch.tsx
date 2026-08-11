@@ -1,9 +1,12 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { formatPrice, productImages, productSku } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { smartSearch } from '@/lib/smart-search';
+import PhotoRecognize from '@/components/PhotoRecognize';
+import { Vehicle } from '@/data/catalog';
+import { saveVehicle } from '@/lib/vehicle';
 
 const EXAMPLES = [
   'магнитола для Toyota',
@@ -21,8 +24,6 @@ const HeroSearch = () => {
   const { products } = useCatalog();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [photo, setPhoto] = useState<string>('');
 
   const hits = useMemo(
     () => (query.trim() ? smartSearch(products, query, 5) : []),
@@ -36,9 +37,10 @@ const HeroSearch = () => {
     navigate(`/search?q=${encodeURIComponent(value)}`);
   };
 
-  const onPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setPhoto(file.name);
+  /** Машина распознана по фото — открываем подборку под неё */
+  const onPhoto = (v: Vehicle) => {
+    saveVehicle(v);
+    navigate('/scenario/vse-po-mashine');
   };
 
   return (
@@ -79,26 +81,9 @@ const HeroSearch = () => {
           </button>
         )}
 
-        {/* Загрузка фото — распознавание появится позже */}
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          title="Найти по фото разъёма или магнитолы"
-          aria-label="Поиск по фото"
-          className="flex flex-none items-center gap-2 border-l border-border pl-3 text-muted-foreground transition-colors hover:text-primary md:pl-4"
-        >
-          <Icon name="Camera" size={22} />
-          <span className="hidden text-[0.75rem] uppercase tracking-[0.1em] lg:inline">
-            По фото
-          </span>
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          onChange={onPhoto}
-          className="hidden"
-        />
+        <div className="flex-none border-l border-border pl-3 md:pl-4">
+          <PhotoRecognize accent onApply={onPhoto} />
+        </div>
 
         <button
           type="submit"
@@ -108,14 +93,6 @@ const HeroSearch = () => {
           <Icon name="ArrowRight" size={20} />
         </button>
       </form>
-
-      {photo && (
-        <p className="mt-2 flex items-center gap-2 text-[0.8rem] text-muted-foreground">
-          <Icon name="Image" size={14} className="flex-none text-primary" />
-          Фото «{photo}» загружено. Пришлём подбор — оставьте заявку или
-          позвоните.
-        </p>
-      )}
 
       {/* Подсказки под строкой */}
       {open && hits.length > 0 && (
@@ -162,6 +139,42 @@ const HeroSearch = () => {
           </button>
         </div>
       )}
+
+      {/* Подсказка к кнопке фото — стрелка указывает вверх, на кнопку */}
+      <div className="mt-2 flex justify-end pr-16 md:pr-20">
+        <span className="flex items-start gap-1.5 text-right text-[0.78rem] text-primary">
+          <span className="max-w-[17rem] leading-snug">
+            Не знаете, что подойдёт? Сфотографируйте торпедо или штатную магнитолу
+          </span>
+          <Icon name="CornerRightUp" size={16} className="mt-0.5 flex-none" />
+        </span>
+      </div>
+
+      {/* Два способа найти товар */}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="flex items-start gap-2.5 border border-border bg-surface px-3.5 py-3">
+          <Icon name="Keyboard" size={17} className="mt-0.5 flex-none text-primary" />
+          <span className="text-[0.82rem] leading-snug">
+            <span className="font-head font-bold uppercase tracking-[0.04em]">
+              Напишите словами
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              Своими словами: «магнитола на Тойоту», «хочу тише в салоне»
+            </span>
+          </span>
+        </div>
+        <div className="flex items-start gap-2.5 border border-border bg-surface px-3.5 py-3">
+          <Icon name="Camera" size={17} className="mt-0.5 flex-none text-primary" />
+          <span className="text-[0.82rem] leading-snug">
+            <span className="font-head font-bold uppercase tracking-[0.04em]">
+              Или пришлите фото
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              Снимок торпедо или штатной магнитолы — определим вашу машину
+            </span>
+          </span>
+        </div>
+      </div>
 
       {/* Примеры запросов */}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.78rem]">
