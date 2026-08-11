@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import ProductGallery from '@/components/ProductGallery';
-import FitsCheck from '@/components/FitsCheck';
-import ProductCard from '@/components/ProductCard';
-import RequestDialog from '@/components/RequestDialog';
-import GuideContent from '@/components/GuideContent';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ProductGallery from "@/components/ProductGallery";
+import FitsCheck from "@/components/FitsCheck";
+import ProductCard from "@/components/ProductCard";
+import RequestDialog from "@/components/RequestDialog";
+import GuideContent from "@/components/GuideContent";
 import {
   Product as ProductType,
   Vehicle,
@@ -17,15 +17,16 @@ import {
   productSku,
   productSpecs,
   productsByCategory,
-} from '@/data/catalog';
-import { loadVehicle } from '@/lib/vehicle';
-import { SITE_URL } from '@/lib/seo';
-import { slugify } from '@/lib/slug';
-import { useSeo } from '@/hooks/use-seo';
-import { useCart } from '@/context/CartContext';
-import PriceBlock from '@/components/PriceBlock';
-import MarketButtons from '@/components/MarketButtons';
-import { useCatalog } from '@/context/CatalogContext';
+} from "@/data/catalog";
+import { loadVehicle } from "@/lib/vehicle";
+import { SITE_URL } from "@/lib/seo";
+import { slugify } from "@/lib/slug";
+import { useSeo } from "@/hooks/use-seo";
+import { useCart } from "@/context/CartContext";
+import PriceBlock from "@/components/PriceBlock";
+import MarketButtons from "@/components/MarketButtons";
+import { useCatalog } from "@/context/CatalogContext";
+import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const Product = () => {
   const { id } = useParams();
@@ -57,42 +58,61 @@ const Product = () => {
     setOpenGuides([]);
   }, [id]);
 
+  const crumbs = useMemo(
+    () =>
+      product
+        ? [
+            { label: "Каталог", to: "/#catalog" },
+            {
+              label: product.category,
+              to: `/catalog/${slugify(product.category)}`,
+            },
+            { label: product.name },
+          ]
+        : [],
+    [product],
+  );
+
   const seo = useMemo(() => {
     if (!product) return null;
     const specs = productSpecs(product)
       .slice(0, 3)
       .map(([k, v]) => `${k}: ${v}`)
-      .join('. ');
-    const brandNames = Object.keys(product.fits ?? {}).join(', ');
+      .join(". ");
+    const brandNames = Object.keys(product.fits ?? {}).join(", ");
     const summary =
-      productDescription(product)[0]?.slice(0, 240) || `${product.name}. ${specs}`;
+      productDescription(product)[0]?.slice(0, 240) ||
+      `${product.name}. ${specs}`;
     const url = `${SITE_URL}/product/${product.id}`;
 
     return {
       title: `${product.name} — купить, артикул ${productSku(product)} | ШТАТНО`,
-      description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ''}`,
+      description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ""}`,
       image: productImages(product)[0],
       canonical: url,
-      type: 'product' as const,
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'Product',
-        name: product.name,
-        sku: productSku(product),
-        category: product.category,
-        image: productImages(product),
-        description: summary,
-        brand: { '@type': 'Brand', name: 'ШТАТНО' },
-        offers: {
-          '@type': 'Offer',
-          price: product.price,
-          priceCurrency: 'RUB',
-          availability: 'https://schema.org/InStock',
-          url,
+      type: "product" as const,
+      jsonLd: [
+        crumbsJsonLd(crumbs),
+        {
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: product.name,
+          sku: productSku(product),
+          category: product.category,
+          image: productImages(product),
+          description: summary,
+          brand: { "@type": "Brand", name: "ШТАТНО" },
+          offers: {
+            "@type": "Offer",
+            price: product.price,
+            priceCurrency: "RUB",
+            availability: "https://schema.org/InStock",
+            url,
+          },
         },
-      },
+      ],
     };
-  }, [product]);
+  }, [product, crumbs]);
 
   useSeo(seo);
 
@@ -122,8 +142,8 @@ const Product = () => {
             Товар не найден
           </div>
           <p className="mx-auto mt-4 max-w-[30em] text-muted-foreground">
-            Возможно, позиция снята с продажи. Вернитесь в каталог и выберите оборудование
-            под вашу машину.
+            Возможно, позиция снята с продажи. Вернитесь в каталог и выберите
+            оборудование под вашу машину.
           </p>
           <Link
             to="/"
@@ -142,14 +162,14 @@ const Product = () => {
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
 
   // Гарантия и артикул показываются только здесь — дублировать их у кнопок не нужно
-  const specs = useMemo(() => {
+  const specs = (() => {
     const base = productSpecs(product);
     const has = (k: string) => base.some(([n]) => n.toLowerCase() === k);
     const extra: [string, string][] = [];
-    if (!has('гарантия')) extra.push(['Гарантия', product.warranty]);
-    if (!has('артикул')) extra.push(['Артикул', productSku(product)]);
+    if (!has("гарантия")) extra.push(["Гарантия", product.warranty]);
+    if (!has("артикул")) extra.push(["Артикул", productSku(product)]);
     return [...base, ...extra];
-  }, [product]);
+  })();
   const related = productsByCategory(product, products);
   const productGuides = guides.filter((g) => g.products?.includes(product.id));
 
@@ -158,28 +178,16 @@ const Product = () => {
       <Header />
       <main>
         <section className="section-pad anchor-offset">
-          <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-            <Link to="/" className="transition-colors hover:text-primary">
-              Главная
-            </Link>
-            <Icon name="ChevronRight" size={13} />
-            <Link to="/#catalog" className="transition-colors hover:text-primary">
-              Каталог
-            </Link>
-            <Icon name="ChevronRight" size={13} />
-            <Link
-              to={`/catalog/${slugify(product.category)}`}
-              className="text-foreground transition-colors hover:text-primary"
-            >
-              {product.category}
-            </Link>
-          </div>
+          <Breadcrumbs items={crumbs} />
 
           <div className="rule" />
 
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 py-10 lg:grid-cols-12 lg:py-14">
             <div className="lg:col-span-5">
-              <ProductGallery images={productImages(product)} alt={product.name} />
+              <ProductGallery
+                images={productImages(product)}
+                alt={product.name}
+              />
             </div>
 
             <div className="lg:col-span-6 lg:col-start-7">
@@ -269,9 +277,10 @@ const Product = () => {
                     setOpenGuides(productGuides.map((g) => g.slug));
                     setTimeout(
                       () =>
-                        document
-                          .getElementById('guide')
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'start' }),
+                        document.getElementById("guide")?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        }),
                       60,
                     );
                   }}
@@ -286,7 +295,6 @@ const Product = () => {
                   <Icon name="ArrowDown" size={16} />
                 </button>
               )}
-
             </div>
           </div>
         </section>
@@ -345,7 +353,6 @@ const Product = () => {
           </div>
         </section>
 
-
         {productGuides.length > 0 && (
           <section id="guide" className="section-pad anchor-offset">
             <div className="rule" />
@@ -357,16 +364,20 @@ const Product = () => {
                 </h2>
               </div>
               <p className="max-w-[34em] text-muted-foreground md:col-span-5 md:col-start-8 md:pt-9">
-                Пошаговое техническое описание монтажа с фотографиями — прямо здесь, без
-                перехода в отдельный раздел.
+                Пошаговое техническое описание монтажа с фотографиями — прямо
+                здесь, без перехода в отдельный раздел.
               </p>
             </div>
 
             {productGuides.map((g) => {
               const open = openGuides.includes(g.slug);
-              const steps = g.blocks?.filter((b) => b.type === 'step').length ?? 0;
+              const steps =
+                g.blocks?.filter((b) => b.type === "step").length ?? 0;
               return (
-                <div key={g.slug} className="border-t border-foreground pb-12 pt-8">
+                <div
+                  key={g.slug}
+                  className="border-t border-foreground pb-12 pt-8"
+                >
                   <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-12">
                     <div className="md:col-span-7">
                       <h3 className="font-head text-xl font-medium tracking-tight">
@@ -405,12 +416,15 @@ const Product = () => {
                         aria-expanded={open}
                         className={`flex items-center justify-between px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] transition-colors ${
                           open
-                            ? 'border border-foreground hover:border-primary hover:text-primary'
-                            : 'bg-primary text-primary-foreground hover:bg-foreground'
+                            ? "border border-foreground hover:border-primary hover:text-primary"
+                            : "bg-primary text-primary-foreground hover:bg-foreground"
                         }`}
                       >
-                        {open ? 'Свернуть инструкцию' : 'Показать инструкцию'}
-                        <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={18} />
+                        {open ? "Свернуть инструкцию" : "Показать инструкцию"}
+                        <Icon
+                          name={open ? "ChevronUp" : "ChevronDown"}
+                          size={18}
+                        />
                       </button>
                       <Link
                         to={`/guides/${g.slug}`}

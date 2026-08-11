@@ -1,20 +1,21 @@
-import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import SectionHead from '@/components/SectionHead';
-import { useCatalog } from '@/context/CatalogContext';
-import { SITE_URL } from '@/lib/seo';
-import { useSeo } from '@/hooks/use-seo';
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SectionHead from "@/components/SectionHead";
+import { useCatalog } from "@/context/CatalogContext";
+import { SITE_URL } from "@/lib/seo";
+import { useSeo } from "@/hooks/use-seo";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
 const Guides = () => {
   const { guides, loading } = useCatalog();
 
   useSeo({
-    title: 'Инструкции по установке автоэлектроники | ШТАТНО',
+    title: "Инструкции по установке автоэлектроники | ШТАТНО",
     description:
-      'Пошаговые инструкции с фотографиями: подключение Android-магнитол, камер заднего вида, CAN-адаптеров и переходных жгутов.',
+      "Пошаговые инструкции с фотографиями: подключение Android-магнитол, камер заднего вида, CAN-адаптеров и переходных жгутов.",
     canonical: `${SITE_URL}/guides`,
   });
 
@@ -26,7 +27,7 @@ const Guides = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="section-pad">
-        <div className="pt-6" />
+        <Breadcrumbs items={[{ label: "Инструкции" }]} />
         <div className="rule" />
         <SectionHead
           index="07"
@@ -36,22 +37,30 @@ const Guides = () => {
         />
 
         {loading && guides.length === 0 ? (
-          <div className="py-24 text-center text-muted-foreground">Загружаем…</div>
+          <div className="py-24 text-center text-muted-foreground">
+            Загружаем…
+          </div>
         ) : guides.length === 0 ? (
           <div className="py-24 text-center">
             <div className="font-head text-2xl font-medium uppercase tracking-tight">
               Скоро здесь появятся инструкции
             </div>
             <p className="mx-auto mt-3 max-w-[30em] text-muted-foreground">
-              Мы готовим пошаговые описания установки с фотографиями по каждой категории
-              оборудования.
+              Мы готовим пошаговые описания установки с фотографиями по каждой
+              категории оборудования.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-12 pb-20 sm:grid-cols-2 lg:grid-cols-3">
             {guides.map((g) => (
-              <article key={g.slug} className="group flex flex-col border-t border-foreground pt-5">
-                <Link to={`/guides/${g.slug}`} className="block overflow-hidden bg-surface-muted">
+              <article
+                key={g.slug}
+                className="group flex flex-col border-t border-foreground pt-5"
+              >
+                <Link
+                  to={`/guides/${g.slug}`}
+                  className="block overflow-hidden bg-surface-muted"
+                >
                   {g.cover ? (
                     <img
                       src={g.cover}

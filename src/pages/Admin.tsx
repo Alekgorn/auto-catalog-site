@@ -1,23 +1,29 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import Icon from '@/components/ui/icon';
-import { useToast } from '@/hooks/use-toast';
-import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from '@/lib/api';
-import { formatPrice } from '@/data/catalog';
-import ProductEditor, { AdminProduct, emptyProduct } from '@/components/admin/ProductEditor';
-import BrandsEditor, { AdminBrand } from '@/components/admin/BrandsEditor';
-import OrdersPanel from '@/components/admin/OrdersPanel';
-import DealersPanel from '@/components/admin/DealersPanel';
-import GuideEditor, { AdminGuide, emptyGuide } from '@/components/admin/GuideEditor';
-import SettingsPanel from '@/components/admin/SettingsPanel';
-import SitePanel from '@/components/admin/SitePanel';
-import CategoriesEditor from '@/components/admin/CategoriesEditor';
-import BulkBar from '@/components/admin/BulkBar';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Icon from "@/components/ui/icon";
+import { useToast } from "@/hooks/use-toast";
+import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from "@/lib/api";
+import { formatPrice } from "@/data/catalog";
+import ProductEditor, {
+  AdminProduct,
+  emptyProduct,
+} from "@/components/admin/ProductEditor";
+import BrandsEditor, { AdminBrand } from "@/components/admin/BrandsEditor";
+import OrdersPanel from "@/components/admin/OrdersPanel";
+import DealersPanel from "@/components/admin/DealersPanel";
+import GuideEditor, {
+  AdminGuide,
+  emptyGuide,
+} from "@/components/admin/GuideEditor";
+import SettingsPanel from "@/components/admin/SettingsPanel";
+import SitePanel from "@/components/admin/SitePanel";
+import CategoriesEditor from "@/components/admin/CategoriesEditor";
+import BulkBar from "@/components/admin/BulkBar";
 
 const Admin = () => {
   const { toast } = useToast();
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
 
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -25,19 +31,28 @@ const Admin = () => {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [tab, setTab] = useState<
-    'products' | 'guides' | 'orders' | 'dealers' | 'brands' | 'categories' | 'site' | 'settings'
-  >('orders');
-  const [search, setSearch] = useState('');
+    | "products"
+    | "guides"
+    | "orders"
+    | "dealers"
+    | "brands"
+    | "categories"
+    | "site"
+    | "settings"
+  >("orders");
+  const [search, setSearch] = useState("");
   const [newOrders, setNewOrders] = useState(0);
   const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
-  const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>({});
+  const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>(
+    {},
+  );
   const [selected, setSelected] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
   const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
 
   const loadGuides = useCallback(async () => {
-    const res = await adminFetch('?action=guides');
+    const res = await adminFetch("?action=guides");
     if (!res.ok) return;
     const data = await res.json();
     setGuides(data.guides ?? []);
@@ -46,7 +61,7 @@ const Admin = () => {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await adminFetch('');
+      const res = await adminFetch("");
       if (res.status === 401) {
         setAuthed(false);
         setAdminToken(null);
@@ -57,7 +72,7 @@ const Admin = () => {
       setBrands(data.brands ?? []);
       setNewOrders(data.newOrders ?? 0);
       await loadGuides();
-      await adminFetch('?action=categories')
+      await adminFetch("?action=categories")
         .then((r) => r.json())
         .then((d) => {
           const list = (d.categories ?? []) as {
@@ -67,7 +82,9 @@ const Admin = () => {
           setCatalogCategories(list.map((c) => c.name));
           setCategorySpecs(
             Object.fromEntries(
-              list.filter((c) => c.specFields?.length).map((c) => [c.name, c.specFields!]),
+              list
+                .filter((c) => c.specFields?.length)
+                .map((c) => [c.name, c.specFields!]),
             ),
           );
         })
@@ -78,24 +95,27 @@ const Admin = () => {
   }, [loadGuides]);
 
   const saveGuide = async (guide: AdminGuide) => {
-    const res = await adminFetch('?action=guides', {
-      method: guide.id ? 'PUT' : 'POST',
+    const res = await adminFetch("?action=guides", {
+      method: guide.id ? "PUT" : "POST",
       body: JSON.stringify(guide),
     });
     const data = await res.json();
     if (!res.ok) {
-      toast({ title: 'Ошибка', description: data.error ?? 'Не удалось сохранить' });
+      toast({
+        title: "Ошибка",
+        description: data.error ?? "Не удалось сохранить",
+      });
       return;
     }
-    toast({ title: 'Инструкция сохранена', description: guide.title });
+    toast({ title: "Инструкция сохранена", description: guide.title });
     setEditingGuide(null);
     loadGuides();
   };
 
   const removeGuide = async (guide: AdminGuide) => {
     if (!window.confirm(`Удалить «${guide.title}»?`)) return;
-    await adminFetch(`?action=guides&id=${guide.id}`, { method: 'DELETE' });
-    toast({ title: 'Удалено' });
+    await adminFetch(`?action=guides&id=${guide.id}`, { method: "DELETE" });
+    toast({ title: "Удалено" });
     loadGuides();
   };
 
@@ -105,7 +125,7 @@ const Admin = () => {
       setChecking(false);
       return;
     }
-    adminFetch('?action=check')
+    adminFetch("?action=check")
       .then((r) => {
         if (r.ok) {
           setAuthed(true);
@@ -122,50 +142,55 @@ const Admin = () => {
     e.preventDefault();
     setLoginError(null);
     const res = await fetch(`${ADMIN_URL}?action=login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
     const data = await res.json();
     if (!res.ok) {
-      setLoginError(data.error ?? 'Не удалось войти');
+      setLoginError(data.error ?? "Не удалось войти");
       return;
     }
     setAdminToken(data.token);
     setAuthed(true);
-    setPassword('');
+    setPassword("");
     load();
   };
 
   const logout = async () => {
-    await adminFetch('?action=logout', { method: 'GET' }).catch(() => undefined);
+    await adminFetch("?action=logout", { method: "GET" }).catch(
+      () => undefined,
+    );
     setAdminToken(null);
     setAuthed(false);
   };
 
   const save = async (product: AdminProduct) => {
-    const res = await adminFetch('', {
-      method: product.id ? 'PUT' : 'POST',
+    const res = await adminFetch("", {
+      method: product.id ? "PUT" : "POST",
       body: JSON.stringify(product),
     });
     const data = await res.json();
     if (!res.ok) {
-      toast({ title: 'Ошибка', description: data.error ?? 'Не удалось сохранить' });
+      toast({
+        title: "Ошибка",
+        description: data.error ?? "Не удалось сохранить",
+      });
       return;
     }
-    toast({ title: 'Сохранено', description: product.name });
+    toast({ title: "Сохранено", description: product.name });
     setEditing(null);
     load();
   };
 
   const remove = async (product: AdminProduct) => {
     if (!window.confirm(`Удалить «${product.name}»?`)) return;
-    const res = await adminFetch(`?id=${product.id}`, { method: 'DELETE' });
+    const res = await adminFetch(`?id=${product.id}`, { method: "DELETE" });
     if (!res.ok) {
-      toast({ title: 'Ошибка', description: 'Не удалось удалить' });
+      toast({ title: "Ошибка", description: "Не удалось удалить" });
       return;
     }
-    toast({ title: 'Удалено', description: product.name });
+    toast({ title: "Удалено", description: product.name });
     load();
   };
 
@@ -174,22 +199,22 @@ const Admin = () => {
   };
 
   const saveBrands = async (next: AdminBrand[]) => {
-    const res = await adminFetch('?action=brands', {
-      method: 'PUT',
+    const res = await adminFetch("?action=brands", {
+      method: "PUT",
       body: JSON.stringify({ brands: next }),
     });
     if (!res.ok) {
-      toast({ title: 'Ошибка', description: 'Не удалось сохранить марки' });
+      toast({ title: "Ошибка", description: "Не удалось сохранить марки" });
       return;
     }
-    toast({ title: 'Марки сохранены' });
+    toast({ title: "Марки сохранены" });
     load();
   };
 
   const filtered = useMemo(
     () =>
       products.filter((p) =>
-        `${p.name} ${p.category} ${p.sku ?? ''}`
+        `${p.name} ${p.category} ${p.sku ?? ""}`
           .toLowerCase()
           .includes(search.toLowerCase()),
       ),
@@ -201,36 +226,48 @@ const Admin = () => {
     setSelected([]);
   }, [tab, search]);
 
-  const visibleIds = filtered.map((p) => p.id).filter((id): id is number => !!id);
-  const allChecked = visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
+  const visibleIds = filtered
+    .map((p) => p.id)
+    .filter((id): id is number => !!id);
+  const allChecked =
+    visibleIds.length > 0 && visibleIds.every((id) => selected.includes(id));
   const someChecked = visibleIds.some((id) => selected.includes(id));
 
   const toggleOne = (id?: number) => {
     if (!id) return;
-    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+    setSelected((s) =>
+      s.includes(id) ? s.filter((x) => x !== id) : [...s, id],
+    );
   };
 
   const bulk = async (payload: Record<string, unknown>, done: string) => {
     setBulkBusy(true);
-    const res = await adminFetch('?action=bulk', {
-      method: 'POST',
+    const res = await adminFetch("?action=bulk", {
+      method: "POST",
       body: JSON.stringify({ ids: selected, ...payload }),
     });
     const data = await res.json().catch(() => ({}));
     setBulkBusy(false);
     if (!res.ok) {
-      toast({ title: 'Ошибка', description: data.error ?? 'Не получилось' });
+      toast({ title: "Ошибка", description: data.error ?? "Не получилось" });
       return;
     }
-    toast({ title: done, description: `Товаров: ${data.affected ?? selected.length}` });
+    toast({
+      title: done,
+      description: `Товаров: ${data.affected ?? selected.length}`,
+    });
     setSelected([]);
     load();
   };
 
   const bulkDelete = () => {
-    if (!window.confirm(`Удалить ${selected.length} товаров? Отменить будет нельзя.`))
+    if (
+      !window.confirm(
+        `Удалить ${selected.length} товаров? Отменить будет нельзя.`,
+      )
+    )
       return;
-    bulk({ op: 'delete' }, 'Товары удалены');
+    bulk({ op: "delete" }, "Товары удалены");
   };
 
   // Справочник категорий; категория старого товара тоже остаётся в списке
@@ -253,7 +290,10 @@ const Admin = () => {
   if (!authed) {
     return (
       <div className="flex min-h-screen items-center justify-center section-pad">
-        <form onSubmit={login} className="w-full max-w-sm border border-foreground">
+        <form
+          onSubmit={login}
+          className="w-full max-w-sm border border-foreground"
+        >
           <div className="border-b border-foreground bg-primary px-6 py-5 text-primary-foreground">
             <div className="text-[0.7rem] uppercase tracking-[0.16em] opacity-80">
               Штатно
@@ -275,7 +315,9 @@ const Admin = () => {
               placeholder="••••••••"
             />
             {loginError && (
-              <div className="mt-3 text-[0.8rem] text-primary">{loginError}</div>
+              <div className="mt-3 text-[0.8rem] text-primary">
+                {loginError}
+              </div>
             )}
             <button
               type="submit"
@@ -320,14 +362,17 @@ const Admin = () => {
         <div className="flex flex-wrap gap-8 border-b border-border py-5">
           {(
             [
-              ['orders', newOrders > 0 ? `Заявки (${newOrders} новых)` : 'Заявки'],
-              ['products', `Товары (${products.length})`],
-              ['guides', `Инструкции (${guides.length})`],
-              ['brands', `Марки (${brands.length})`],
-              ['categories', `Категории (${categories.length})`],
-              ['dealers', 'Дилеры'],
-              ['site', 'Сайт'],
-              ['settings', 'Настройки'],
+              [
+                "orders",
+                newOrders > 0 ? `Заявки (${newOrders} новых)` : "Заявки",
+              ],
+              ["products", `Товары (${products.length})`],
+              ["guides", `Инструкции (${guides.length})`],
+              ["brands", `Марки (${brands.length})`],
+              ["categories", `Категории (${categories.length})`],
+              ["dealers", "Дилеры"],
+              ["site", "Сайт"],
+              ["settings", "Настройки"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -335,8 +380,8 @@ const Admin = () => {
               onClick={() => setTab(key)}
               className={`border-b-2 pb-2 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
                 tab === key
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               {label}
@@ -344,16 +389,16 @@ const Admin = () => {
           ))}
         </div>
 
-        {tab === 'orders' && <OrdersPanel />}
+        {tab === "orders" && <OrdersPanel />}
 
-        {tab === 'dealers' && <DealersPanel />}
+        {tab === "dealers" && <DealersPanel />}
 
-        {tab === 'guides' && (
+        {tab === "guides" && (
           <>
             <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-[42em] text-muted-foreground">
-                Технические описания установки с фото. Каждую инструкцию можно привязать к
-                товарам — она покажется прямо в карточке товара.
+                Технические описания установки с фото. Каждую инструкцию можно
+                привязать к товарам — она покажется прямо в карточке товара.
               </p>
               <button
                 onClick={() => setEditingGuide(emptyGuide())}
@@ -391,17 +436,18 @@ const Admin = () => {
                         {g.title}
                       </div>
                       <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-                        {g.blocks?.length ?? 0} блоков · {g.productIds?.length ?? 0} товаров
+                        {g.blocks?.length ?? 0} блоков ·{" "}
+                        {g.productIds?.length ?? 0} товаров
                       </div>
                     </div>
                     <span
                       className={`px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] ${
                         g.isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'border border-border text-muted-foreground'
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border text-muted-foreground"
                       }`}
                     >
-                      {g.isActive ? 'На сайте' : 'Скрыта'}
+                      {g.isActive ? "На сайте" : "Скрыта"}
                     </span>
                     <button
                       onClick={() => setEditingGuide(g)}
@@ -423,17 +469,17 @@ const Admin = () => {
           </>
         )}
 
-        {tab === 'brands' && (
+        {tab === "brands" && (
           <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
         )}
 
-        {tab === 'categories' && <CategoriesEditor onSaved={load} />}
+        {tab === "categories" && <CategoriesEditor onSaved={load} />}
 
-        {tab === 'site' && <SitePanel onSaved={load} categories={categories} />}
+        {tab === "site" && <SitePanel onSaved={load} categories={categories} />}
 
-        {tab === 'settings' && <SettingsPanel onImported={load} />}
+        {tab === "settings" && <SettingsPanel onImported={load} />}
 
-        {tab === 'products' && (
+        {tab === "products" && (
           <>
             <div className="flex flex-col gap-4 py-6 sm:flex-row sm:items-center sm:justify-between">
               <input
@@ -452,7 +498,9 @@ const Admin = () => {
             </div>
 
             {loading ? (
-              <div className="py-20 text-center text-muted-foreground">Загружаем…</div>
+              <div className="py-20 text-center text-muted-foreground">
+                Загружаем…
+              </div>
             ) : filtered.length === 0 ? (
               <div className="py-20 text-center text-muted-foreground">
                 Товаров не найдено
@@ -470,13 +518,17 @@ const Admin = () => {
                       setSelected(
                         allChecked
                           ? []
-                          : filtered.map((p) => p.id).filter((id): id is number => !!id),
+                          : filtered
+                              .map((p) => p.id)
+                              .filter((id): id is number => !!id),
                       )
                     }
                     className="h-4 w-4 cursor-pointer accent-primary"
                   />
                   <span className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground">
-                    {allChecked ? 'Снять выделение' : `Выбрать все — ${filtered.length}`}
+                    {allChecked
+                      ? "Снять выделение"
+                      : `Выбрать все — ${filtered.length}`}
                   </span>
                 </label>
 
@@ -493,7 +545,7 @@ const Admin = () => {
                       className="h-4 w-4 flex-none cursor-pointer accent-primary"
                     />
                     <img
-                      src={p.images?.[0] ?? ''}
+                      src={p.images?.[0] ?? ""}
                       alt=""
                       className="h-14 w-14 flex-none bg-card object-contain p-1"
                     />
@@ -502,7 +554,7 @@ const Admin = () => {
                         {p.name}
                       </div>
                       <div className="mt-1 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-                        {p.sku || '—'} · {p.category} ·{' '}
+                        {p.sku || "—"} · {p.category} ·{" "}
                         {Object.keys(p.fits ?? {}).length} марок
                       </div>
                     </div>
@@ -513,11 +565,11 @@ const Admin = () => {
                       onClick={() => toggleActive(p)}
                       className={`px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] transition-colors ${
                         p.isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'border border-border text-muted-foreground'
+                          ? "bg-primary text-primary-foreground"
+                          : "border border-border text-muted-foreground"
                       }`}
                     >
-                      {p.isActive ? 'На сайте' : 'Скрыт'}
+                      {p.isActive ? "На сайте" : "Скрыт"}
                     </button>
                     <button
                       onClick={() => setEditing(p)}
@@ -541,9 +593,14 @@ const Admin = () => {
               count={selected.length}
               categories={categories}
               busy={bulkBusy}
-              onMove={(category) => bulk({ op: 'category', category }, 'Товары перенесены')}
+              onMove={(category) =>
+                bulk({ op: "category", category }, "Товары перенесены")
+              }
               onVisibility={(op) =>
-                bulk({ op }, op === 'show' ? 'Показаны на сайте' : 'Скрыты с сайта')
+                bulk(
+                  { op },
+                  op === "show" ? "Показаны на сайте" : "Скрыты с сайта",
+                )
               }
               onDelete={bulkDelete}
               onClear={() => setSelected([])}

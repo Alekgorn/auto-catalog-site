@@ -1,37 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import ProductCard from '@/components/ProductCard';
-import VehicleFilterBar from '@/components/VehicleFilterBar';
-import { Vehicle, matchVehicle } from '@/data/catalog';
-import { loadVehicle, saveVehicle } from '@/lib/vehicle';
-import { SITE_URL } from '@/lib/seo';
-import { slugify } from '@/lib/slug';
-import { useSeo } from '@/hooks/use-seo';
-import { useCatalog } from '@/context/CatalogContext';
-import { describeQuery, parseQuery, smartSearch } from '@/lib/smart-search';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ProductCard from "@/components/ProductCard";
+import VehicleFilterBar from "@/components/VehicleFilterBar";
+import { Vehicle, matchVehicle } from "@/data/catalog";
+import { loadVehicle, saveVehicle } from "@/lib/vehicle";
+import { SITE_URL } from "@/lib/seo";
+import { slugify } from "@/lib/slug";
+import { useSeo } from "@/hooks/use-seo";
+import { useCatalog } from "@/context/CatalogContext";
+import { describeQuery, parseQuery, smartSearch } from "@/lib/smart-search";
+import Breadcrumbs from "@/components/Breadcrumbs";
 
-type SortKey = 'relevance' | 'price-asc' | 'price-desc' | 'name';
+type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'relevance', label: 'по совпадению' },
-  { key: 'price-asc', label: 'сначала дешёвые' },
-  { key: 'price-desc', label: 'сначала дорогие' },
-  { key: 'name', label: 'по названию' },
+  { key: "relevance", label: "по совпадению" },
+  { key: "price-asc", label: "сначала дешёвые" },
+  { key: "price-desc", label: "сначала дорогие" },
+  { key: "name", label: "по названию" },
 ];
 
 const PAGE_SIZE = 12;
 
 const SearchPage = () => {
   const [params, setParams] = useSearchParams();
-  const query = params.get('q') ?? '';
+  const query = params.get("q") ?? "";
   const { products, brands, loading } = useCatalog();
 
   const [input, setInput] = useState(query);
-  const [sort, setSort] = useState<SortKey>('relevance');
-  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState<SortKey>("relevance");
+  const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
 
@@ -39,7 +40,7 @@ const SearchPage = () => {
   useEffect(() => setVehicle(loadVehicle()), []);
   useEffect(() => {
     setShown(PAGE_SIZE);
-    setCategory('');
+    setCategory("");
   }, [query]);
 
   const found = useMemo(() => smartSearch(products, query), [products, query]);
@@ -55,10 +56,7 @@ const SearchPage = () => {
     );
   }, [found, vehicle, brands.length]);
 
-  const parsed = useMemo(
-    () => parseQuery(query, products),
-    [query, products],
-  );
+  const parsed = useMemo(() => parseQuery(query, products), [query, products]);
 
   const understood = useMemo(() => describeQuery(parsed), [parsed]);
 
@@ -91,11 +89,11 @@ const SearchPage = () => {
     let out = category
       ? hits.filter((h) => h.product.category === category)
       : hits;
-    if (sort !== 'relevance') {
+    if (sort !== "relevance") {
       out = [...out].sort((a, b) => {
-        if (sort === 'price-asc') return a.product.price - b.product.price;
-        if (sort === 'price-desc') return b.product.price - a.product.price;
-        return a.product.name.localeCompare(b.product.name, 'ru');
+        if (sort === "price-asc") return a.product.price - b.product.price;
+        if (sort === "price-desc") return b.product.price - a.product.price;
+        return a.product.name.localeCompare(b.product.name, "ru");
       });
     }
     return out;
@@ -104,10 +102,10 @@ const SearchPage = () => {
   useSeo({
     title: query
       ? `${query} — поиск по каталогу · ШТАТНО`
-      : 'Поиск по каталогу · ШТАТНО',
+      : "Поиск по каталогу · ШТАТНО",
     description: query
       ? `Результаты поиска «${query}»: автоэлектроника, переходники, разъёмы и аксессуары с подбором по марке и модели авто.`
-      : 'Поиск по каталогу автоэлектроники: магнитолы, камеры, переходники и штатные разъёмы.',
+      : "Поиск по каталогу автоэлектроники: магнитолы, камеры, переходники и штатные разъёмы.",
     canonical: `${SITE_URL}/search`,
   });
 
@@ -136,13 +134,7 @@ const SearchPage = () => {
       <Header />
 
       <main className="section-pad">
-        <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-primary">
-            Главная
-          </Link>
-          <Icon name="ChevronRight" size={13} />
-          <span className="text-foreground">Поиск</span>
-        </div>
+        <Breadcrumbs items={[{ label: query ? `Поиск: ${query}` : "Поиск" }]} />
 
         <div className="rule" />
 
@@ -150,11 +142,11 @@ const SearchPage = () => {
           <div className="md:col-span-7">
             <div className="eyebrow">Результаты поиска</div>
             <h1 className="mt-3 font-head text-3xl font-bold uppercase leading-tight tracking-tight md:text-[42px]">
-              {query ? `«${query}»` : 'Что ищем?'}
+              {query ? `«${query}»` : "Что ищем?"}
             </h1>
             {understood && (
               <p className="mt-3 text-[0.85rem] text-muted-foreground">
-                Поняли запрос как:{' '}
+                Поняли запрос как:{" "}
                 <span className="text-foreground">{understood}</span>
               </p>
             )}
@@ -199,8 +191,8 @@ const SearchPage = () => {
             />
             {vehicle && found.length > hits.length && (
               <p className="mt-2 text-[0.78rem] text-muted-foreground">
-                Скрыто несовместимых: {found.length - hits.length}. Универсальные
-                товары остаются в списке.
+                Скрыто несовместимых: {found.length - hits.length}.
+                Универсальные товары остаются в списке.
               </p>
             )}
           </div>
@@ -255,11 +247,11 @@ const SearchPage = () => {
             {categories.length > 1 && (
               <div className="flex flex-wrap gap-2 pb-6">
                 <button
-                  onClick={() => setCategory('')}
+                  onClick={() => setCategory("")}
                   className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
                     category
-                      ? 'border-border bg-surface hover:border-primary hover:text-primary'
-                      : 'border-foreground bg-foreground text-background'
+                      ? "border-border bg-surface hover:border-primary hover:text-primary"
+                      : "border-foreground bg-foreground text-background"
                   }`}
                 >
                   Все ({hits.length})
@@ -270,8 +262,8 @@ const SearchPage = () => {
                     onClick={() => setCategory(c)}
                     className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
                       category === c
-                        ? 'border-foreground bg-foreground text-background'
-                        : 'border-border bg-surface hover:border-primary hover:text-primary'
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-surface hover:border-primary hover:text-primary"
                     }`}
                   >
                     {c} ({n})

@@ -1,33 +1,37 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import SectionHead from '@/components/SectionHead';
-import ProductCard from '@/components/ProductCard';
-import CatalogFilters, { FilterState, SortKey } from '@/components/CatalogFilters';
-import NotFound from '@/pages/NotFound';
-import { useCatalog } from '@/context/CatalogContext';
-import { SITE_URL } from '@/lib/seo';
-import { useSeo } from '@/hooks/use-seo';
-import { slugify } from '@/lib/slug';
-import { loadVehicle } from '@/lib/vehicle';
-import { formatPrice } from '@/data/catalog';
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SectionHead from "@/components/SectionHead";
+import ProductCard from "@/components/ProductCard";
+import CatalogFilters, {
+  FilterState,
+  SortKey,
+} from "@/components/CatalogFilters";
+import NotFound from "@/pages/NotFound";
+import { useCatalog } from "@/context/CatalogContext";
+import { SITE_URL } from "@/lib/seo";
+import { useSeo } from "@/hooks/use-seo";
+import { slugify } from "@/lib/slug";
+import { loadVehicle } from "@/lib/vehicle";
+import { formatPrice } from "@/data/catalog";
+import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'popular', label: 'По популярности' },
-  { key: 'price-asc', label: 'Сначала дешевле' },
-  { key: 'price-desc', label: 'Сначала дороже' },
-  { key: 'name', label: 'По названию' },
+  { key: "popular", label: "По популярности" },
+  { key: "price-asc", label: "Сначала дешевле" },
+  { key: "price-desc", label: "Сначала дороже" },
+  { key: "name", label: "По названию" },
 ];
 
 /** Каталог одной категории по собственному адресу — чтобы его индексировали. */
 const CategoryPage = () => {
-  const { slug = '' } = useParams();
+  const { slug = "" } = useParams();
   const navigate = useNavigate();
   const { products, categories, loading } = useCatalog();
   const vehicle = loadVehicle();
-  const [sort, setSort] = useState<SortKey>('popular');
+  const [sort, setSort] = useState<SortKey>("popular");
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const category = useMemo(
@@ -77,8 +81,8 @@ const CategoryPage = () => {
       return;
     }
     if (picked.length !== 1) {
-      window.sessionStorage.setItem('shtatno.filters', JSON.stringify(next));
-      navigate('/#catalog');
+      window.sessionStorage.setItem("shtatno.filters", JSON.stringify(next));
+      navigate("/#catalog");
       return;
     }
     setFilters(next);
@@ -102,8 +106,9 @@ const CategoryPage = () => {
 
   const list = useMemo(() => {
     const filtered = items.filter((p) => {
-      if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
-      if (filters.onlyHits && p.badge !== 'Хит') return false;
+      if (p.price < filters.priceMin || p.price > filters.priceMax)
+        return false;
+      if (filters.onlyHits && p.badge !== "Хит") return false;
       if (filters.onlySale && !p.oldPrice) return false;
       if (filters.warranties.length && !filters.warranties.includes(p.warranty))
         return false;
@@ -111,13 +116,14 @@ const CategoryPage = () => {
     });
 
     const sorted = [...filtered];
-    if (sort === 'price-asc') sorted.sort((a, b) => a.price - b.price);
-    else if (sort === 'price-desc') sorted.sort((a, b) => b.price - a.price);
-    else if (sort === 'name') sorted.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    if (sort === "price-asc") sorted.sort((a, b) => a.price - b.price);
+    else if (sort === "price-desc") sorted.sort((a, b) => b.price - a.price);
+    else if (sort === "name")
+      sorted.sort((a, b) => a.name.localeCompare(b.name, "ru"));
     else
       sorted.sort((a, b) => {
-        const ba = a.badge === 'Хит' ? 1 : 0;
-        const bb = b.badge === 'Хит' ? 1 : 0;
+        const ba = a.badge === "Хит" ? 1 : 0;
+        const bb = b.badge === "Хит" ? 1 : 0;
         if (ba !== bb) return bb - ba;
         return (b.popularity ?? 0) - (a.popularity ?? 0);
       });
@@ -138,16 +144,22 @@ const CategoryPage = () => {
       ? {
           title: `${category} — купить с доставкой | ШТАТНО`,
           description: `${category}: ${items.length} позиций в наличии${
-            minPrice ? `, цены от ${formatPrice(minPrice)}` : ''
+            minPrice ? `, цены от ${formatPrice(minPrice)}` : ""
           }. Подбор по марке и модели автомобиля, доставка по России.`,
           canonical: `${SITE_URL}/catalog/${slug}`,
-          jsonLd: {
-            '@context': 'https://schema.org',
-            '@type': 'CollectionPage',
-            name: category,
-            url: `${SITE_URL}/catalog/${slug}`,
-            numberOfItems: items.length,
-          },
+          jsonLd: [
+            crumbsJsonLd([
+              { label: "Каталог", to: "/#catalog" },
+              { label: category },
+            ]),
+            {
+              "@context": "https://schema.org",
+              "@type": "CollectionPage",
+              name: category,
+              url: `${SITE_URL}/catalog/${slug}`,
+              numberOfItems: items.length,
+            },
+          ],
         }
       : null,
   );
@@ -161,7 +173,9 @@ const CategoryPage = () => {
       return (
         <div className="min-h-screen bg-background">
           <Header />
-          <div className="py-32 text-center text-muted-foreground">Загружаем…</div>
+          <div className="py-32 text-center text-muted-foreground">
+            Загружаем…
+          </div>
         </div>
       );
     }
@@ -184,15 +198,9 @@ const CategoryPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="section-pad">
-        <div className="pt-6" />
-
-        <nav className="mb-6 flex flex-wrap items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-primary">
-            Каталог
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{category}</span>
-        </nav>
+        <Breadcrumbs
+          items={[{ label: "Каталог", to: "/#catalog" }, { label: category }]}
+        />
 
         <div className="rule" />
         <SectionHead
@@ -200,7 +208,7 @@ const CategoryPage = () => {
           eyebrow="Категория"
           title={category}
           note={`В категории ${items.length} позиций${
-            minPrice ? `, цены начинаются от ${formatPrice(minPrice)}` : ''
+            minPrice ? `, цены начинаются от ${formatPrice(minPrice)}` : ""
           }. Подберите оборудование по марке и модели автомобиля — совместимость проверена по штатным разъёмам.`}
         />
 
@@ -251,7 +259,9 @@ const CategoryPage = () => {
             {list.length === 0 ? (
               <div className="py-24 text-center">
                 <div className="font-head text-2xl font-medium uppercase tracking-tight">
-                  {items.length === 0 ? 'В категории пока пусто' : 'Ничего не нашлось'}
+                  {items.length === 0
+                    ? "В категории пока пусто"
+                    : "Ничего не нашлось"}
                 </div>
                 {items.length > 0 && (
                   <button

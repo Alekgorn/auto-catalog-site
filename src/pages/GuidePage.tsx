@@ -1,21 +1,25 @@
-import { useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import GuideContent from '@/components/GuideContent';
-import ProductCard from '@/components/ProductCard';
-import { useCatalog } from '@/context/CatalogContext';
-import { loadVehicle } from '@/lib/vehicle';
-import { SITE_URL } from '@/lib/seo';
-import { useSeo } from '@/hooks/use-seo';
+import { useEffect, useMemo } from "react";
+import { Link, useParams } from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import GuideContent from "@/components/GuideContent";
+import ProductCard from "@/components/ProductCard";
+import { useCatalog } from "@/context/CatalogContext";
+import { loadVehicle } from "@/lib/vehicle";
+import { SITE_URL } from "@/lib/seo";
+import { useSeo } from "@/hooks/use-seo";
+import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const GuidePage = () => {
   const { slug } = useParams();
   const { guides, products, loading } = useCatalog();
   const vehicle = loadVehicle();
 
-  const guide = useMemo(() => guides.find((g) => g.slug === slug) ?? null, [guides, slug]);
+  const guide = useMemo(
+    () => guides.find((g) => g.slug === slug) ?? null,
+    [guides, slug],
+  );
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
@@ -23,7 +27,7 @@ const GuidePage = () => {
 
   const seo = useMemo(() => {
     if (!guide) return null;
-    const steps = (guide.blocks ?? []).filter((b) => b.type === 'step');
+    const steps = (guide.blocks ?? []).filter((b) => b.type === "step");
     return {
       title: `${guide.title} — пошаговая инструкция | ШТАТНО`,
       description:
@@ -31,23 +35,32 @@ const GuidePage = () => {
         `Пошаговая инструкция: ${guide.title}. Что снимать, куда подключать и какой инструмент нужен.`,
       image: guide.cover,
       canonical: `${SITE_URL}/guides/${guide.slug}`,
-      type: 'article' as const,
-      jsonLd: {
-        '@context': 'https://schema.org',
-        '@type': 'HowTo',
-        name: guide.title,
-        description: guide.excerpt || guide.title,
-        image: guide.cover || undefined,
-        totalTime: guide.duration || undefined,
-        tool: (guide.tools ?? []).map((t) => ({ '@type': 'HowToTool', name: t })),
-        step: steps.map((b, i) => ({
-          '@type': 'HowToStep',
-          position: i + 1,
-          name: 'title' in b ? b.title : `Шаг ${i + 1}`,
-          text: 'text' in b ? b.text : '',
-          image: 'image' in b ? b.image : undefined,
-        })),
-      },
+      type: "article" as const,
+      jsonLd: [
+        crumbsJsonLd([
+          { label: "Инструкции", to: "/guides" },
+          { label: guide.title },
+        ]),
+        {
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          name: guide.title,
+          description: guide.excerpt || guide.title,
+          image: guide.cover || undefined,
+          totalTime: guide.duration || undefined,
+          tool: (guide.tools ?? []).map((t) => ({
+            "@type": "HowToTool",
+            name: t,
+          })),
+          step: steps.map((b, i) => ({
+            "@type": "HowToStep",
+            position: i + 1,
+            name: "title" in b ? b.title : `Шаг ${i + 1}`,
+            text: "text" in b ? b.text : "",
+            image: "image" in b ? b.image : undefined,
+          })),
+        },
+      ],
     };
   }, [guide]);
 
@@ -90,15 +103,12 @@ const GuidePage = () => {
       <Header />
       <main>
         <section className="section-pad">
-          <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-            <Link to="/" className="transition-colors hover:text-primary">
-              Главная
-            </Link>
-            <Icon name="ChevronRight" size={13} />
-            <Link to="/guides" className="transition-colors hover:text-primary">
-              Инструкции
-            </Link>
-          </div>
+          <Breadcrumbs
+            items={[
+              { label: "Инструкции", to: "/guides" },
+              { label: guide.title },
+            ]}
+          />
 
           <div className="rule" />
 

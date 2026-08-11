@@ -1,19 +1,20 @@
-import { useEffect, useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import SectionHead from '@/components/SectionHead';
-import ProductCard from '@/components/ProductCard';
-import NotFound from '@/pages/NotFound';
-import { useCatalog } from '@/context/CatalogContext';
-import { SITE_URL } from '@/lib/seo';
-import { useSeo } from '@/hooks/use-seo';
-import { slugify } from '@/lib/slug';
-import { loadVehicle } from '@/lib/vehicle';
+import { useEffect, useMemo } from "react";
+import { Link, useParams } from "react-router-dom";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import SectionHead from "@/components/SectionHead";
+import ProductCard from "@/components/ProductCard";
+import NotFound from "@/pages/NotFound";
+import { useCatalog } from "@/context/CatalogContext";
+import { SITE_URL } from "@/lib/seo";
+import { useSeo } from "@/hooks/use-seo";
+import { slugify } from "@/lib/slug";
+import { loadVehicle } from "@/lib/vehicle";
+import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 /** Оборудование для одной марки авто по собственному адресу. */
 const BrandPage = () => {
-  const { slug = '' } = useParams();
+  const { slug = "" } = useParams();
   const { products, brands, loading } = useCatalog();
   const vehicle = loadVehicle();
 
@@ -23,13 +24,18 @@ const BrandPage = () => {
   );
 
   const items = useMemo(
-    () => (brand ? products.filter((p) => (p.fits?.[brand.name] ?? []).length > 0) : []),
+    () =>
+      brand
+        ? products.filter((p) => (p.fits?.[brand.name] ?? []).length > 0)
+        : [],
     [products, brand],
   );
 
   const byCategory = useMemo(() => {
     const map = new Map<string, typeof items>();
-    items.forEach((p) => map.set(p.category, [...(map.get(p.category) ?? []), p]));
+    items.forEach((p) =>
+      map.set(p.category, [...(map.get(p.category) ?? []), p]),
+    );
     return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [items]);
 
@@ -39,15 +45,21 @@ const BrandPage = () => {
           title: `Автоэлектроника для ${brand.name} — магнитолы, камеры, жгуты | ШТАТНО`,
           description: `Оборудование для ${brand.name}: ${items.length} позиций для моделей ${brand.models
             .slice(0, 4)
-            .join(', ')}. Совместимость проверена по штатным разъёмам.`,
+            .join(", ")}. Совместимость проверена по штатным разъёмам.`,
           canonical: `${SITE_URL}/brand/${slug}`,
-          jsonLd: {
-            '@context': 'https://schema.org',
-            '@type': 'CollectionPage',
-            name: `Оборудование для ${brand.name}`,
-            url: `${SITE_URL}/brand/${slug}`,
-            numberOfItems: items.length,
-          },
+          jsonLd: [
+            crumbsJsonLd([
+              { label: "Каталог", to: "/#catalog" },
+              { label: brand.name },
+            ]),
+            {
+              "@context": "https://schema.org",
+              "@type": "CollectionPage",
+              name: `Оборудование для ${brand.name}`,
+              url: `${SITE_URL}/brand/${slug}`,
+              numberOfItems: items.length,
+            },
+          ],
         }
       : null,
   );
@@ -61,7 +73,9 @@ const BrandPage = () => {
       return (
         <div className="min-h-screen bg-background">
           <Header />
-          <div className="py-32 text-center text-muted-foreground">Загружаем…</div>
+          <div className="py-32 text-center text-muted-foreground">
+            Загружаем…
+          </div>
         </div>
       );
     }
@@ -72,22 +86,16 @@ const BrandPage = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main className="section-pad">
-        <div className="pt-6" />
-
-        <nav className="mb-6 flex flex-wrap items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-primary">
-            Каталог
-          </Link>
-          <span>/</span>
-          <span className="text-foreground">{brand.name}</span>
-        </nav>
+        <Breadcrumbs
+          items={[{ label: "Каталог", to: "/#catalog" }, { label: brand.name }]}
+        />
 
         <div className="rule" />
         <SectionHead
           index="01"
           eyebrow="Подбор по марке"
           title={`Оборудование для ${brand.name}`}
-          note={`${items.length} позиций подходят для ${brand.name}. Модели: ${brand.models.join(', ')}. Совместимость проверена по штатным разъёмам и посадочному месту.`}
+          note={`${items.length} позиций подходят для ${brand.name}. Модели: ${brand.models.join(", ")}. Совместимость проверена по штатным разъёмам и посадочному месту.`}
         />
 
         <div className="rule-hair" />

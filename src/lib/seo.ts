@@ -6,7 +6,7 @@ export interface SeoData {
   image?: string;
   canonical?: string;
   type?: 'website' | 'product' | 'article';
-  jsonLd?: Record<string, unknown> | null;
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[] | null;
 }
 
 /** Собранное при сборке SEO — читается генератором статики. */

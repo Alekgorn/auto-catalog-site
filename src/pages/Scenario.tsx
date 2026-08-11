@@ -1,49 +1,55 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import Icon from '@/components/ui/icon';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import ProductCard from '@/components/ProductCard';
+import { useEffect, useMemo, useState } from "react";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
+import Icon from "@/components/ui/icon";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import ProductCard from "@/components/ProductCard";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import VehicleFilterBar from '@/components/VehicleFilterBar';
-import { Vehicle, matchVehicle } from '@/data/catalog';
-import { SCENARIOS, findScenario } from '@/data/scenarios';
-import { loadVehicle, saveVehicle } from '@/lib/vehicle';
-import { SITE_URL } from '@/lib/seo';
-import { useSeo } from '@/hooks/use-seo';
-import { useCatalog } from '@/context/CatalogContext';
-import { smartSearch } from '@/lib/smart-search';
-import CatalogFilters, { FilterState } from '@/components/CatalogFilters';
+} from "@/components/ui/accordion";
+import VehicleFilterBar from "@/components/VehicleFilterBar";
+import { Vehicle, matchVehicle } from "@/data/catalog";
+import { SCENARIOS, findScenario } from "@/data/scenarios";
+import { loadVehicle, saveVehicle } from "@/lib/vehicle";
+import { SITE_URL } from "@/lib/seo";
+import { useSeo } from "@/hooks/use-seo";
+import { useCatalog } from "@/context/CatalogContext";
+import { smartSearch } from "@/lib/smart-search";
+import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
+import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
-type SortKey = 'relevance' | 'price-asc' | 'price-desc' | 'name';
+type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'relevance', label: 'по совпадению' },
-  { key: 'price-asc', label: 'сначала дешёвые' },
-  { key: 'price-desc', label: 'сначала дорогие' },
-  { key: 'name', label: 'по названию' },
+  { key: "relevance", label: "по совпадению" },
+  { key: "price-asc", label: "сначала дешёвые" },
+  { key: "price-desc", label: "сначала дорогие" },
+  { key: "name", label: "по названию" },
 ];
 
 const PAGE_SIZE = 12;
 
 const ScenarioPage = () => {
-  const { slug = '' } = useParams();
+  const { slug = "" } = useParams();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
 
   /** Марка из ссылки — «популярные марки» в футере ведут сюда */
-  const brandFilter = params.get('brand') ?? '';
+  const brandFilter = params.get("brand") ?? "";
   const { products, brands, loading } = useCatalog();
   const scenario = findScenario(slug);
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [sort, setSort] = useState<SortKey>('relevance');
-  const [category, setCategory] = useState('');
+  const [sort, setSort] = useState<SortKey>("relevance");
+  const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
 
@@ -82,7 +88,7 @@ const ScenarioPage = () => {
   useEffect(() => setVehicle(loadVehicle()), []);
   useEffect(() => {
     setShown(PAGE_SIZE);
-    setCategory('');
+    setCategory("");
     window.scrollTo({ top: 0 });
   }, [slug]);
 
@@ -95,12 +101,12 @@ const ScenarioPage = () => {
     if (scenario.fullCatalog) {
       return [...products]
         .sort((a, b) => {
-          const ba = a.badge === 'Хит' ? 1 : 0;
-          const bb = b.badge === 'Хит' ? 1 : 0;
+          const ba = a.badge === "Хит" ? 1 : 0;
+          const bb = b.badge === "Хит" ? 1 : 0;
           if (ba !== bb) return bb - ba;
           return (b.popularity ?? 0) - (a.popularity ?? 0);
         })
-        .map((p) => ({ product: p, score: 0, reason: '' }));
+        .map((p) => ({ product: p, score: 0, reason: "" }));
     }
     return smartSearch(products, scenario.query);
   }, [products, scenario]);
@@ -111,9 +117,7 @@ const ScenarioPage = () => {
 
     // Пришли по ссылке с маркой — оставляем только её оборудование
     if (brandFilter) {
-      out = out.filter(
-        (h) => (h.product.fits?.[brandFilter] ?? []).length > 0,
-      );
+      out = out.filter((h) => (h.product.fits?.[brandFilter] ?? []).length > 0);
     }
 
     if (!vehicle) return out;
@@ -154,21 +158,28 @@ const ScenarioPage = () => {
     // Полный каталог — работают развёрнутые фильтры слева
     if (scenario?.fullCatalog) {
       out = out.filter(({ product: p }) => {
-        if (filters.categories.length && !filters.categories.includes(p.category))
+        if (
+          filters.categories.length &&
+          !filters.categories.includes(p.category)
+        )
           return false;
-        if (p.price < filters.priceMin || p.price > filters.priceMax) return false;
-        if (filters.onlyHits && p.badge !== 'Хит') return false;
+        if (p.price < filters.priceMin || p.price > filters.priceMax)
+          return false;
+        if (filters.onlyHits && p.badge !== "Хит") return false;
         if (filters.onlySale && !p.oldPrice) return false;
-        if (filters.warranties.length && !filters.warranties.includes(p.warranty))
+        if (
+          filters.warranties.length &&
+          !filters.warranties.includes(p.warranty)
+        )
           return false;
         return true;
       });
     }
-    if (sort !== 'relevance') {
+    if (sort !== "relevance") {
       out = [...out].sort((a, b) => {
-        if (sort === 'price-asc') return a.product.price - b.product.price;
-        if (sort === 'price-desc') return b.product.price - a.product.price;
-        return a.product.name.localeCompare(b.product.name, 'ru');
+        if (sort === "price-asc") return a.product.price - b.product.price;
+        if (sort === "price-desc") return b.product.price - a.product.price;
+        return a.product.name.localeCompare(b.product.name, "ru");
       });
     }
     return out;
@@ -181,19 +192,27 @@ const ScenarioPage = () => {
           description: scenario.intro.slice(0, 300),
           canonical: `${SITE_URL}/scenario/${scenario.slug}`,
           // Разметка вопросов — поисковики показывают их прямо в выдаче
-          jsonLd: scenario.faq.length
-            ? {
-                '@context': 'https://schema.org',
-                '@type': 'FAQPage',
-                mainEntity: scenario.faq.map((item) => ({
-                  '@type': 'Question',
-                  name: item.q,
-                  acceptedAnswer: { '@type': 'Answer', text: item.a },
-                })),
-              }
-            : null,
+          jsonLd: [
+            crumbsJsonLd([
+              { label: "Подбор по задаче", to: "/#scenarios" },
+              { label: scenario.heading },
+            ]),
+            ...(scenario.faq.length
+              ? [
+                  {
+                    "@context": "https://schema.org",
+                    "@type": "FAQPage",
+                    mainEntity: scenario.faq.map((item) => ({
+                      "@type": "Question",
+                      name: item.q,
+                      acceptedAnswer: { "@type": "Answer", text: item.a },
+                    })),
+                  },
+                ]
+              : []),
+          ],
         }
-      : { title: 'Сценарий не найден · ШТАТНО' },
+      : { title: "Сценарий не найден · ШТАТНО" },
   );
 
   const applyVehicle = (v: Vehicle) => {
@@ -235,17 +254,12 @@ const ScenarioPage = () => {
       <Header />
 
       <main className="section-pad">
-        <div className="flex flex-wrap items-center gap-2 py-6 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-          <Link to="/" className="transition-colors hover:text-primary">
-            Главная
-          </Link>
-          <Icon name="ChevronRight" size={13} />
-          <Link to="/#scenarios" className="transition-colors hover:text-primary">
-            Сценарии
-          </Link>
-          <Icon name="ChevronRight" size={13} />
-          <span className="text-foreground">{scenario.heading}</span>
-        </div>
+        <Breadcrumbs
+          items={[
+            { label: "Подбор по задаче", to: "/#scenarios" },
+            { label: scenario.heading },
+          ]}
+        />
 
         <div className="rule" />
 
@@ -277,7 +291,7 @@ const ScenarioPage = () => {
           {scenario.steps.map((step, i) => (
             <div key={step.title} className="flex gap-4">
               <span className="font-head text-2xl font-bold text-primary">
-                {String(i + 1).padStart(2, '0')}
+                {String(i + 1).padStart(2, "0")}
               </span>
               <div>
                 <div className="font-head text-[1.02rem] font-bold tracking-tight">
@@ -305,7 +319,7 @@ const ScenarioPage = () => {
             <button
               onClick={() => {
                 const next = new URLSearchParams(params);
-                next.delete('brand');
+                next.delete("brand");
                 setParams(next);
               }}
               className="border border-border px-4 py-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -377,11 +391,11 @@ const ScenarioPage = () => {
             {categories.length > 1 && !scenario.fullCatalog && (
               <div className="flex flex-wrap gap-2 pb-6">
                 <button
-                  onClick={() => setCategory('')}
+                  onClick={() => setCategory("")}
                   className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
                     category
-                      ? 'border-border bg-surface hover:border-primary hover:text-primary'
-                      : 'border-foreground bg-foreground text-background'
+                      ? "border-border bg-surface hover:border-primary hover:text-primary"
+                      : "border-foreground bg-foreground text-background"
                   }`}
                 >
                   Все ({hits.length})
@@ -392,8 +406,8 @@ const ScenarioPage = () => {
                     onClick={() => setCategory(c)}
                     className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
                       category === c
-                        ? 'border-foreground bg-foreground text-background'
-                        : 'border-border bg-surface hover:border-primary hover:text-primary'
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-surface hover:border-primary hover:text-primary"
                     }`}
                   >
                     {c} ({n})
@@ -402,7 +416,13 @@ const ScenarioPage = () => {
               </div>
             )}
 
-            <div className={scenario.fullCatalog ? 'grid grid-cols-1 gap-x-6 lg:grid-cols-12' : ''}>
+            <div
+              className={
+                scenario.fullCatalog
+                  ? "grid grid-cols-1 gap-x-6 lg:grid-cols-12"
+                  : ""
+              }
+            >
               {scenario.fullCatalog && (
                 <>
                   {/* Кнопка фильтров на телефоне */}
@@ -411,11 +431,14 @@ const ScenarioPage = () => {
                     className="mb-4 flex items-center justify-between border border-foreground px-4 py-3 text-[0.8rem] uppercase tracking-[0.1em] lg:hidden"
                   >
                     Фильтры
-                    <Icon name={mobileFilters ? 'X' : 'SlidersHorizontal'} size={17} />
+                    <Icon
+                      name={mobileFilters ? "X" : "SlidersHorizontal"}
+                      size={17}
+                    />
                   </button>
 
                   <aside
-                    className={`lg:col-span-3 ${mobileFilters ? 'block' : 'hidden lg:block'}`}
+                    className={`lg:col-span-3 ${mobileFilters ? "block" : "hidden lg:block"}`}
                   >
                     <div className="border border-border bg-surface p-4 lg:sticky lg:top-[100px]">
                       <CatalogFilters
@@ -432,7 +455,7 @@ const ScenarioPage = () => {
                 </>
               )}
 
-              <div className={scenario.fullCatalog ? 'lg:col-span-9' : ''}>
+              <div className={scenario.fullCatalog ? "lg:col-span-9" : ""}>
                 <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-3">
                   {visible.map((h) => (
                     <ProductCard
