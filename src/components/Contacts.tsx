@@ -65,7 +65,7 @@ const Contacts = () => {
     <section id="contacts" className="section-pad anchor-offset bg-surface">
       <div className="rule" />
       <SectionHead
-        index="05"
+        index="06"
         eyebrow="Контакты"
         title="Напишите, подберём"
         note="Отвечаем в рабочее время. Если знаете марку, модель и год — напишите их в комментарии, пришлём готовый список."

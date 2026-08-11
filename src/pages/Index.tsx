@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Selection from "@/components/Selection";
+import NewArrivals from "@/components/NewArrivals";
 import Faq from "@/components/Faq";
 import Contacts from "@/components/Contacts";
 import Footer from "@/components/Footer";
@@ -109,6 +110,7 @@ const Index = () => {
       <main>
         <Hero />
         <Selection {...selectorProps} />
+        <NewArrivals vehicle={vehicle} />
         <Faq />
         <Contacts />
       </main>

@@ -4,6 +4,8 @@ export interface Product {
   id: string;
   sku?: string;
   popularity?: number;
+  /** Когда товар добавили — по нему собираем блок новинок */
+  createdAt?: string | null;
   name: string;
   category: Category;
   price: number;

@@ -17,7 +17,7 @@ const Faq = () => {
   <section id="faq" className="section-pad anchor-offset">
     <div className="rule" />
     <SectionHead
-      index="04"
+      index="05"
       eyebrow="FAQ и гарантия"
       title="Частые вопросы"
       note="Если ответа нет — напишите, добавим сюда."
