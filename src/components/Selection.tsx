@@ -1,5 +1,6 @@
 import SectionHead from '@/components/SectionHead';
 import VehicleSelector from '@/components/VehicleSelector';
+import { Vehicle } from '@/data/catalog';
 
 interface Props {
   brand: string;
@@ -9,6 +10,7 @@ interface Props {
   onModel: (v: string) => void;
   onYear: (v: string) => void;
   onSubmit: () => void;
+  onPhoto?: (v: Vehicle) => void;
 }
 
 const STEPS = [

@@ -1,40 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
 import { Vehicle, YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
-
-/** Загрузка фото разъёма или магнитолы — подбор по снимку. */
-const PhotoButton = () => {
-  const ref = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState('');
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => ref.current?.click()}
-        title="Подобрать по фото разъёма или магнитолы"
-        aria-label="Подобрать по фото"
-        className={`flex items-center gap-2 border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors ${
-          name
-            ? 'border-primary text-primary'
-            : 'border-foreground hover:border-primary hover:text-primary'
-        }`}
-      >
-        <Icon name="Camera" size={19} />
-        <span className="hidden sm:inline">{name ? 'Фото есть' : 'По фото'}</span>
-      </button>
-      <input
-        ref={ref}
-        type="file"
-        accept="image/*"
-        onChange={(e) => setName(e.target.files?.[0]?.name ?? '')}
-        className="hidden"
-      />
-    </>
-  );
-};
+import PhotoRecognize from '@/components/PhotoRecognize';
 
 interface Props {
   vehicle: Vehicle | null;
@@ -94,7 +63,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <PhotoButton />
+          <PhotoRecognize compact onApply={onApply} onManual={() => setOpen(true)} />
           <button
             onClick={() => setOpen(true)}
             className="border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
@@ -132,7 +101,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
         </button>
 
         <div className="flex flex-none items-center gap-2">
-          <PhotoButton />
+          <PhotoRecognize compact onApply={onApply} onManual={() => setOpen(true)} />
           <button
             onClick={() => setOpen(true)}
             className="flex items-center gap-2 bg-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
