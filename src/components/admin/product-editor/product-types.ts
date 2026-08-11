@@ -7,11 +7,9 @@ export interface AdminProduct {
   category: string;
   price: number;
   oldPrice: number | null;
-  /** Цена для дилеров */
+  /** Цена для дилеров — видна в админке и выгрузке */
   proPrice: number | null;
-  /** Ссылка на товар в Ozon */
   ozonUrl: string;
-  /** Ссылка на товар в Wildberries */
   wbUrl: string;
   install: string;
   warranty: string;

@@ -1,12 +1,13 @@
-import { AdminProduct, SetField, field, label } from './types';
+import { AdminProduct, SetField, label, field } from './product-types';
 
 interface Props {
   form: AdminProduct;
-  categories: string[];
   set: SetField;
+  categories: string[];
 }
 
-const MainSection = ({ form, categories, set }: Props) => (
+/** Вкладка «Основное»: название, цены, ссылки на маркетплейсы, годы. */
+const ProductMainTab = ({ form, set, categories }: Props) => (
   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
     <div className="sm:col-span-2">
       <span className={label}>Название</span>
@@ -152,4 +153,4 @@ const MainSection = ({ form, categories, set }: Props) => (
   </div>
 );
 
-export default MainSection;
+export default ProductMainTab;

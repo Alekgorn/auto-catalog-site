@@ -1,14 +1,16 @@
 import Icon from '@/components/ui/icon';
-import { AdminProduct, SetField, field, label } from './types';
+import { AdminProduct, SetField, label, field } from './product-types';
 
 interface Props {
   form: AdminProduct;
   set: SetField;
   uploading: boolean;
-  onUpload: (files: FileList | null) => void;
+  upload: (files: FileList | null) => void;
+  missingFields: string[];
 }
 
-const ContentSection = ({ form, set, uploading, onUpload }: Props) => (
+/** Вкладка «Описание и фото»: снимки, абзацы, характеристики, комплектация. */
+const ProductContentTab = ({ form, set, uploading, upload, missingFields }: Props) => (
   <div className="space-y-7">
     <div>
       <span className={label}>Фотографии</span>
@@ -38,7 +40,7 @@ const ContentSection = ({ form, set, uploading, onUpload }: Props) => (
             accept="image/*"
             multiple
             className="hidden"
-            onChange={(e) => onUpload(e.target.files)}
+            onChange={(e) => upload(e.target.files)}
           />
         </label>
       </div>
@@ -84,6 +86,27 @@ const ContentSection = ({ form, set, uploading, onUpload }: Props) => (
 
     <div>
       <span className={label}>Характеристики</span>
+
+      {missingFields.length > 0 && (
+        <div className="mb-4 border border-border bg-surface-muted p-3">
+          <div className="text-[0.78rem] text-muted-foreground">
+            Для категории «{form.category}» не заполнены:
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {missingFields.map((f) => (
+              <button
+                key={f}
+                onClick={() => set('specs', [...form.specs, [f, '']])}
+                className="flex items-center gap-1.5 border border-foreground px-2.5 py-1.5 text-[0.78rem] transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name="Plus" size={13} />
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {form.specs.map(([k, v], i) => (
         <div key={i} className="mb-2 flex gap-2">
           <input
@@ -174,4 +197,4 @@ const ContentSection = ({ form, set, uploading, onUpload }: Props) => (
   </div>
 );
 
-export default ContentSection;
+export default ProductContentTab;
