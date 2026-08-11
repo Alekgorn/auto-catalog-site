@@ -150,32 +150,6 @@ const HeroSearch = () => {
         </span>
       </div>
 
-      {/* Два способа найти товар */}
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        <div className="flex items-start gap-2.5 border border-border bg-surface px-3.5 py-3">
-          <Icon name="Keyboard" size={17} className="mt-0.5 flex-none text-primary" />
-          <span className="text-[0.82rem] leading-snug">
-            <span className="font-head font-bold uppercase tracking-[0.04em]">
-              Напишите словами
-            </span>
-            <span className="mt-0.5 block text-muted-foreground">
-              Своими словами: «магнитола на Тойоту», «хочу тише в салоне»
-            </span>
-          </span>
-        </div>
-        <div className="flex items-start gap-2.5 border border-border bg-surface px-3.5 py-3">
-          <Icon name="Camera" size={17} className="mt-0.5 flex-none text-primary" />
-          <span className="text-[0.82rem] leading-snug">
-            <span className="font-head font-bold uppercase tracking-[0.04em]">
-              Или пришлите фото
-            </span>
-            <span className="mt-0.5 block text-muted-foreground">
-              Снимок торпедо или штатной магнитолы — определим вашу машину
-            </span>
-          </span>
-        </div>
-      </div>
-
       {/* Примеры запросов */}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.78rem]">
         <span className="text-muted-foreground">Например:</span>

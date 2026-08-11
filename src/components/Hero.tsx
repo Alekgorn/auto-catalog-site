@@ -92,20 +92,6 @@ const Hero = () => {
 
     <div className="rule-hair" />
 
-    <div className="pt-6 md:pt-8">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <span className="flex h-6 w-6 flex-none items-center justify-center bg-foreground text-[0.72rem] font-bold text-background">
-          2
-        </span>
-        <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
-          Или выберите готовую задачу
-        </span>
-        <span className="text-[0.85rem] text-muted-foreground">
-          не знаете, что искать — начните отсюда
-        </span>
-      </div>
-    </div>
-
     <Scenarios />
 
     <div className="rule-hair" />

@@ -17,7 +17,12 @@ const Scenarios = () => {
   <section id="scenarios" className="anchor-offset py-10 md:py-12">
     <div className="flex flex-col gap-2 pb-7 md:flex-row md:items-end md:justify-between">
       <div>
-        <div className="eyebrow">С чем пришли</div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-6 w-6 flex-none items-center justify-center bg-foreground text-[0.72rem] font-bold text-background">
+            2
+          </span>
+          <span className="eyebrow">С чем пришли</span>
+        </div>
         <h2 className="mt-2 font-head text-2xl font-bold uppercase leading-tight tracking-tight md:text-3xl">
           Выберите свою задачу
         </h2>
