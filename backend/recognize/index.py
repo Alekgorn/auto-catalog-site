@@ -76,7 +76,9 @@ def ask_ai(data_url: str) -> dict:
     if not key:
         return {'error': 'no_key'}
 
-    base = os.environ.get('AI_BASE_URL', '').strip().rstrip('/') or DEFAULT_BASE
+    base = os.environ.get('AI_BASE_URL', '').strip().rstrip('/')
+    if not base.startswith('http'):
+        base = DEFAULT_BASE
     if not base.endswith('/chat/completions'):
         base = base + '/chat/completions'
     model = os.environ.get('AI_MODEL', '').strip() or DEFAULT_MODEL
