@@ -16,7 +16,8 @@ CORS = {
 }
 
 DEFAULT_MODEL = 'gpt-4o-mini'
-DEFAULT_BASE = 'https://api.openai.com/v1'
+PROXY_BASE = 'https://api.proxyapi.ru/openai/v1'
+OPENAI_BASE = 'https://api.openai.com/v1'
 MAX_BYTES = 6 * 1024 * 1024
 
 PROMPT = (
@@ -71,20 +72,30 @@ def pick(value: str, options: list) -> str:
     return ''
 
 
-def ask_ai(data_url: str) -> dict:
+def candidates() -> list:
+    """Пары «ключ + адрес сервиса». Поля могли перепутать местами — учитываем это."""
     key = os.environ.get('OPENAI_API_KEY', '').strip()
-    if not key:
-        return {'error': 'no_key'}
+    other = os.environ.get('AI_BASE_URL', '').strip()
 
-    base = os.environ.get('AI_BASE_URL', '').strip().rstrip('/')
-    if not base.startswith('http'):
-        base = DEFAULT_BASE
-    if not base.endswith('/chat/completions'):
-        base = base + '/chat/completions'
+    keys = [k for k in (key, other) if k and not k.startswith('http')]
+    bases = [b for b in (other, key) if b.startswith('http')]
+    bases += [PROXY_BASE, OPENAI_BASE]
+
+    pairs = []
+    for k in keys:
+        for b in bases:
+            b = b.rstrip('/')
+            if not b.endswith('/chat/completions'):
+                b += '/chat/completions'
+            if (k, b) not in pairs:
+                pairs.append((k, b))
+    return pairs[:4]
+
+
+def call_ai(key: str, url: str, data_url: str) -> dict:
     model = os.environ.get('AI_MODEL', '').strip() or DEFAULT_MODEL
-
     r = requests.post(
-        base,
+        url,
         headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
         json={
             'model': model,
@@ -103,13 +114,28 @@ def ask_ai(data_url: str) -> dict:
         timeout=40,
     )
     if r.status_code != 200:
-        return {'error': 'ai_failed', 'status': r.status_code, 'detail': r.text[:400]}
+        return {'error': 'ai_failed', 'status': r.status_code, 'detail': r.text[:300]}
 
     text = r.json()['choices'][0]['message']['content']
     match = re.search(r'\{.*\}', text, re.S)
     if not match:
         return {'error': 'bad_answer'}
     return json.loads(match.group(0))
+
+
+def ask_ai(data_url: str) -> dict:
+    pairs = candidates()
+    if not pairs:
+        return {'error': 'no_key'}
+
+    last = {'error': 'ai_failed'}
+    for key, url in pairs:
+        result = call_ai(key, url, data_url)
+        if not result.get('error'):
+            return result
+        last = result
+        print('recognize try failed:', url, result.get('status'), str(result.get('detail'))[:120])
+    return last
 
 
 def handler(event: dict, context) -> dict:
@@ -121,6 +147,7 @@ def handler(event: dict, context) -> dict:
         return resp(405, {'error': 'method not allowed'})
 
     body = json.loads(event.get('body') or '{}')
+
     image = (body.get('image') or '').strip()
     if not image.startswith('data:image'):
         return resp(400, {'error': 'Нужно фото салона автомобиля'})
