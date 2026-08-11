@@ -85,6 +85,10 @@ const Hero = () => {
         <span className="text-[0.85rem] text-muted-foreground">
           своими словами — «магнитола для Тойоты» или артикул с коробки
         </span>
+        <span className="flex items-center gap-1.5 text-[0.85rem] text-primary">
+          <Icon name="Camera" size={15} className="flex-none" />
+          Не знаете, что подойдёт? Сфотографируйте торпедо или штатную магнитолу
+        </span>
       </div>
 
       <HeroSearch />

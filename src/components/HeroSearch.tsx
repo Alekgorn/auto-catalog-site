@@ -140,16 +140,6 @@ const HeroSearch = () => {
         </div>
       )}
 
-      {/* Подсказка к кнопке фото — стрелка указывает вверх, на кнопку */}
-      <div className="mt-2 flex justify-end pr-16 md:pr-20">
-        <span className="flex items-start gap-1.5 text-right text-[0.78rem] text-primary">
-          <span className="max-w-[17rem] leading-snug">
-            Не знаете, что подойдёт? Сфотографируйте торпедо или штатную магнитолу
-          </span>
-          <Icon name="CornerRightUp" size={16} className="mt-0.5 flex-none" />
-        </span>
-      </div>
-
       {/* Примеры запросов */}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.78rem]">
         <span className="text-muted-foreground">Например:</span>
