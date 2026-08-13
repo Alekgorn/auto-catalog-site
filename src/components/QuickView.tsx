@@ -11,6 +11,7 @@ import {
   productSku,
   productSpecs,
 } from '@/data/catalog';
+import { isVehicle } from '@/lib/vehicle';
 import { useCart } from '@/context/CartContext';
 
 interface Props {
@@ -20,7 +21,9 @@ interface Props {
 }
 
 /** Быстрый просмотр: характеристики товара без ухода из каталога. */
-const QuickView = ({ product, vehicle, onClose }: Props) => {
+const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
+  // Неполные данные машины = машина не выбрана
+  const vehicle = isVehicle(rawVehicle) ? rawVehicle : null;
   const { add, has } = useCart();
   const [active, setActive] = useState(0);
 

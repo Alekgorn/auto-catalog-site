@@ -11,6 +11,7 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
+import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -25,7 +26,9 @@ interface Props {
   onPick?: (product: Product) => void;
 }
 
-const ProductCard = ({ product, vehicle, picked, onPick }: Props) => {
+const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
+  // Неполные данные машины = машина не выбрана
+  const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
   const { cardFields, categorySpecs } = useCatalog();
