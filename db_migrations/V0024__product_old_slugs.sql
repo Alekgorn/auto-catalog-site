@@ -1,0 +1,1 @@
+ALTER TABLE products ADD COLUMN IF NOT EXISTS old_slugs JSONB NOT NULL DEFAULT '[]'::jsonb;

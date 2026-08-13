@@ -209,26 +209,56 @@ def row_to_guide(r: dict) -> dict:
     }
 
 
-def slugify(text: str) -> str:
-    table = {
-        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
-        'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
-        'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-        'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
-        'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
-    }
-    out = []
-    for ch in text.lower():
-        if ch in table:
-            out.append(table[ch])
-        elif ch.isalnum():
-            out.append(ch)
-        else:
-            out.append('-')
-    slug = ''.join(out)
-    while '--' in slug:
-        slug = slug.replace('--', '-')
-    return slug.strip('-')[:80] or 'guide-' + uuid.uuid4().hex[:6]
+SLUG_LIMIT = 60
+
+TRANSLIT = {
+    'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+    'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+    'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+    'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch', 'ъ': '',
+    'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+}
+
+# Предлоги, союзы и «вода» — в адресе не нужны
+SLUG_STOP = set("""
+    dlya na s so i v vo k ko po ot do iz u o ob pri za pod nad a no ili zhe li by
+    eto kak chto vse ves vsya vseh tip tipa vid vida goda godov god let
+    shtuk sht komplekte takzhe ochen bolee samyy svoy nash vash lyuboy raznyh
+    prochee drugoe novyy universalnyy
+""".split())
+
+# Перед числом предлог оставляем: «с 2016» и «до 2016» — разные товары
+SLUG_KEEP_BEFORE_NUM = {'s', 'do', 'ot', 'po', 'pod', 'nad', 'iz'}
+
+
+def slugify(text: str, limit: int = SLUG_LIMIT) -> str:
+    """Название → короткий SEO-адрес на латинице, только значимые слова."""
+    translit = ''.join(TRANSLIT.get(ch, ch) for ch in str(text or '').lower())
+    words = [w for w in re.split(r'[^a-z0-9]+', translit) if w]
+
+    kept = []
+    seen = set()
+    for i, w in enumerate(words):
+        nxt = words[i + 1] if i + 1 < len(words) else ''
+        keep_prefix = w in SLUG_KEEP_BEFORE_NUM and nxt.isdigit()
+        if w in SLUG_STOP and not keep_prefix and kept:
+            continue
+        if w in seen and not w.isdigit():
+            continue
+        seen.add(w)
+        kept.append(w)
+
+    source = kept or words[:1]
+    if not source:
+        return 'tovar'
+
+    slug = ''
+    for w in source:
+        candidate = w if not slug else slug + '-' + w
+        if len(candidate) > limit:
+            break
+        slug = candidate
+    return slug or source[0][:limit]
 
 
 XLS_COLUMNS = [
@@ -638,19 +668,13 @@ def replace_brands(conn, brands: list) -> int:
 
 
 def make_slug(name: str, taken: set) -> str:
-    """Короткий код товара из названия. Длинные названия обрезаем по словам."""
-    full = slugify(name)
-    base = full
-    if len(base) > 52:
-        cut = base[:52]
-        # обрезаем по последнему целому слову, чтобы код оставался читаемым
-        base = cut.rsplit('-', 1)[0] if '-' in cut[30:] else cut
-    base = base.rstrip('-') or 'tovar'
+    """Уникальный SEO-адрес товара. При совпадении добавляем номер."""
+    base = slugify(name) or 'tovar'
     slug = base
     n = 2
     while slug in taken:
         suffix = f'-{n}'
-        slug = base[: 56 - len(suffix)].rstrip('-') + suffix
+        slug = base[: SLUG_LIMIT - len(suffix)].rstrip('-') + suffix
         n += 1
     taken.add(slug)
     return slug
@@ -1341,7 +1365,13 @@ def handler(event: dict, context) -> dict:
             name = str(body.get('name', '')).strip()
             if not name:
                 return resp(400, {'error': 'Укажите название'})
-            slug = str(body.get('slug', '')).strip() or 'p-' + uuid.uuid4().hex[:8]
+            slug = str(body.get('slug', '')).strip()
+            if not slug:
+                cur_s = conn.cursor()
+                cur_s.execute(f"SELECT slug FROM {schema()}.products")
+                taken = {r[0] for r in cur_s.fetchall()}
+                cur_s.close()
+                slug = make_slug(name, taken)
             category = str(body.get('category', '')).strip() or 'Другое'
             fields = {
                 'slug': q(slug),
@@ -1379,8 +1409,14 @@ def handler(event: dict, context) -> dict:
                 if pid == 'NULL':
                     return resp(400, {'error': 'Не указан товар'})
                 sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+                # адрес поменялся — старый запоминаем, чтобы ссылки не побились
+                keep_old = (
+                    f", old_slugs = CASE WHEN slug <> {q(slug)} "
+                    f"AND NOT (old_slugs ? slug) THEN old_slugs || to_jsonb(slug) "
+                    f"ELSE old_slugs END"
+                )
                 cur.execute(
-                    f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
+                    f"UPDATE {schema()}.products SET {sets}{keep_old}, updated_at = NOW() "
                     f"WHERE id = {pid} RETURNING *"
                 )
             row = cur.fetchone()
