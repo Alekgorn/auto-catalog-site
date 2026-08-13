@@ -397,12 +397,14 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
   /* --- 5. Семантика: смысл запроса --- */
   if (q.concepts.length) {
     let semantic = 0;
+    let inTargetCategory = false;
     q.concepts.forEach((id) => {
       const c = CONCEPT_BY_ID.get(id);
       if (!c) return;
       if ((c.categories ?? []).includes(item.product.category)) {
         // Совпал сам раздел: «магнитола» показывает магнитолы, а не переходники
-        semantic += 240;
+        semantic += 900;
+        inTargetCategory = true;
         reasons.push(item.product.category);
       }
       (c.keywords ?? []).forEach((k) => {
@@ -412,6 +414,10 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
       });
     });
     score += semantic;
+    // Раздел из запроса известен, но товар из другого — это сопутствующее,
+    // а не то, что просили: не даём ему обгонять профильные товары
+    const hasTargetCats = q.categories.length > 0;
+    if (hasTargetCats && !inTargetCategory && !nameHits) score = Math.min(score, 120);
     if (!semantic && !wordHits) return null;
   }
 
@@ -462,11 +468,22 @@ export const smartSearch = (
    * Иначе к трём нужным позициям прицепляются десятки случайных, где слово
    * мелькнуло лишь в описании.
    */
+  // Смысл запроса понят, но товар зацепился лишь словом из описания —
+  // такие «почти совпадения» только мешают, показываем честное «не найдено»
   let result = hits;
-  if (hits.length > 3) {
-    const best = hits[0].score;
+  if (q.concepts.length && q.categories.length) {
+    const meaningful = hits.filter((h) => h.score >= 130);
+    if (meaningful.length) result = meaningful;
+    else return [];
+  }
+  // Ни один товар не совпал названием — значит слова нашлись лишь в описаниях.
+  // Такая выдача выглядит случайной, честнее показать «ничего не найдено»
+  if (result.length > 3 && result[0].score < 100) return [];
+
+  if (result.length > 3) {
+    const best = result[0].score;
     const floor = Math.max(best * 0.18, 40);
-    const strong = hits.filter((h) => h.score >= floor);
+    const strong = result.filter((h) => h.score >= floor);
     if (strong.length >= 3) result = strong;
   }
 
