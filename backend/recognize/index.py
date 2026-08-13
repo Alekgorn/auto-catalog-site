@@ -25,9 +25,12 @@ SEARCH_PROMPT = (
     'Выбери только те, что действительно отвечают запросу, самые подходящие первыми. '
     'Учитывай смысл: «хочу тише» — это шумоизоляция, «чтобы играло громче» — акустика, '
     '«не вижу при парковке» — камеры и парктроники. '
-    'Если подходящих товаров нет, верни пустой список — не выдумывай. '
+    'Строго: если подходящих товаров нет, верни пустой список items и напиши в explain '
+    '«такого пока нет в наличии». Никогда не подставляй товар из другой категории '
+    'только потому, что больше нечего предложить — лучше пустой ответ. '
+    'В explain пиши коротко и по делу, до 12 слов, без рассуждений. '
     'Ответь строго JSON без пояснений: '
-    '{"items": [номера подходящих товаров, до 12], "explain": "чем помогли, до 12 слов по-русски"}.'
+    '{"items": [номера подходящих товаров, до 12], "explain": "текст"}.'
 )
 
 DEFAULT_MODEL = 'gpt-4o-mini'
@@ -243,10 +246,29 @@ def call_ai_text(key: str, url: str, prompt: str) -> dict:
     return json.loads(match.group(0))
 
 
+def setting(name: str) -> str:
+    """Значение настройки из админки — там же лежит каталог Яндекса."""
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                f"SELECT value FROM {get_schema()}.settings WHERE key = {sq(name)}"
+            )
+            row = cur.fetchone()
+            return str(row[0]).strip().strip('"') if row and row[0] else ''
+        finally:
+            conn.close()
+    except Exception as exc:
+        print('setting read failed:', name, str(exc)[:100])
+        return ''
+
+
 def call_yandex(prompt: str) -> dict:
     """Запрос к YandexGPT. У него свой формат ответа, приводим к общему виду."""
     key = os.environ.get('YANDEX_API_KEY', '').strip()
-    folder = os.environ.get('YANDEX_FOLDER_ID', '').strip()
+    # Каталог берём из настроек проекта, иначе из секрета
+    folder = setting('yandex_folder_id') or os.environ.get('YANDEX_FOLDER_ID', '').strip()
     if not key or not folder:
         return {'error': 'no_key'}
 
