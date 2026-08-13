@@ -102,7 +102,17 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
         </div>
       ) : (
         <div className="px-5 py-4">
-          <div className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+          {/* Машина не выбрана — товар доступен всем, проверка по желанию */}
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
+              <Icon name="Check" size={15} strokeWidth={3} />
+            </span>
+            <span className="font-head text-[0.92rem] font-bold uppercase tracking-tight text-success">
+              Подходит ко всем автомобилям
+            </span>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
             <Icon name="Car" size={15} />
             Проверьте свою машину
           </div>

@@ -114,20 +114,25 @@ const QuickView = ({ product, vehicle, onClose }: Props) => {
           </div>
 
           <div className="mt-5 md:mt-0">
-            {vehicle && (
-              <div
-                className={`mb-4 flex items-center gap-2.5 border px-3 py-2.5 text-[0.85rem] ${
-                  fits
-                    ? 'border-success bg-success-soft text-success'
-                    : 'border-border text-muted-foreground'
-                }`}
-              >
-                <Icon name={fits ? 'Check' : 'CircleSlash'} size={16} strokeWidth={fits ? 3 : 2} />
-                {fits
+            {/* Машина не выбрана — товар доступен всем */}
+            <div
+              className={`mb-4 flex items-center gap-2.5 border px-3 py-2.5 text-[0.85rem] ${
+                !vehicle || fits
+                  ? 'border-success bg-success-soft text-success'
+                  : 'border-border text-muted-foreground'
+              }`}
+            >
+              <Icon
+                name={!vehicle || fits ? 'Check' : 'CircleSlash'}
+                size={16}
+                strokeWidth={!vehicle || fits ? 3 : 2}
+              />
+              {!vehicle
+                ? 'Подходит ко всем автомобилям'
+                : fits
                   ? `Подходит к ${vehicle.brand} ${vehicle.model}`
                   : `Не подходит к ${vehicle.brand} ${vehicle.model}`}
-              </div>
-            )}
+            </div>
 
             <div className="flex items-end gap-3">
               {product.oldPrice && (

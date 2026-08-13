@@ -139,25 +139,30 @@ const ProductCard = ({ product, vehicle, picked, onPick }: Props) => {
         </dl>
       )}
 
-      {vehicle && fits ? (
+      {/* Машина не выбрана — не пугаем «не подходит», предлагаем проверить */}
+      {!vehicle || fits ? (
         <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
             <Icon name="Check" size={13} strokeWidth={3} />
           </span>
           <span className="text-[0.78rem] font-medium leading-snug text-success sm:text-[0.85rem]">
-            Подходит к вашему автомобилю
-            <span className="block font-normal">
-              {vehicle.brand} {vehicle.model}, {vehicle.year} г.
-            </span>
+            {vehicle ? (
+              <>
+                Подходит к вашему автомобилю
+                <span className="block font-normal">
+                  {vehicle.brand} {vehicle.model}, {vehicle.year} г.
+                </span>
+              </>
+            ) : (
+              'Подходит ко всем автомобилям'
+            )}
           </span>
         </div>
       ) : (
-        vehicle && (
-          <div className="mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-            <Icon name="CircleSlash" size={15} />
-            Не подходит к выбранной машине
-          </div>
-        )
+        <div className="mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+          <Icon name="CircleSlash" size={15} />
+          Не подходит к выбранной машине
+        </div>
       )}
 
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-4 sm:pt-6">
