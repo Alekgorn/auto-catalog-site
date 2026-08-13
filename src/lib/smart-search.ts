@@ -149,6 +149,8 @@ export interface ParsedQuery {
   categories: string[];
   /** Пожелание по цене */
   priceOrder?: 'asc' | 'desc';
+  /** Год из запроса: «камри 2015». Без него год выбирает покупатель */
+  year?: number;
 }
 
 /** Разбирает «магнитола хонда подешевле» на сущности и намерение. */
@@ -201,6 +203,8 @@ export const parseQuery = (
     known.forEach((m) => {
       const mn = normalize(m);
       if (mn.length < 3) return;
+      // Чисто числовое «название» — это год из запроса, а не модель
+      if (/^\d{4}$/.test(mn)) return;
       // Только по границе слова — иначе «hd» из артикула станет моделью
       const re = new RegExp(`(^|\\s)${mn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s)`);
       if (re.test(cleaned)) {
@@ -243,6 +247,18 @@ export const parseQuery = (
     }
   });
 
+  /* год выпуска: «рио 2019», «камри 2015 года» */
+  let year: number | undefined;
+  const now = new Date().getFullYear();
+  for (const w of allWords) {
+    const n = Number(w);
+    // Разумные рамки: раньше 1980 машин в каталоге нет, будущее тоже отсекаем
+    if (Number.isInteger(n) && n >= 1980 && n <= now + 1) {
+      year = n;
+      break;
+    }
+  }
+
   /* намёк на цену */
   let priceOrder: 'asc' | 'desc' | undefined;
   for (const hint of PRICE_HINTS) {
@@ -267,6 +283,7 @@ export const parseQuery = (
     narrowConcepts,
     categories,
     priceOrder,
+    year,
   };
 };
 

@@ -14,6 +14,7 @@ import { useCatalog } from "@/context/CatalogContext";
 import { describeQuery, parseQuery, smartSearch } from "@/lib/smart-search";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import AiSearchBlock from "@/components/AiSearchBlock";
+import YearPrompt from "@/components/YearPrompt";
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
@@ -62,21 +63,35 @@ const SearchPage = () => {
   const understood = useMemo(() => describeQuery(parsed), [parsed]);
 
   /**
-   * Марка названа прямо в запросе («для Toyota») — сразу подставляем её
-   * в подбор по машине, чтобы не выбирать вручную.
+   * Марка и модель названы в запросе («магнитола Kia Rio 2019») — сразу
+   * подставляем машину. Год берём из запроса; если его не назвали —
+   * машину не подставляем, а просим покупателя выбрать год сам.
    */
   useEffect(() => {
-    if (!parsed.brands.length || vehicle) return;
+    if (!parsed.brands.length || vehicle || !parsed.year) return;
     const brand = parsed.brands[0];
     const known = brands.find((b) => b.name === brand);
     if (!known) return;
     const model = parsed.models.find((m) => known.models.includes(m));
     if (!model) return;
-    const next = { brand, model, year: new Date().getFullYear() - 4 };
+    const next = { brand, model, year: parsed.year };
     setVehicle(next);
     saveVehicle(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [parsed.brands.join(), parsed.models.join(), brands.length]);
+  }, [parsed.brands.join(), parsed.models.join(), parsed.year, brands.length]);
+
+  /**
+   * Машину назвали без года — предлагаем выбрать его,
+   * иначе подбор врёт: год влияет на совместимость.
+   */
+  const askYear = useMemo(() => {
+    if (vehicle || parsed.year || !parsed.brands.length) return null;
+    const brand = parsed.brands[0];
+    const known = brands.find((b) => b.name === brand);
+    if (!known) return null;
+    const model = parsed.models.find((m) => known.models.includes(m));
+    return model ? { brand, model } : null;
+  }, [vehicle, parsed.year, parsed.brands, parsed.models, brands]);
 
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
@@ -181,6 +196,16 @@ const SearchPage = () => {
         </div>
 
         <div className="rule-hair" />
+
+        {askYear && !loading && (
+          <div className="py-5">
+            <YearPrompt
+              brand={askYear.brand}
+              model={askYear.model}
+              onPick={applyVehicle}
+            />
+          </div>
+        )}
 
         {query && !loading && (
           <div className="py-5">
