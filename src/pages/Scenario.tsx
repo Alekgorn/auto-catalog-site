@@ -26,9 +26,8 @@ import { smartSearch } from "@/lib/smart-search";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 import KitSection from "@/components/kit/KitSection";
-import KitBar from "@/components/kit/KitBar";
-import { useCart } from "@/context/CartContext";
-import { Product } from "@/data/catalog";
+import KitRecommend from "@/components/kit/KitRecommend";
+import { useKit } from "@/context/KitContext";
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
@@ -57,35 +56,13 @@ const ScenarioPage = () => {
   const [shown, setShown] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
 
-  /** Сборка комплекта: по одной позиции из каждого шага */
-  const { add, setOpen } = useCart();
-  const [picked, setPicked] = useState<Record<string, Product | undefined>>({});
-  const [kitAdded, setKitAdded] = useState(false);
+  /** Сборка комплекта живёт в общем хранилище — панель видна на всём сайте */
+  const { picks, begin, pick: pickForKit } = useKit();
 
-  /** Смена сценария — сбрасываем набранный комплект */
   useEffect(() => {
-    setPicked({});
-    setKitAdded(false);
-  }, [slug]);
-
-  const pickForKit = (product: Product) => {
-    setKitAdded(false);
-    setPicked((prev) => ({
-      ...prev,
-      // Повторное нажатие снимает выбор
-      [product.category]:
-        prev[product.category]?.id === product.id ? undefined : product,
-    }));
-  };
-
-  const removeFromKit = (category: string) =>
-    setPicked((prev) => ({ ...prev, [category]: undefined }));
-
-  const addKitToCart = () => {
-    Object.values(picked).forEach((p) => p && add(p));
-    setKitAdded(true);
-    setOpen(true);
-  };
+    if (scenario?.kit) begin(scenario.slug, scenario.kit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, scenario?.kit]);
 
   /** Прокрутка к панели выбора машины */
   const scrollToVehicle = () => {
@@ -392,18 +369,19 @@ const ScenarioPage = () => {
                   products={products}
                   vehicle={vehicle}
                   brandsCount={brands.length}
-                  pickedId={picked[step.category]?.id}
+                  pickedId={picks[step.category]}
                   onPick={pickForKit}
                   onNeedVehicle={scrollToVehicle}
                 />
               </div>
             ))}
-            <KitBar
-              steps={scenario.kit}
-              picked={picked}
-              onRemove={removeFromKit}
-              onAddAll={addKitToCart}
-              added={kitAdded}
+            <KitRecommend
+              products={products}
+              vehicle={vehicle}
+              picks={picks}
+              onPick={pickForKit}
+              /* Советуем только когда основа собрана */
+              ready={scenario.kit.every((s) => picks[s.category])}
             />
           </>
         ) : hits.length === 0 ? (
