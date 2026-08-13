@@ -243,10 +243,31 @@ def call_ai_text(key: str, url: str, prompt: str) -> dict:
     return json.loads(match.group(0))
 
 
-def call_yandex(prompt: str) -> dict:
+def get_settings() -> dict:
+    """Настройки из админки: выбор сервиса и каталог Яндекса."""
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                f"SELECT key, value FROM {get_schema()}.settings "
+                f"WHERE key IN ('ai_search_provider', 'yandex_folder_id')"
+            )
+            return {
+                r[0]: str(r[1]).strip().strip('"') for r in cur.fetchall() if r[1]
+            }
+        finally:
+            conn.close()
+    except Exception as exc:
+        print('settings read failed:', str(exc)[:120])
+        return {}
+
+
+def call_yandex(prompt: str, folder: str = '') -> dict:
     """Запрос к YandexGPT. У него свой формат ответа, приводим к общему виду."""
     key = os.environ.get('YANDEX_API_KEY', '').strip()
-    folder = os.environ.get('YANDEX_FOLDER_ID', '').strip()
+    # Каталог берём из админки, иначе из секрета проекта
+    folder = folder or os.environ.get('YANDEX_FOLDER_ID', '').strip()
     if not key or not folder:
         return {'error': 'no_key'}
 
@@ -271,11 +292,14 @@ def call_yandex(prompt: str) -> dict:
     return json.loads(match.group(0))
 
 
-def ai_provider() -> str:
+def ai_provider(saved: str = '') -> str:
     """
     Какой сервис использовать для поиска: yandex, openai или auto.
     Сначала смотрим настройку из админки, затем переменную окружения.
     """
+    choice = (saved or '').strip().lower()
+    if choice in ('yandex', 'openai', 'auto'):
+        return choice if choice in ('yandex', 'openai') else 'auto'
     choice = ''
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
