@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { Product, Vehicle, matchVehicle } from '@/data/catalog';
+import { Product, Vehicle, formatPrice, matchVehicle } from '@/data/catalog';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 
@@ -33,18 +33,40 @@ const KitSection = ({
   onNeedVehicle,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
+  /** Ограничение по цене снято — «бюджетно» у каждого своё */
+  const [allPrices, setAllPrices] = useState(false);
+  /** Показать список снова, когда позиция уже выбрана */
+  const [replacing, setReplacing] = useState(false);
 
-  const list = useMemo(() => {
+  /** Все товары раздела, подходящие машине */
+  const full = useMemo(() => {
     let out = products.filter((p) => p.category === step.category);
-    if (step.maxPrice) out = out.filter((p) => p.price <= step.maxPrice!);
     if (vehicle) {
       out = out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
     }
     // Дешёвые сначала — сценарий про ограниченный бюджет
     return [...out].sort((a, b) => a.price - b.price);
-  }, [products, step, vehicle, brandsCount]);
+  }, [products, step.category, vehicle, brandsCount]);
+
+  /** Сколько позиций скрывает ценовой порог */
+  const overLimit = useMemo(
+    () =>
+      step.maxPrice ? full.filter((p) => p.price > step.maxPrice!).length : 0,
+    [full, step.maxPrice],
+  );
+
+  const list = useMemo(
+    () =>
+      step.maxPrice && !allPrices
+        ? full.filter((p) => p.price <= step.maxPrice!)
+        : full,
+    [full, step.maxPrice, allPrices],
+  );
 
   const needCar = step.needVehicle && !vehicle;
+  const chosen = full.find((p) => p.id === pickedId);
+  /** Позиция выбрана — прячем остальные, чтобы не мозолили глаза */
+  const collapsed = !!chosen && !replacing;
 
   return (
     <section className="py-7">
@@ -64,9 +86,40 @@ const KitSection = ({
               </span>
             )}
           </div>
-          <p className="mt-1.5 max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
-            {step.text}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
+              {allPrices && step.maxPrice
+                ? 'Показаны все модели раздела — от самых доступных к дорогим.'
+                : step.text}
+            </p>
+
+            {/* Порог цены условен: что «бюджетно» — решает покупатель */}
+            {!needCar && !collapsed && overLimit > 0 && (
+              <button
+                onClick={() => {
+                  setAllPrices((v) => !v);
+                  setShown(STEP_SIZE);
+                }}
+                className="flex flex-none items-center gap-1.5 border border-foreground px-3.5 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name={allPrices ? 'ChevronUp' : 'ChevronDown'} size={14} />
+                {allPrices
+                  ? `Только до ${formatPrice(step.maxPrice!)}`
+                  : `Показать все (+${overLimit})`}
+              </button>
+            )}
+
+            {/* Выбор сделан — даём заменить, не листая весь список */}
+            {collapsed && (
+              <button
+                onClick={() => setReplacing(true)}
+                className="flex flex-none items-center gap-1.5 border border-foreground px-3.5 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name="RefreshCw" size={14} />
+                Заменить {step.unit ?? 'позицию'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -106,18 +159,22 @@ const KitSection = ({
       ) : (
         <>
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
-            {list.slice(0, shown).map((p) => (
+            {(collapsed ? [chosen!] : list.slice(0, shown)).map((p) => (
               <ProductCard
                 key={p.id}
                 product={p}
                 vehicle={vehicle}
                 picked={pickedId === p.id}
-                onPick={onPick}
+                onPick={(prod) => {
+                  onPick(prod);
+                  // Выбрали замену — снова сворачиваем список
+                  setReplacing(false);
+                }}
               />
             ))}
           </div>
 
-          {shown < list.length && (
+          {!collapsed && shown < list.length && (
             <div className="mt-5 text-center">
               <button
                 onClick={() => setShown((s) => s + STEP_SIZE)}

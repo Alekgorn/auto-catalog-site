@@ -46,6 +46,8 @@ export interface KitStep {
   maxPrice?: number;
   /** Список бессмысленен без выбранной машины — просим указать авто */
   needVehicle?: boolean;
+  /** Название позиции для кнопки: «Заменить магнитолу» */
+  unit?: string;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -62,6 +64,7 @@ export const SCENARIOS: Scenario[] = [
         text: 'Бюджетный сегмент — до 20 000 ₽. Сначала самые доступные.',
         icon: 'MonitorSmartphone',
         maxPrice: 20000,
+        unit: 'магнитолу',
       },
       {
         category: 'Переходные рамки для магнитол',
@@ -69,6 +72,7 @@ export const SCENARIOS: Scenario[] = [
         text: 'Закрывает штатное место ровно, без щелей. Подбирается строго по вашей машине.',
         icon: 'Frame',
         needVehicle: true,
+        unit: 'рамку',
       },
       {
         category: 'Переходники для подключения магнитол',
@@ -76,6 +80,7 @@ export const SCENARIOS: Scenario[] = [
         text: 'Подключение в заводской разъём, без резки штатной проводки.',
         icon: 'Cable',
         needVehicle: true,
+        unit: 'проводку',
       },
     ],
     heading: 'Большой экран без переплаты',
