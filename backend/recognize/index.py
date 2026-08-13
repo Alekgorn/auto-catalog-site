@@ -35,6 +35,11 @@ PROXY_BASE = 'https://api.proxyapi.ru/openai/v1'
 OPENAI_BASE = 'https://api.openai.com/v1'
 MAX_BYTES = 6 * 1024 * 1024
 
+# YandexGPT — российский сервис, используется для поиска по смыслу.
+# Картинки он не понимает, поэтому распознавание фото остаётся на OpenAI.
+YANDEX_URL = 'https://llm.api.cloud.yandex.net/foundationModels/v1/completion'
+YANDEX_MODEL = 'yandexgpt-lite'
+
 PROMPT = (
     'На фото — салон автомобиля: торпедо, приборная панель или штатная магнитола. '
     'Определи марку и модель машины по форме панели, магнитолы, дефлекторов, логотипу на руле. '
@@ -238,7 +243,57 @@ def call_ai_text(key: str, url: str, prompt: str) -> dict:
     return json.loads(match.group(0))
 
 
+def call_yandex(prompt: str) -> dict:
+    """Запрос к YandexGPT. У него свой формат ответа, приводим к общему виду."""
+    key = os.environ.get('YANDEX_API_KEY', '').strip()
+    folder = os.environ.get('YANDEX_FOLDER_ID', '').strip()
+    if not key or not folder:
+        return {'error': 'no_key'}
+
+    model = os.environ.get('YANDEX_MODEL', '').strip() or YANDEX_MODEL
+    r = requests.post(
+        YANDEX_URL,
+        headers={'Authorization': f'Api-Key {key}', 'Content-Type': 'application/json'},
+        json={
+            'modelUri': f'gpt://{folder}/{model}',
+            'completionOptions': {'stream': False, 'temperature': 0, 'maxTokens': 400},
+            'messages': [{'role': 'user', 'text': prompt}],
+        },
+        timeout=25,
+    )
+    if r.status_code != 200:
+        return {'error': 'ai_failed', 'status': r.status_code, 'detail': r.text[:300]}
+
+    text = r.json()['result']['alternatives'][0]['message']['text']
+    match = re.search(r'\{.*\}', text, re.S)
+    if not match:
+        return {'error': 'bad_answer'}
+    return json.loads(match.group(0))
+
+
+def ai_provider() -> str:
+    """Какой сервис использовать для поиска: yandex, openai или auto."""
+    choice = os.environ.get('AI_SEARCH_PROVIDER', '').strip().lower()
+    return choice if choice in ('yandex', 'openai') else 'auto'
+
+
 def ask_ai_text(prompt: str) -> dict:
+    """
+    Поиск по смыслу. По умолчанию сначала пробуем YandexGPT (российский сервис),
+    а если ключа нет или он не ответил — уходим на OpenAI.
+    """
+    choice = ai_provider()
+
+    if choice in ('yandex', 'auto'):
+        result = call_yandex(prompt)
+        if not result.get('error'):
+            result['provider'] = 'yandex'
+            return result
+        if choice == 'yandex':
+            return result
+        if result.get('error') != 'no_key':
+            print('yandex search failed:', result.get('status'), str(result.get('detail'))[:150])
+
     pairs = candidates()
     if not pairs:
         return {'error': 'no_key'}
@@ -246,6 +301,7 @@ def ask_ai_text(prompt: str) -> dict:
     for key, url in pairs:
         result = call_ai_text(key, url, prompt)
         if not result.get('error'):
+            result['provider'] = 'openai'
             return result
         last = result
         print('ai search try failed:', url, result.get('status'), str(result.get('detail'))[:120])
@@ -288,7 +344,12 @@ def smart_search(query: str) -> dict:
 
     explain = str(answer.get('explain') or '')[:300]
     cache_put(key, query, slugs, explain)
-    return {'slugs': slugs, 'explain': explain, 'cached': False}
+    return {
+        'slugs': slugs,
+        'explain': explain,
+        'cached': False,
+        'provider': answer.get('provider') or '',
+    }
 
 
 def handler(event: dict, context) -> dict:
