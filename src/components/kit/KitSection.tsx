@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { Product, Vehicle, formatPrice, matchVehicle } from '@/data/catalog';
+import {
+  Product,
+  Vehicle,
+  formatPrice,
+  isCompatible,
+  matchVehicle,
+} from '@/data/catalog';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 
@@ -42,11 +48,16 @@ const KitSection = ({
   const full = useMemo(() => {
     let out = products.filter((p) => p.category === step.category);
     if (vehicle) {
-      out = out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
+      // Рамки и проводка — только точное совпадение по машине.
+      // «Универсальные» переходники сюда не пускаем: они подходят формально,
+      // а на деле покупатель возьмёт не тот разъём
+      out = step.strictFit
+        ? out.filter((p) => isCompatible(p, vehicle))
+        : out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
     }
     // Дешёвые сначала — сценарий про ограниченный бюджет
     return [...out].sort((a, b) => a.price - b.price);
-  }, [products, step.category, vehicle, brandsCount]);
+  }, [products, step.category, step.strictFit, vehicle, brandsCount]);
 
   /** Сколько позиций скрывает ценовой порог */
   const overLimit = useMemo(
@@ -152,9 +163,23 @@ const KitSection = ({
           </div>
         </div>
       ) : list.length === 0 ? (
-        <div className="mt-5 border border-border bg-surface px-5 py-6 text-[0.88rem] leading-relaxed text-muted-foreground">
-          Под эту машину в разделе пока ничего нет. Позвоните — подберём и
-          привезём под заказ.
+        <div className="mt-5 border border-border bg-surface px-5 py-6">
+          <div className="flex items-start gap-3">
+            <Icon
+              name="PhoneCall"
+              size={20}
+              className="mt-0.5 flex-none text-primary"
+            />
+            <div className="text-[0.88rem] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Под {vehicle?.brand} {vehicle?.model} {vehicle?.year} г. в этом
+                разделе подходящего нет.
+              </span>{' '}
+              Показываем только то, что точно встанет на вашу машину, — поэтому
+              список пуст, а не забит «универсальным». Позвоните: подберём по
+              вашему штатному разъёму и привезём под заказ.
+            </div>
+          </div>
         </div>
       ) : (
         <>

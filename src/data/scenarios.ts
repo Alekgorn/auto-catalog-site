@@ -48,6 +48,12 @@ export interface KitStep {
   needVehicle?: boolean;
   /** Название позиции для кнопки: «Заменить магнитолу» */
   unit?: string;
+  /**
+   * Показывать только товары, у которых машина указана в совместимости.
+   * Универсальные позиции скрываем: для рамок и проводки «подойдёт почти
+   * всем» означает, что покупатель возьмёт не то.
+   */
+  strictFit?: boolean;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -72,6 +78,7 @@ export const SCENARIOS: Scenario[] = [
         text: 'Закрывает штатное место ровно, без щелей. Подбирается строго по вашей машине.',
         icon: 'Frame',
         needVehicle: true,
+        strictFit: true,
         unit: 'рамку',
       },
       {
@@ -80,6 +87,7 @@ export const SCENARIOS: Scenario[] = [
         text: 'Подключение в заводской разъём, без резки штатной проводки.',
         icon: 'Cable',
         needVehicle: true,
+        strictFit: true,
         unit: 'проводку',
       },
     ],
