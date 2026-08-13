@@ -1409,14 +1409,8 @@ def handler(event: dict, context) -> dict:
                 if pid == 'NULL':
                     return resp(400, {'error': 'Не указан товар'})
                 sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
-                # адрес поменялся — старый запоминаем, чтобы ссылки не побились
-                keep_old = (
-                    f", old_slugs = CASE WHEN slug <> {q(slug)} "
-                    f"AND NOT (old_slugs ? slug) THEN old_slugs || to_jsonb(slug) "
-                    f"ELSE old_slugs END"
-                )
                 cur.execute(
-                    f"UPDATE {schema()}.products SET {sets}{keep_old}, updated_at = NOW() "
+                    f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
                     f"WHERE id = {pid} RETURNING *"
                 )
             row = cur.fetchone()

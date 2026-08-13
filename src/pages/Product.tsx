@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -34,15 +34,6 @@ const Product = () => {
   const product = useMemo(
     () => products.find((p) => p.id === id) ?? null,
     [id, products],
-  );
-
-  /** Товар открыли по старому адресу — переводим на новый, ссылки не теряются */
-  const renamed = useMemo(
-    () =>
-      product || !id
-        ? null
-        : (products.find((p) => (p.oldSlugs ?? []).includes(id)) ?? null),
-    [id, product, products],
   );
 
   const { add } = useCart();
@@ -129,10 +120,6 @@ const Product = () => {
     setDialogProduct(p);
     setDialogOpen(true);
   };
-
-  if (!product && renamed) {
-    return <Navigate to={`/product/${renamed.id}`} replace />;
-  }
 
   if (!product && loading) {
     return (

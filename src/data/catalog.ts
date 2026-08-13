@@ -6,8 +6,6 @@ export interface Product {
   popularity?: number;
   /** Когда товар добавили — по нему собираем блок новинок */
   createdAt?: string | null;
-  /** Прежние адреса товара — со старых ссылок переводим на новый */
-  oldSlugs?: string[];
   name: string;
   category: Category;
   price: number;
