@@ -272,8 +272,28 @@ def call_yandex(prompt: str) -> dict:
 
 
 def ai_provider() -> str:
-    """Какой сервис использовать для поиска: yandex, openai или auto."""
-    choice = os.environ.get('AI_SEARCH_PROVIDER', '').strip().lower()
+    """
+    Какой сервис использовать для поиска: yandex, openai или auto.
+    Сначала смотрим настройку из админки, затем переменную окружения.
+    """
+    choice = ''
+    try:
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                f"SELECT value FROM {get_schema()}.settings WHERE key = 'ai_search_provider'"
+            )
+            row = cur.fetchone()
+            if row and row[0]:
+                choice = str(row[0]).strip().strip('"').lower()
+        finally:
+            conn.close()
+    except Exception as exc:
+        print('ai provider setting failed:', str(exc)[:120])
+
+    if choice not in ('yandex', 'openai', 'auto'):
+        choice = os.environ.get('AI_SEARCH_PROVIDER', '').strip().lower()
     return choice if choice in ('yandex', 'openai') else 'auto'
 
 
@@ -289,10 +309,10 @@ def ask_ai_text(prompt: str) -> dict:
         if not result.get('error'):
             result['provider'] = 'yandex'
             return result
-        if choice == 'yandex':
-            return result
+        # Яндекс не ответил — не оставляем покупателя без поиска и уходим
+        # на второй сервис. Причину пишем в логи, чтобы было видно, что чинить
         if result.get('error') != 'no_key':
-            print('yandex search failed:', result.get('status'), str(result.get('detail'))[:150])
+            print('yandex search failed:', result.get('status'), str(result.get('detail'))[:200])
 
     pairs = candidates()
     if not pairs:

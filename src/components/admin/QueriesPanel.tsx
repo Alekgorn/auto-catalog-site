@@ -11,6 +11,25 @@ interface AdminQuery {
 }
 
 type Filter = 'all' | 'empty';
+type Provider = 'auto' | 'yandex' | 'openai';
+
+const PROVIDERS: { key: Provider; label: string; note: string }[] = [
+  {
+    key: 'yandex',
+    label: 'YandexGPT',
+    note: 'Российский сервис, оплата рублями по счёту',
+  },
+  {
+    key: 'openai',
+    label: 'ChatGPT',
+    note: 'Точнее на сложных запросах, нужен зарубежный ключ',
+  },
+  {
+    key: 'auto',
+    label: 'Автоматически',
+    note: 'Сначала Яндекс, при сбое переключится на ChatGPT',
+  },
+];
 
 /**
  * Что покупатели искали по смыслу. Запросы без результата — прямая подсказка,
@@ -21,6 +40,8 @@ const QueriesPanel = () => {
   const [items, setItems] = useState<AdminQuery[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('all');
+  const [provider, setProvider] = useState<Provider>('auto');
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -28,6 +49,13 @@ const QueriesPanel = () => {
       const res = await adminFetch('?action=queries');
       const data = await res.json();
       setItems(data.queries ?? []);
+      const cfg = await adminFetch('?action=settings')
+        .then((r) => r.json())
+        .catch(() => ({}));
+      const saved = cfg.settings?.ai_search_provider;
+      if (saved === 'yandex' || saved === 'openai' || saved === 'auto') {
+        setProvider(saved);
+      }
     } finally {
       setLoading(false);
     }
@@ -36,6 +64,22 @@ const QueriesPanel = () => {
   useEffect(() => {
     load();
   }, [load]);
+
+  const chooseProvider = async (next: Provider) => {
+    setProvider(next);
+    setSaving(true);
+    const res = await adminFetch('?action=settings', {
+      method: 'PUT',
+      body: JSON.stringify({ settings: { ai_search_provider: next } }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить выбор' });
+      return;
+    }
+    const label = PROVIDERS.find((p) => p.key === next)?.label ?? next;
+    toast({ title: 'Сохранено', description: `Поиск по смыслу: ${label}` });
+  };
 
   const clear = async () => {
     if (!window.confirm('Очистить историю запросов? Отменить будет нельзя.')) return;
@@ -70,6 +114,43 @@ const QueriesPanel = () => {
             Очистить
           </button>
         )}
+      </div>
+
+      <div className="border border-border px-5 py-5">
+        <div className="font-head text-[1rem] font-bold uppercase">
+          Кто разбирает запросы
+        </div>
+        <p className="mt-2 max-w-[44em] text-[0.85rem] leading-relaxed text-muted-foreground">
+          Сервис, который подбирает товары по смыслу. Распознавание авто по фото
+          всегда работает через ChatGPT — Яндекс не умеет читать картинки.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          {PROVIDERS.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => chooseProvider(p.key)}
+              disabled={saving}
+              className={`border px-4 py-3 text-left transition-colors disabled:opacity-60 ${
+                provider === p.key
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border hover:border-primary'
+              }`}
+            >
+              <div className="font-head text-[0.9rem] font-bold uppercase">
+                {p.label}
+              </div>
+              <div
+                className={`mt-1 text-[0.75rem] leading-snug ${
+                  provider === p.key
+                    ? 'text-primary-foreground/80'
+                    : 'text-muted-foreground'
+                }`}
+              >
+                {p.note}
+              </div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {items.length === 0 ? (
