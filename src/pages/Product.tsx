@@ -266,30 +266,6 @@ const Product = () => {
 
               <MarketButtons product={product} />
 
-              {productGuides.length > 0 && (
-                <button
-                  onClick={() => {
-                    setTab("guides");
-                    setTimeout(
-                      () =>
-                        document.getElementById("about")?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        }),
-                      60,
-                    );
-                  }}
-                  className="mt-4 flex w-full items-center justify-between border border-border px-5 py-4 transition-colors hover:border-primary hover:text-primary"
-                >
-                  <span className="flex items-center gap-3">
-                    <Icon name="BookOpen" size={17} />
-                    <span className="text-[0.9rem]">
-                      Инструкция по установке с фото
-                    </span>
-                  </span>
-                  <Icon name="ArrowDown" size={16} />
-                </button>
-              )}
             </div>
           </div>
         </section>

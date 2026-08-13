@@ -1,0 +1,30 @@
+INSERT INTO products (slug,sku,name,category,price,old_price,pro_price,badge,install,warranty,stock,year_from,year_to,images,description,specs,kit,notes,fits,sort_order,popularity,is_active)
+SELECT v.slug,v.sku,v.name,'Переходные рамки для магнитол',v.price,v.old_price,v.pro_price,v.badge,'в штатное место','1 год','на складе',2010,2024,
+ '["https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/4b88cf74-eefc-4005-acba-8ff11940ced1.jpg"]'::jsonb,
+ jsonb_build_array('Переходная рамка формата '||v.size||' для установки магнитолы в штатное место. Повторяет геометрию заводской панели: зазоров и щелей после установки не остаётся.','Материал — ABS-пластик с шагренью под заводскую. Не выгорает на солнце и не скрипит на неровностях.'),
+ jsonb_build_array(jsonb_build_array('Типоразмер:',v.size),jsonb_build_array('Материал:','ABS-пластик'),jsonb_build_array('Цвет:','чёрный'),jsonb_build_array('Крепление:','штатные точки')),
+ '["Переходная рамка","Крепёжные саморезы","Инструкция"]'::jsonb,
+ v.notes::jsonb,v.fits::jsonb,v.sort_order,v.popularity,TRUE
+FROM (VALUES
+('ramka-hyundai-solaris-2din','test-ramka-01','Переходная рамка 2DIN для Hyundai Solaris 2010-2017',1490,1890,1192,NULL,'2DIN','[{"type": "note", "text": "Штатная рамка снимается вместе с накладкой центральной консоли — иначе сломаются нижние защёлки."}]','{"Hyundai": ["Accent", "Sonata"]}',10,900),
+('ramka-hyundai-creta-9','test-ramka-02','Переходная рамка 9 дюймов для Hyundai Creta 2016-2021',2290,2790,1832,NULL,'9 дюймов','[{"type": "note", "text": "Под рамкой проходит шлейф кнопок обогрева: не тяните консоль резко, шлейф короткий."}]','{"Hyundai": ["Creta", "Tucson"]}',20,893),
+('ramka-kia-rio-10','test-ramka-03','Переходная рамка 10 дюймов для Kia Rio 2017-2023',2490,2990,1992,'ХИТ','10 дюймов','[{"type": "note", "text": "Под экран 10 дюймов нужно отогнуть штатный воздуховод — он упирается в корпус магнитолы."}]','{"Kia": ["Rio", "Stonic"]}',30,886),
+('ramka-kia-cerato-2din','test-ramka-04','Переходная рамка 2DIN для Kia Cerato 2012-2018',1690,NULL,1352,NULL,'2DIN','[{"type": "note", "text": "В машинах до 2015 года другой шаг крепёжных отверстий — нужны длинные саморезы из комплекта."}]','{"Kia": ["Cerato", "Sportage"]}',40,879),
+('ramka-kia-sportage-9','test-ramka-05','Переходная рамка 9 дюймов для Kia Sportage 2016-2021',2390,2890,1912,NULL,'9 дюймов','[{"type": "note", "text": "Кнопка аварийки переносится в рамку. Разъём тот же, удлинитель не нужен."}]','{"Kia": ["Sportage", "Sorento"]}',50,872),
+('ramka-toyota-camry-2din','test-ramka-06','Переходная рамка 2DIN для Toyota Camry 2006-2011',1590,1990,1272,'ХИТ','2DIN','[{"type": "note", "text": "У версий с климат-контролем нижний блок опускается на 5 мм — в комплекте есть проставки."}]','{"Toyota": ["Camry", "Avensis"]}',60,865),
+('ramka-toyota-corolla-10','test-ramka-07','Переходная рамка 10 дюймов для Toyota Corolla 2013-2018',2590,NULL,2072,NULL,'10 дюймов','[{"type": "note", "text": "Экран 10 дюймов частично перекрывает дефлекторы. Проверьте поток воздуха до сборки."}]','{"Toyota": ["Corolla", "RAV4"]}',70,858),
+('ramka-toyota-rav4-9','test-ramka-08','Переходная рамка 9 дюймов для Toyota RAV4 2013-2018',2450,2950,1960,NULL,'9 дюймов','[{"type": "note", "text": "Штатный CD-чейнджер снимается полностью — на его место уходит проводка магнитолы."}]','{"Toyota": ["RAV4", "Highlander"]}',80,851),
+('ramka-vw-polo-2din','test-ramka-09','Переходная рамка 2DIN для Volkswagen Polo 2010-2020',1390,1790,1112,NULL,'2DIN','[{"type": "note", "text": "Рамка садится плотно, но на морозе пластик хрупкий. Ставьте в тёплом помещении."}]','{"Volkswagen": ["Polo", "Jetta"]}',90,844),
+('ramka-vw-tiguan-10','test-ramka-10','Переходная рамка 10 дюймов для Volkswagen Tiguan 2016-2022',2690,3190,2152,'ХИТ','10 дюймов','[{"type": "note", "text": "У комплектаций с навигацией другое посадочное место — нужна версия под 9 дюймов."}]','{"Volkswagen": ["Tiguan", "Passat"]}',100,837),
+('ramka-skoda-octavia-2din','test-ramka-11','Переходная рамка 2DIN для Skoda Octavia 2013-2019',1690,NULL,1352,NULL,'2DIN','[]','{"Skoda": ["Octavia", "Rapid"]}',110,830),
+('ramka-skoda-rapid-9','test-ramka-12','Переходная рамка 9 дюймов для Skoda Rapid 2012-2020',2190,2690,1752,NULL,'9 дюймов','[]','{"Skoda": ["Rapid", "Fabia"]}',120,823),
+('ramka-lada-vesta-2din','test-ramka-13','Переходная рамка 2DIN для Lada Vesta 2015-2023',1290,1590,1032,NULL,'2DIN','[]','{"Lada (ВАЗ)": ["Vesta", "XRay"]}',130,816),
+('ramka-lada-granta-9','test-ramka-14','Переходная рамка 9 дюймов для Lada Granta 2018-2024',1890,2290,1512,NULL,'9 дюймов','[]','{"Lada (ВАЗ)": ["Granta", "Kalina"]}',140,809),
+('ramka-nissan-qashqai-2din','test-ramka-15','Переходная рамка 2DIN для Nissan Qashqai 2007-2013',1590,NULL,1272,NULL,'2DIN','[]','{"Nissan": ["Qashqai", "X-Trail"]}',150,802),
+('ramka-nissan-xtrail-10','test-ramka-16','Переходная рамка 10 дюймов для Nissan X-Trail 2014-2020',2590,3090,2072,NULL,'10 дюймов','[]','{"Nissan": ["X-Trail", "Murano"]}',160,795),
+('ramka-renault-duster-2din','test-ramka-17','Переходная рамка 2DIN для Renault Duster 2010-2020',1490,1890,1192,NULL,'2DIN','[]','{"Renault": ["Duster", "Logan"]}',170,788),
+('ramka-renault-logan-9','test-ramka-18','Переходная рамка 9 дюймов для Renault Logan 2014-2022',1990,NULL,1592,NULL,'9 дюймов','[]','{"Renault": ["Logan", "Sandero"]}',180,781),
+('ramka-mazda-3-2din','test-ramka-19','Переходная рамка 2DIN для Mazda 3 2009-2013',1690,2090,1352,NULL,'2DIN','[]','{"Mazda": ["3 (Axela)", "6 (Atenza)"]}',190,774),
+('ramka-ford-focus-10','test-ramka-20','Переходная рамка 10 дюймов для Ford Focus 2011-2018',2390,2890,1912,NULL,'10 дюймов','[]','{"Ford": ["Focus", "Mondeo"]}',200,767)
+) AS v(slug,sku,name,price,old_price,pro_price,badge,size,notes,fits,sort_order,popularity)
+ON CONFLICT (slug) DO NOTHING;
