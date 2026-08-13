@@ -10,6 +10,7 @@ import ProductEditor, {
 import BrandsEditor, { AdminBrand } from "@/components/admin/BrandsEditor";
 import OrdersPanel from "@/components/admin/OrdersPanel";
 import DealersPanel from "@/components/admin/DealersPanel";
+import QueriesPanel from "@/components/admin/QueriesPanel";
 import GuideEditor, {
   AdminGuide,
   emptyGuide,
@@ -34,6 +35,7 @@ const Admin = () => {
     | "products"
     | "guides"
     | "orders"
+    | "queries"
     | "dealers"
     | "brands"
     | "categories"
@@ -370,6 +372,7 @@ const Admin = () => {
               ["guides", `Инструкции (${guides.length})`],
               ["brands", `Марки (${brands.length})`],
               ["categories", `Категории (${categories.length})`],
+              ["queries", "Запросы"],
               ["dealers", "Дилеры"],
               ["site", "Сайт"],
               ["settings", "Настройки"],
@@ -390,6 +393,8 @@ const Admin = () => {
         </div>
 
         {tab === "orders" && <OrdersPanel />}
+
+        {tab === "queries" && <QueriesPanel />}
 
         {tab === "dealers" && <DealersPanel />}
 
