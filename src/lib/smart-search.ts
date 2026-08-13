@@ -10,7 +10,7 @@
  *  3. Ищет по смыслу — «шумка», «хочу тише» и «шумоизоляция» дают один ответ.
  *  4. Прощает опечатки, окончания слов и забытую раскладку клавиатуры.
  */
-import { Product, productSku } from '@/data/catalog';
+import { Product, productSku, isUniversal } from '@/data/catalog';
 import {
   BRAND_ALIASES,
   CONCEPTS,
@@ -94,6 +94,38 @@ const fuzzyHit = (word: string, haystackWords: string[]): boolean => {
   });
 };
 
+
+/**
+ * «рав4» → «rav4», «камри» → «kamri». Нужно, чтобы модель, написанную
+ * по-русски, можно было сверить с латинским названием из каталога.
+ */
+const TRANSLIT: Record<string, string> = {
+  а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ж: 'zh', з: 'z', и: 'i',
+  й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r', с: 's',
+  т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch',
+  ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+};
+
+export const translit = (value: string): string =>
+  value.replace(/[а-я]/g, (ch) => (ch in TRANSLIT ? TRANSLIT[ch] : ch));
+
+/**
+ * Сводим похожие по звучанию буквы: «camry» и «kamri» станут одинаковыми.
+ * Без этого «камри» не находит Camry, а «солярис» — Solaris.
+ */
+const fold = (value: string): string =>
+  value.replace(/c/g, 'k').replace(/y/g, 'i').replace(/j/g, 'zh');
+
+/** Слово похоже на название модели? Сверяем и как есть, и в транслите. */
+const sameModel = (word: string, model: string): boolean => {
+  if (word === model) return true;
+  const wt = translit(word);
+  if (wt === model) return true;
+  // Точное совпадение после сведения похожих букв: «камри» = Camry,
+  // «рав4» = RAV4. Опечатки здесь не прощаем — иначе «камри» поймает Capri
+  return fold(wt) === fold(model);
+};
+
 /* ---------- разбор запроса ---------- */
 
 export interface ParsedQuery {
@@ -171,7 +203,12 @@ export const parseQuery = (
       if (mn.length < 3) return;
       // Только по границе слова — иначе «hd» из артикула станет моделью
       const re = new RegExp(`(^|\\s)${mn.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s)`);
-      if (re.test(cleaned)) models.push(m);
+      if (re.test(cleaned)) {
+        models.push(m);
+        return;
+      }
+      // Модель могли написать по-русски: «рав4», «камри», «солярис»
+      if (words.some((w) => sameModel(w, mn))) models.push(m);
     });
   }
 
@@ -237,6 +274,8 @@ export const parseQuery = (
 
 interface Indexed {
   product: Product;
+  /** Подходит почти любой машине: марок не указано или указаны почти все */
+  universal: boolean;
   name: string;
   nameWords: string[];
   sku: string;
@@ -251,6 +290,11 @@ const indexCache = new WeakMap<Product[], Indexed[]>();
 const buildIndex = (products: Product[]): Indexed[] => {
   const cached = indexCache.get(products);
   if (cached) return cached;
+
+  const allBrands = new Set<string>();
+  products.forEach((p) =>
+    Object.keys(p.fits ?? {}).forEach((b) => allBrands.add(b)),
+  );
 
   const built = products.map((p) => {
     const fits = Object.entries(p.fits ?? {})
@@ -279,6 +323,7 @@ const buildIndex = (products: Product[]): Indexed[] => {
       text,
       textWords: Array.from(new Set(text.split(' ').filter(Boolean))),
       brands: Object.keys(p.fits ?? {}),
+      universal: isUniversal(p, allBrands.size),
     };
   });
 
@@ -378,9 +423,12 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
     } else if (match.length) {
       score += 90;
       reasons.push(`Подходит для ${match.join(', ')}`);
-    } else if (q.concepts.length || wordHits) {
+    } else if (item.universal) {
+      // Универсальная позиция подходит любой машине — оставляем, но ниже профильных
       score -= 60;
     } else {
+      // Товар сделан под другие марки: в запросе назвали конкретную машину,
+      // значит это не то, что просили
       return null;
     }
   }
@@ -389,8 +437,15 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
   if (q.models.length) {
     const models = Object.values(item.product.fits ?? {}).flat();
     if (q.models.some((m) => models.includes(m))) {
-      score += 70;
+      score += 200;
       reasons.push('Подходит по модели');
+    } else if (item.universal) {
+      // Универсальный товар подойдёт и этой машине, но показываем его ниже
+      score -= 60;
+    } else if (!q.brands.length) {
+      // Назвали конкретную модель, а товар сделан под другие — это не он.
+      // Когда марка тоже названа, отбор уже сделан выше по марке
+      return null;
     }
   }
 
