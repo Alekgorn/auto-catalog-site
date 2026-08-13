@@ -44,7 +44,7 @@ const ScenarioPage = () => {
 
   /** Марка из ссылки — «популярные марки» в футере ведут сюда */
   const brandFilter = params.get("brand") ?? "";
-  const { products, brands, loading } = useCatalog();
+  const { products, brands, categories: allCategories, loading } = useCatalog();
   const scenario = findScenario(slug);
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -133,14 +133,6 @@ const ScenarioPage = () => {
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [hits]);
-
-  const allCategories = useMemo(() => {
-    const set: string[] = [];
-    products.forEach((p) => {
-      if (!set.includes(p.category)) set.push(p.category);
-    });
-    return set;
-  }, [products]);
 
   const catalogCounts = useMemo(() => {
     const map: Record<string, number> = {};

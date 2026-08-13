@@ -226,8 +226,13 @@ const Catalog = ({ vehicle, onReset, onChangeVehicle }: Props) => {
         }),
       }))
       .filter((g) => g.items.length > 0)
-      .sort((a, b) => b.items.length - a.items.length);
-  }, [products, vehicle]);
+      // Порядок разделов задан в админке; чего там нет — уходит в конец
+      .sort((a, b) => {
+        const ia = categories.indexOf(a.category);
+        const ib = categories.indexOf(b.category);
+        return (ia < 0 ? 9999 : ia) - (ib < 0 ? 9999 : ib);
+      });
+  }, [products, vehicle, categories]);
 
   const activeCount =
     filters.categories.length +
