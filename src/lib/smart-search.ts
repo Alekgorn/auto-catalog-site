@@ -114,15 +114,109 @@ export const translit = (value: string): string =>
  * Без этого «камри» не находит Camry, а «солярис» — Solaris.
  */
 const fold = (value: string): string =>
-  value.replace(/c/g, 'k').replace(/y/g, 'i').replace(/j/g, 'zh');
+  value
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/ya/g, 'a')
+    .replace(/yu/g, 'u')
+    .replace(/dzh/g, 'j')
+    .replace(/[cq]/g, 'k')
+    .replace(/y/g, 'i');
+
+/**
+ * Народные написания моделей, которые не выводятся транслитерацией:
+ * «дастер» вместо duster, «спортейдж» вместо sportage.
+ */
+const MODEL_ALIASES: Record<string, string> = {
+  дастер: 'duster',
+  спортейдж: 'sportage',
+  спортаж: 'sportage',
+  каптур: 'kaptur',
+  сандеро: 'sandero',
+  ларгус: 'largus',
+  приора: 'priora',
+  калина: 'kalina',
+  нива: 'niva',
+  туарег: 'touareg',
+  тукан: 'tiguan',
+  джетта: 'jetta',
+  октавия: 'octavia',
+  суперб: 'superb',
+  фабия: 'fabia',
+  рапид: 'rapid',
+  кодиак: 'kodiaq',
+  карок: 'karoq',
+  камик: 'kamiq',
+  соренто: 'sorento',
+  селтос: 'seltos',
+  серато: 'cerato',
+  церато: 'cerato',
+  оптима: 'optima',
+  соул: 'soul',
+  пиканто: 'picanto',
+  туксон: 'tucson',
+  туссан: 'tucson',
+  элантра: 'elantra',
+  соната: 'sonata',
+  акцент: 'accent',
+  паджеро: 'pajero',
+  аутлендер: 'outlander',
+  лансер: 'lancer',
+  кашкай: 'qashqai',
+  альмера: 'almera',
+  теана: 'teana',
+  мурано: 'murano',
+  джук: 'juke',
+  ноут: 'note',
+  тиида: 'tiida',
+  прадо: 'prado',
+  хайлендер: 'highlander',
+  ленд: 'land',
+  крузер: 'cruiser',
+  королла: 'corolla',
+  авенсис: 'avensis',
+  приус: 'prius',
+  ярис: 'yaris',
+  хайлюкс: 'hilux',
+  фиеста: 'fiesta',
+  мондео: 'mondeo',
+  куга: 'kuga',
+  транзит: 'transit',
+  эксплорер: 'explorer',
+  меган: 'megane',
+  флюенс: 'fluence',
+  колеос: 'koleos',
+  аркана: 'arkana',
+  сценик: 'scenic',
+  кангу: 'kangoo',
+  астра: 'astra',
+  инсигния: 'insignia',
+  корса: 'corsa',
+  зафира: 'zafira',
+  мокка: 'mokka',
+  пежо: 'peugeot',
+  партнер: 'partner',
+  боксер: 'boxer',
+  берлинго: 'berlingo',
+  джампи: 'jumpy',
+  аутбек: 'outback',
+  форестер: 'forester',
+  импреза: 'impreza',
+  витара: 'vitara',
+  свифт: 'swift',
+  гранд: 'grand',
+  чероки: 'cherokee',
+  рэнглер: 'wrangler',
+  компас: 'compass',
+};
 
 /** Слово похоже на название модели? Сверяем и как есть, и в транслите. */
 const sameModel = (word: string, model: string): boolean => {
   if (word === model) return true;
-  const wt = translit(word);
+  const wt = MODEL_ALIASES[word] ?? translit(word);
   if (wt === model) return true;
-  // Точное совпадение после сведения похожих букв: «камри» = Camry,
-  // «рав4» = RAV4. Опечатки здесь не прощаем — иначе «камри» поймает Capri
+  // Точное совпадение после сведения похожих букв и гласных:
+  // «камри» = Camry, «дастер» = Duster, «рав4» = RAV4.
+  // Опечатки не прощаем — иначе «фокус» поймает Catera
   return fold(wt) === fold(model);
 };
 
@@ -213,6 +307,25 @@ export const parseQuery = (
       }
       // Модель могли написать по-русски: «рав4», «камри», «солярис»
       if (words.some((w) => sameModel(w, mn))) models.push(m);
+    });
+  }
+
+  /*
+   * Модель назвали без марки («камри 2012 проводка») — восстанавливаем марку
+   * по каталогу, иначе подбор по машине не сработает
+   */
+  if (models.length && !brands.length && products.length) {
+    const byModel = new Map<string, string>();
+    products.forEach((p) =>
+      Object.entries(p.fits ?? {}).forEach(([b, list]) =>
+        list.forEach((m) => {
+          if (!byModel.has(m)) byModel.set(m, b);
+        }),
+      ),
+    );
+    models.forEach((m) => {
+      const b = byModel.get(m);
+      if (b && !brands.includes(b)) brands.push(b);
     });
   }
 
