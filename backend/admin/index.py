@@ -240,6 +240,9 @@ XLS_COLUMNS = [
     ('oldPrice', 'Старая цена', 13),
     ('proPrice', 'Цена дилера', 13),
     ('warranty', 'Гарантия', 12),
+    ('install', 'Установка', 18),
+    ('ozonUrl', 'Ссылка Ozon', 34),
+    ('wbUrl', 'Ссылка Wildberries', 34),
     ('yearFrom', 'Год с', 8),
     ('yearTo', 'Год по', 8),
     ('badge', 'Метка', 12),
@@ -327,6 +330,9 @@ def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
             'oldPrice': p.get('oldPrice'),
             'proPrice': p.get('proPrice'),
             'warranty': p.get('warranty', ''),
+            'install': p.get('install', ''),
+            'ozonUrl': p.get('ozonUrl', ''),
+            'wbUrl': p.get('wbUrl', ''),
             'yearFrom': p.get('yearFrom', ''),
             'yearTo': p.get('yearTo', ''),
             'badge': p.get('badge') or '',
@@ -375,16 +381,19 @@ def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
         ['Подсказка', 'Что важно знать'],
         ['Столбец «Код»', 'Не меняйте и не удаляйте — по нему товар находится при загрузке. Для нового товара оставьте пустым.'],
         ['Новый товар', 'Добавьте строку внизу, заполните название, категорию и цену. Код создастся сам.'],
-        ['Цены', 'Только числа, без пробелов и знака рубля. Пустая «Старая цена» — скидки нет.'],
+        ['Цены', 'Числа. Пробелы, запятую и знак рубля уберём сами: «15 900,00 ₽» прочитается как 15900. Пустая «Старая цена» — скидки нет.'],
+        ['Установка', 'Куда ставится: «в штатное место», «в ручку багажника». Показывается в карточке.'],
+        ['Ozon и Wildberries', 'Ссылки на товар на маркетплейсах. Пусто — кнопка не показывается.'],
         ['На сайте', '«да» — товар виден покупателям, «нет» — скрыт.'],
         ['Совместимость', 'Формат: Lada: Vesta SW Cross, Granta | Kia: Rio, Seltos'],
         ['Фото', 'Ссылки на картинки через точку с запятой.'],
-        ['Описание', 'Абзацы разделяйте вертикальной чертой |'],
+        ['Описание', 'Абзацы разделяйте вертикальной чертой |. Внутри самого текста черту не используйте — она разорвёт абзац.'],
         ['Характеристики', 'Формат: Гарантия=5 лет; Материал=сталь 2 мм'],
         ['Комплектация', 'Пункты через точку с запятой.'],
         ['Марки и модели', 'Отдельный лист. Модели одной марки — через запятую.'],
         ['Категории', 'Отдельный лист. Порядок задаёт вид фильтра на сайте. Характеристики категории показываются в каталоге под товаром.'],
-        ['Загрузка', 'Ничего не удаляется: совпавшие товары обновятся, новые добавятся.'],
+        ['Загрузка', 'Ничего не удаляется: совпавшие по коду товары обновятся, новые добавятся.'],
+        ['Лишние столбцы', 'Можно удалить ненужные столбцы — эти поля у товара останутся прежними. Столбцы «Код», «Название», «Категория» нужны всегда.'],
     ]
     for r, row in enumerate(tips, start=1):
         for c, val in enumerate(row, start=1):
@@ -437,11 +446,14 @@ def parse_xlsx(data: bytes) -> tuple:
             continue
 
         def as_int(key, default=None):
-            raw = str(get(key, '')).strip().replace(' ', '').replace('\u00a0', '')
-            if raw in ('', '-'):
+            # Из 1С и Excel цены приходят как «15 900,00» или «15 900.00 ₽»
+            raw = str(get(key, '')).strip()
+            raw = raw.replace(' ', '').replace('\u00a0', '').replace(',', '.')
+            raw = re.sub(r'[^0-9.\-]', '', raw)
+            if raw in ('', '-', '.'):
                 return default
             try:
-                return int(float(raw))
+                return int(round(float(raw)))
             except ValueError:
                 return default
 
@@ -455,6 +467,9 @@ def parse_xlsx(data: bytes) -> tuple:
             'oldPrice': as_int('oldPrice'),
             'proPrice': as_int('proPrice'),
             'warranty': str(get('warranty')).strip(),
+            'install': str(get('install')).strip(),
+            'ozonUrl': str(get('ozonUrl')).strip(),
+            'wbUrl': str(get('wbUrl')).strip(),
             'yearFrom': as_int('yearFrom', 2010),
             'yearTo': as_int('yearTo', 2026),
             'badge': str(get('badge')).strip() or None,
@@ -466,6 +481,8 @@ def parse_xlsx(data: bytes) -> tuple:
             'description': text_to_list(get('description'), '|'),
             'specs': text_to_specs(get('specs')),
             'kit': text_to_list(get('kit'), ';'),
+            # Какие столбцы реально были в файле — остальные поля не трогаем
+            '_columns': sorted(index.keys()),
         })
 
     if 'Марки и модели' in wb.sheetnames:
@@ -532,22 +549,6 @@ def build_brands_xlsx(brands: list) -> bytes:
             ws.cell(row=row, column=2, value=m)
             ws.cell(row=row, column=3, value=(i + 1) * 10)
             row += 1
-
-    wsc = wb.create_sheet('Категории')
-    for i, title in enumerate(
-        ['Категория', 'Порядок', 'Характеристики категории (через запятую)'], start=1
-    ):
-        cell = wsc.cell(row=1, column=i, value=title)
-        cell.font = head_font
-        cell.fill = head_fill
-    wsc.column_dimensions['A'].width = 30
-    wsc.column_dimensions['B'].width = 10
-    wsc.column_dimensions['C'].width = 60
-    wsc.freeze_panes = 'A2'
-    for r, c in enumerate(categories or [], start=2):
-        wsc.cell(row=r, column=1, value=c.get('name', ''))
-        wsc.cell(row=r, column=2, value=c.get('sortOrder', (r - 1) * 10))
-        wsc.cell(row=r, column=3, value=', '.join(c.get('specFields') or []))
 
     wsh = wb.create_sheet('Как заполнять')
     tips = [
@@ -727,6 +728,25 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'popularity': qint(p.get('popularity'), 0),
             'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
         }
+
+        # Столбца нет в файле — у существующего товара оставляем прежнее значение
+        full_fields = dict(fields)
+        present = p.get('_columns')
+        if present:
+            keep = {
+                'slug': 'slug', 'sku': 'sku', 'name': 'name', 'category': 'category',
+                'price': 'price', 'oldPrice': 'old_price', 'proPrice': 'pro_price',
+                'ozonUrl': 'ozon_url', 'wbUrl': 'wb_url', 'install': 'install',
+                'warranty': 'warranty', 'yearFrom': 'year_from', 'yearTo': 'year_to',
+                'badge': 'badge', 'images': 'images', 'description': 'description',
+                'specs': 'specs', 'kit': 'kit', 'fits': 'fits',
+                'sortOrder': 'sort_order', 'popularity': 'popularity',
+                'isActive': 'is_active',
+            }
+            allowed = {keep[k] for k in present if k in keep}
+            allowed |= {'slug', 'sku', 'name', 'category'}
+            fields = {k: v for k, v in fields.items() if k in allowed}
+
         try:
             cur.execute(f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}")
             found = cur.fetchone()
@@ -741,8 +761,8 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
                 updated += 1
             else:
                 cur.execute(
-                    f"INSERT INTO {schema()}.products ({', '.join(fields.keys())}) "
-                    f"VALUES ({', '.join(fields.values())})"
+                    f"INSERT INTO {schema()}.products ({', '.join(full_fields.keys())}) "
+                    f"VALUES ({', '.join(full_fields.values())})"
                 )
                 created += 1
         except Exception as exc:
