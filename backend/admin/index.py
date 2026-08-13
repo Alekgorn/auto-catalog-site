@@ -8,13 +8,8 @@ import secrets
 import uuid
 from datetime import datetime, timedelta
 
-import boto3
 import psycopg2
 import psycopg2.extras
-from image_optimizer import optimize
-from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -76,6 +71,10 @@ def check_token(conn, token: str) -> bool:
 
 
 def _s3():
+    # Загружаем тяжёлые библиотеки только когда они реально нужны:
+    # иначе выгрузка каталога тратит секунды на импорт и упирается в таймаут
+    import boto3
+
     return boto3.client(
         's3',
         endpoint_url='https://bucket.poehali.dev',
@@ -94,6 +93,8 @@ def upload_image(data_url: str) -> str:
     elif 'svg' in header:
         ext = 'svg'
     raw = base64.b64decode(payload)
+    from image_optimizer import optimize
+
     body, ext, content_type = optimize(raw, ext)
     key = f"catalog/{uuid.uuid4().hex}.{ext}"
     s3 = _s3()
@@ -133,6 +134,8 @@ def reoptimize_url(url: str) -> str:
         return url
 
     ext = src_key.rsplit('.', 1)[-1].lower()
+    from image_optimizer import optimize
+
     data, new_ext, content_type = optimize(raw, ext)
     if new_ext != 'webp':
         return url
@@ -335,6 +338,10 @@ def text_to_list(text: str, sep: str) -> list:
 
 
 def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
     wb = Workbook()
     head_font = Font(bold=True, color='FFFFFF', size=10)
     head_fill = PatternFill('solid', fgColor='1B1B1B')
@@ -442,6 +449,8 @@ def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
 
 
 def parse_xlsx(data: bytes) -> tuple:
+    from openpyxl import load_workbook
+
     wb = load_workbook(io.BytesIO(data), data_only=True)
     products = []
     brands = []
@@ -547,6 +556,10 @@ def parse_xlsx(data: bytes) -> tuple:
 
 
 def build_brands_xlsx(brands: list) -> bytes:
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
     wb = Workbook()
     head_font = Font(bold=True, color='FFFFFF', size=10)
     head_fill = PatternFill('solid', fgColor='1B1B1B')
@@ -609,6 +622,8 @@ def build_brands_xlsx(brands: list) -> bytes:
 
 
 def parse_brands_xlsx(data: bytes) -> list:
+    from openpyxl import load_workbook
+
     wb = load_workbook(io.BytesIO(data), data_only=True)
     ws = wb['Марки и модели'] if 'Марки и модели' in wb.sheetnames else wb.worksheets[0]
 
