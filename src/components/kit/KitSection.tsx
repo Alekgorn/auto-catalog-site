@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, Vehicle, matchVehicle } from '@/data/catalog';
 import { KitStep } from '@/data/scenarios';
-import KitProductCard from '@/components/kit/KitProductCard';
+import ProductCard from '@/components/ProductCard';
 
 interface Props {
   step: KitStep;
@@ -107,12 +107,12 @@ const KitSection = ({
         <>
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
             {list.slice(0, shown).map((p) => (
-              <KitProductCard
+              <ProductCard
                 key={p.id}
                 product={p}
                 vehicle={vehicle}
                 picked={pickedId === p.id}
-                onPick={() => onPick(p)}
+                onPick={onPick}
               />
             ))}
           </div>

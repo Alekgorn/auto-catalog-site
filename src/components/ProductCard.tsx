@@ -17,13 +17,20 @@ import { useCatalog } from '@/context/CatalogContext';
 interface Props {
   product: Product;
   vehicle: Vehicle | null;
+  /**
+   * Режим сборки комплекта: кнопка не кладёт товар в корзину, а отмечает
+   * его выбранным на своём шаге. Корзина заполняется одной кнопкой в конце.
+   */
+  picked?: boolean;
+  onPick?: (product: Product) => void;
 }
 
-const ProductCard = ({ product, vehicle }: Props) => {
+const ProductCard = ({ product, vehicle, picked, onPick }: Props) => {
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
   const { cardFields, categorySpecs } = useCatalog();
-  const inCart = has(product.id);
+  const kitMode = !!onPick;
+  const chosen = kitMode ? !!picked : has(product.id);
 
   const rows = CARD_FIELDS.filter((f) => cardFields.includes(f.key))
     .map((f) => ({ label: f.label, value: f.get(product) }))
@@ -165,15 +172,15 @@ const ProductCard = ({ product, vehicle }: Props) => {
             Подробнее
           </Link>
           <button
-            onClick={() => add(product)}
+            onClick={() => (onPick ? onPick(product) : add(product))}
             className={`flex w-full items-center justify-center gap-2 border px-4 py-2.5 font-head text-[0.75rem] font-medium uppercase tracking-[0.08em] transition-colors sm:w-auto sm:py-3 sm:text-[0.78rem] ${
-              inCart
+              chosen
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'
             }`}
           >
-            {inCart ? 'В заказе' : 'В заказ'}
-            <Icon name={inCart ? 'Check' : 'Plus'} size={15} />
+            {chosen ? 'В заказе' : 'В заказ'}
+            <Icon name={chosen ? 'Check' : 'Plus'} size={15} />
           </button>
         </div>
       </div>
