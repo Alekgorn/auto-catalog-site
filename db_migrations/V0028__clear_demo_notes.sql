@@ -1,0 +1,1 @@
+UPDATE products SET notes = '[]'::jsonb WHERE slug = 'vneshniy-mikrofon-dlya-avtomagnitoly-s';

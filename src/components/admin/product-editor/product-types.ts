@@ -1,3 +1,5 @@
+import { GuideBlock } from '@/data/catalog';
+
 export interface AdminProduct {
   id?: number;
   slug?: string;
@@ -20,6 +22,8 @@ export interface AdminProduct {
   description: string[];
   specs: [string, string][];
   kit: string[];
+  /** Особенности и нюансы монтажа — блоки текста и фото */
+  notes: GuideBlock[];
   fits: Record<string, string[]>;
   sortOrder: number;
   isActive: boolean;
@@ -44,6 +48,7 @@ export const emptyProduct = (): AdminProduct => ({
   description: [''],
   specs: [],
   kit: [''],
+  notes: [],
   fits: {},
   sortOrder: 100,
   isActive: true,

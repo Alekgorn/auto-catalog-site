@@ -7,6 +7,7 @@ import { AdminProduct, emptyProduct } from '@/components/admin/product-editor/pr
 import ProductMainTab from '@/components/admin/product-editor/ProductMainTab';
 import ProductContentTab from '@/components/admin/product-editor/ProductContentTab';
 import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
+import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
 
 export type { AdminProduct };
 export { emptyProduct };
@@ -34,11 +35,14 @@ const ProductEditor = ({
     kit: product.kit?.length ? product.kit : [''],
     specs: product.specs ?? [],
     images: product.images ?? [],
+    notes: product.notes ?? [],
     fits: product.fits ?? {},
   });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<'main' | 'content' | 'fits'>('main');
+  const [section, setSection] = useState<'main' | 'content' | 'notes' | 'fits'>(
+    'main',
+  );
 
   const set = <K extends keyof AdminProduct>(key: K, value: AdminProduct[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -116,6 +120,7 @@ const ProductEditor = ({
       description: form.description.filter((d) => d.trim()),
       kit: form.kit.filter((k) => k.trim()),
       specs: form.specs.filter(([k]) => k.trim()),
+      notes: cleanBlocks(form.notes),
     });
   };
 
@@ -136,6 +141,7 @@ const ProductEditor = ({
             [
               ['main', 'Основное'],
               ['content', 'Описание и фото'],
+              ['notes', 'Особенности'],
               ['fits', 'Совместимость'],
             ] as const
           ).map(([key, text]) => (
@@ -165,6 +171,17 @@ const ProductEditor = ({
               uploading={uploading}
               upload={upload}
               missingFields={missingFields}
+            />
+          )}
+
+          {section === 'notes' && (
+            <BlocksEditor
+              blocks={form.notes}
+              onChange={(next) => set('notes', next)}
+              types={['text', 'image', 'note']}
+              title="Особенности и примечания"
+              hint="Нюансы монтажа этого товара: что подрезать, где не встанет, какие переходники нужны. На сайте появится отдельной вкладкой «Нюансы монтажа». Пусто — напишем «Установка стандартная»."
+              emptyText="Особенностей нет — на сайте будет «Установка стандартная»."
             />
           )}
 

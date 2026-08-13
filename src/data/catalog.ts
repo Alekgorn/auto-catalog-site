@@ -25,6 +25,8 @@ export interface Product {
   description?: string[];
   specs?: [string, string][];
   kit?: string[];
+  /** Особенности и нюансы монтажа — блоки текста и фото */
+  notes?: GuideBlock[];
   guides?: string[];
 }
 

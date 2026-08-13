@@ -29,7 +29,7 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             f"SELECT slug, sku, name, category, price, old_price, pro_price, ozon_url, wb_url, install, warranty, "
-            f"year_from, year_to, badge, images, description, specs, kit, fits, popularity, created_at "
+            f"year_from, year_to, badge, images, description, specs, kit, fits, popularity, created_at, notes "
             f"FROM {schema}.products WHERE is_active = TRUE ORDER BY sort_order, id"
         )
         rows = cur.fetchall()
@@ -52,6 +52,7 @@ def handler(event: dict, context) -> dict:
                 'description': r['description'],
                 'specs': r['specs'],
                 'kit': r['kit'],
+                'notes': r['notes'] or [],
                 'fits': r['fits'],
                 'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
                 'popularity': r['popularity'],

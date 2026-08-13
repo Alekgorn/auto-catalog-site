@@ -7,7 +7,7 @@ import ProductGallery from "@/components/ProductGallery";
 import FitsCheck from "@/components/FitsCheck";
 import ProductCard from "@/components/ProductCard";
 import RequestDialog from "@/components/RequestDialog";
-import GuideContent from "@/components/GuideContent";
+import ProductTabs, { ProductTab } from "@/components/ProductTabs";
 import {
   Product as ProductType,
   Vehicle,
@@ -41,12 +41,7 @@ const Product = () => {
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogProduct, setDialogProduct] = useState<ProductType | null>(null);
-  const [openGuides, setOpenGuides] = useState<string[]>([]);
-
-  const toggleGuide = (slug: string) =>
-    setOpenGuides((list) =>
-      list.includes(slug) ? list.filter((s) => s !== slug) : [...list, slug],
-    );
+  const [tab, setTab] = useState<ProductTab>("about");
 
   useEffect(() => {
     setVehicle(loadVehicle());
@@ -55,7 +50,7 @@ const Product = () => {
   useEffect(() => {
     window.scrollTo({ top: 0 });
     setQty(1);
-    setOpenGuides([]);
+    setTab("about");
   }, [id]);
 
   const crumbs = useMemo(
@@ -274,10 +269,10 @@ const Product = () => {
               {productGuides.length > 0 && (
                 <button
                   onClick={() => {
-                    setOpenGuides(productGuides.map((g) => g.slug));
+                    setTab("guides");
                     setTimeout(
                       () =>
-                        document.getElementById("guide")?.scrollIntoView({
+                        document.getElementById("about")?.scrollIntoView({
                           behavior: "smooth",
                           block: "start",
                         }),
@@ -299,37 +294,21 @@ const Product = () => {
           </div>
         </section>
 
-        <section className="section-pad">
+        <section id="about" className="section-pad anchor-offset">
           <div className="rule" />
           <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-12 lg:grid-cols-12">
             <div className="lg:col-span-6">
               <div className="eyebrow">Описание</div>
               <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em] sm:text-3xl">
-                Как это устроено
+                Всё о товаре
               </h2>
-              <div className="mt-6 space-y-4 text-muted-foreground">
-                {productDescription(product).map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
-              </div>
-
-              <div className="mt-8">
-                <div className="eyebrow">Комплектация</div>
-                <ul className="mt-4 space-y-2">
-                  {productKit(product).map((k) => (
-                    <li
-                      key={k}
-                      className="flex items-start gap-3 border-b border-border pb-2 text-[0.9rem]"
-                    >
-                      <Icon
-                        name="Check"
-                        size={15}
-                        className="mt-1 flex-none text-primary"
-                      />
-                      {k}
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-6">
+                <ProductTabs
+                  product={product}
+                  guides={productGuides}
+                  active={tab}
+                  onChange={setTab}
+                />
               </div>
             </div>
 
@@ -352,100 +331,6 @@ const Product = () => {
             </div>
           </div>
         </section>
-
-        {productGuides.length > 0 && (
-          <section id="guide" className="section-pad anchor-offset">
-            <div className="rule" />
-            <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-10 md:grid-cols-12">
-              <div className="md:col-span-6">
-                <div className="eyebrow">Установка</div>
-                <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em] sm:text-3xl">
-                  Как это ставится
-                </h2>
-              </div>
-              <p className="max-w-[34em] text-muted-foreground md:col-span-5 md:col-start-8 md:pt-9">
-                Пошаговое техническое описание монтажа с фотографиями — прямо
-                здесь, без перехода в отдельный раздел.
-              </p>
-            </div>
-
-            {productGuides.map((g) => {
-              const open = openGuides.includes(g.slug);
-              const steps =
-                g.blocks?.filter((b) => b.type === "step").length ?? 0;
-              return (
-                <div
-                  key={g.slug}
-                  className="border-t border-foreground pb-12 pt-8"
-                >
-                  <div className="grid grid-cols-1 gap-x-6 gap-y-6 md:grid-cols-12">
-                    <div className="md:col-span-7">
-                      <h3 className="font-head text-xl font-medium tracking-tight">
-                        {g.title}
-                      </h3>
-                      {g.excerpt && (
-                        <p className="mt-3 max-w-[46em] text-muted-foreground">
-                          {g.excerpt}
-                        </p>
-                      )}
-                      <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
-                        {steps > 0 && (
-                          <span className="flex items-center gap-2">
-                            <Icon name="ListOrdered" size={14} />
-                            {steps} шагов
-                          </span>
-                        )}
-                        {g.duration && (
-                          <span className="flex items-center gap-2">
-                            <Icon name="Clock" size={14} />
-                            {g.duration}
-                          </span>
-                        )}
-                        {g.difficulty && (
-                          <span className="flex items-center gap-2">
-                            <Icon name="Wrench" size={14} />
-                            {g.difficulty}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-3 md:col-span-4 md:col-start-9 md:justify-center">
-                      <button
-                        onClick={() => toggleGuide(g.slug)}
-                        aria-expanded={open}
-                        className={`flex items-center justify-between px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] transition-colors ${
-                          open
-                            ? "border border-foreground hover:border-primary hover:text-primary"
-                            : "bg-primary text-primary-foreground hover:bg-foreground"
-                        }`}
-                      >
-                        {open ? "Свернуть инструкцию" : "Показать инструкцию"}
-                        <Icon
-                          name={open ? "ChevronUp" : "ChevronDown"}
-                          size={18}
-                        />
-                      </button>
-                      <Link
-                        to={`/guides/${g.slug}`}
-                        className="flex items-center justify-between px-6 py-3 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-                      >
-                        Открыть отдельной страницей
-                        <Icon name="ArrowUpRight" size={14} />
-                      </Link>
-                    </div>
-                  </div>
-
-                  {open && (
-                    <div className="mt-10 animate-fade-in border-t border-border pt-8">
-                      <GuideContent guide={g} compact />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-        )}
 
         {related.length > 0 && (
           <section className="section-pad">
