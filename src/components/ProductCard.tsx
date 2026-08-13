@@ -7,6 +7,7 @@ import {
   Product,
   Vehicle,
   isCompatible,
+  isUniversal,
   productImages,
   productSpecs,
 } from '@/data/catalog';
@@ -31,7 +32,9 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
   const { add, has } = useCart();
-  const { cardFields, categorySpecs } = useCatalog();
+  const { cardFields, categorySpecs, brands } = useCatalog();
+  /** Товар и правда подходит любой машине, а не «просто машина не выбрана» */
+  const universal = isUniversal(product, brands.length);
   const kitMode = !!onPick;
   const chosen = kitMode ? !!picked : has(product.id);
 
@@ -142,8 +145,20 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         </dl>
       )}
 
-      {/* Машина не выбрана — не пугаем «не подходит», предлагаем проверить */}
-      {!vehicle || fits ? (
+      {/* Машина не выбрана: «подходит всем» — только если это правда,
+          иначе честно предлагаем проверить свою машину */}
+      {!vehicle && !universal ? (
+        <div className="mt-3 flex items-start gap-2 border border-border bg-surface-muted px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
+          <Icon
+            name="Car"
+            size={15}
+            className="mt-0.5 flex-none text-muted-foreground"
+          />
+          <span className="text-[0.78rem] leading-snug text-muted-foreground sm:text-[0.85rem]">
+            Подходит не всем машинам — укажите свою, проверим совместимость
+          </span>
+        </div>
+      ) : !vehicle || fits ? (
         <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
             <Icon name="Check" size={13} strokeWidth={3} />

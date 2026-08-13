@@ -2,7 +2,13 @@ import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
 import FitsList from '@/components/FitsList';
-import { Product, Vehicle, YEARS, isCompatible } from '@/data/catalog';
+import {
+  Product,
+  Vehicle,
+  YEARS,
+  isCompatible,
+  isUniversal,
+} from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { saveVehicle } from '@/lib/vehicle';
 
@@ -27,6 +33,8 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
   const entries = Object.entries(product.fits) as [string, string[]][];
   const modelCount = entries.reduce((n, [, m]) => n + m.length, 0);
   const fits = isCompatible(product, vehicle);
+  /** Товар действительно подходит любой машине по своим данным */
+  const universal = isUniversal(product, BRANDS.length);
 
   const models = useMemo(
     () => BRANDS.find((b) => b.name === brand)?.models ?? [],
@@ -102,17 +110,23 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
         </div>
       ) : (
         <div className="px-5 py-4">
-          {/* Машина не выбрана — товар доступен всем, проверка по желанию */}
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
-              <Icon name="Check" size={15} strokeWidth={3} />
-            </span>
-            <span className="font-head text-[0.92rem] font-bold uppercase tracking-tight text-success">
-              Подходит ко всем автомобилям
-            </span>
-          </div>
+          {/* «Подходит всем» — только если это правда по данным товара */}
+          {universal && (
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
+                <Icon name="Check" size={15} strokeWidth={3} />
+              </span>
+              <span className="font-head text-[0.92rem] font-bold uppercase tracking-tight text-success">
+                Подходит ко всем автомобилям
+              </span>
+            </div>
+          )}
 
-          <div className="mt-3 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+          <div
+            className={`flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground ${
+              universal ? 'mt-3' : ''
+            }`}
+          >
             <Icon name="Car" size={15} />
             Проверьте свою машину
           </div>

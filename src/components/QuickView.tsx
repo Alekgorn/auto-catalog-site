@@ -6,12 +6,14 @@ import {
   Vehicle,
   formatPrice,
   isCompatible,
+  isUniversal,
   productImages,
   productKit,
   productSku,
   productSpecs,
 } from '@/data/catalog';
 import { isVehicle } from '@/lib/vehicle';
+import { useCatalog } from '@/context/CatalogContext';
 import { useCart } from '@/context/CartContext';
 
 interface Props {
@@ -25,6 +27,7 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(rawVehicle) ? rawVehicle : null;
   const { add, has } = useCart();
+  const { brands } = useCatalog();
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -56,6 +59,8 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
 
   const images = productImages(product);
   const fits = isCompatible(product, vehicle);
+  /** Подходит любой машине по данным товара, а не «машина не выбрана» */
+  const universal = isUniversal(product, brands.length);
   const inCart = has(product.id);
   const kit = productKit(product);
 
@@ -120,18 +125,26 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
             {/* Машина не выбрана — товар доступен всем */}
             <div
               className={`mb-4 flex items-center gap-2.5 border px-3 py-2.5 text-[0.85rem] ${
-                !vehicle || fits
+                (!vehicle && universal) || (vehicle && fits)
                   ? 'border-success bg-success-soft text-success'
                   : 'border-border text-muted-foreground'
               }`}
             >
               <Icon
-                name={!vehicle || fits ? 'Check' : 'CircleSlash'}
+                name={
+                  (!vehicle && universal) || (vehicle && fits)
+                    ? 'Check'
+                    : !vehicle
+                      ? 'Car'
+                      : 'CircleSlash'
+                }
                 size={16}
-                strokeWidth={!vehicle || fits ? 3 : 2}
+                strokeWidth={(!vehicle && universal) || (vehicle && fits) ? 3 : 2}
               />
               {!vehicle
-                ? 'Подходит ко всем автомобилям'
+                ? universal
+                  ? 'Подходит ко всем автомобилям'
+                  : 'Подходит не всем машинам — укажите свою'
                 : fits
                   ? `Подходит к ${vehicle.brand} ${vehicle.model}`
                   : `Не подходит к ${vehicle.brand} ${vehicle.model}`}
