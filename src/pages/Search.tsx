@@ -13,6 +13,7 @@ import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
 import { describeQuery, parseQuery, smartSearch } from "@/lib/smart-search";
 import Breadcrumbs from "@/components/Breadcrumbs";
+import AiSearchBlock from "@/components/AiSearchBlock";
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
@@ -221,6 +222,15 @@ const SearchPage = () => {
               Открыть каталог
               <Icon name="ArrowRight" size={15} />
             </Link>
+
+            <div className="mx-auto mt-10 max-w-3xl text-left">
+              <AiSearchBlock
+                query={query}
+                products={products}
+                vehicle={vehicle}
+                empty
+              />
+            </div>
           </div>
         ) : (
           <>
@@ -309,6 +319,15 @@ const SearchPage = () => {
                 </button>
               </div>
             )}
+
+            <div className="pb-14">
+              <AiSearchBlock
+                query={query}
+                products={products}
+                vehicle={vehicle}
+                empty={false}
+              />
+            </div>
           </>
         )}
       </main>

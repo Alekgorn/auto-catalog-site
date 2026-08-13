@@ -15,6 +15,21 @@ CORS = {
     'Content-Type': 'application/json',
 }
 
+# Поиск по смыслу: сколько товаров показываем и насколько длинный запрос принимаем
+SEARCH_LIMIT = 12
+QUERY_LIMIT = 160
+
+SEARCH_PROMPT = (
+    'Ты подбираешь товары в магазине автоэлектроники по запросу покупателя. '
+    'Тебе дан список товаров в формате «номер | название | раздел». '
+    'Выбери только те, что действительно отвечают запросу, самые подходящие первыми. '
+    'Учитывай смысл: «хочу тише» — это шумоизоляция, «чтобы играло громче» — акустика, '
+    '«не вижу при парковке» — камеры и парктроники. '
+    'Если подходящих товаров нет, верни пустой список — не выдумывай. '
+    'Ответь строго JSON без пояснений: '
+    '{"items": [номера подходящих товаров, до 12], "explain": "чем помогли, до 12 слов по-русски"}.'
+)
+
 DEFAULT_MODEL = 'gpt-4o-mini'
 PROXY_BASE = 'https://api.proxyapi.ru/openai/v1'
 OPENAI_BASE = 'https://api.openai.com/v1'
@@ -138,8 +153,146 @@ def ask_ai(data_url: str) -> dict:
     return last
 
 
+def sq(value: str) -> str:
+    """Значение в кавычках для SQL: одинарные кавычки удваиваем."""
+    return "'" + str(value).replace("'", "''") + "'"
+
+
+def normalize_query(text: str) -> str:
+    """Ключ для запоминания: «Магнитола  НА Камри!» и «магнитола на камри» — одно и то же."""
+    low = re.sub(r'[^a-zа-я0-9\s-]', ' ', text.lower().replace('ё', 'е'))
+    return ' '.join(sorted(low.split()))[:200]
+
+
+def load_catalog() -> list:
+    """Активные товары для подбора: название и раздел."""
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            f"SELECT slug, name, category FROM {get_schema()}.products "
+            f"WHERE is_active = TRUE ORDER BY sort_order, id"
+        )
+        return [dict(r) for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+
+def cache_get(key: str) -> dict:
+    """Уже отвечали на такой запрос — платить второй раз не нужно."""
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(
+            f"SELECT slugs, explain FROM {get_schema()}.ai_search_cache "
+            f"WHERE query_key = {sq(key)}"
+        )
+        row = cur.fetchone()
+        if not row:
+            return {}
+        cur.execute(
+            f"UPDATE {get_schema()}.ai_search_cache SET hits = hits + 1 "
+            f"WHERE query_key = {sq(key)}"
+        )
+        conn.commit()
+        return {'slugs': row['slugs'] or [], 'explain': row['explain'] or ''}
+    finally:
+        conn.close()
+
+
+def cache_put(key: str, raw: str, slugs: list, explain: str) -> None:
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            f"INSERT INTO {get_schema()}.ai_search_cache (query_key, query_raw, slugs, explain) "
+            f"VALUES ({sq(key)}, {sq(raw[:300])}, "
+            f"{sq(json.dumps(slugs, ensure_ascii=False))}, {sq(explain[:300])}) "
+            f"ON CONFLICT (query_key) DO UPDATE "
+            f"SET slugs = EXCLUDED.slugs, explain = EXCLUDED.explain"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def call_ai_text(key: str, url: str, prompt: str) -> dict:
+    model = os.environ.get('AI_MODEL', '').strip() or DEFAULT_MODEL
+    r = requests.post(
+        url,
+        headers={'Authorization': f'Bearer {key}', 'Content-Type': 'application/json'},
+        json={
+            'model': model,
+            'max_tokens': 300,
+            'temperature': 0,
+            'messages': [{'role': 'user', 'content': prompt}],
+        },
+        timeout=25,
+    )
+    if r.status_code != 200:
+        return {'error': 'ai_failed', 'status': r.status_code, 'detail': r.text[:300]}
+    text = r.json()['choices'][0]['message']['content']
+    match = re.search(r'\{.*\}', text, re.S)
+    if not match:
+        return {'error': 'bad_answer'}
+    return json.loads(match.group(0))
+
+
+def ask_ai_text(prompt: str) -> dict:
+    pairs = candidates()
+    if not pairs:
+        return {'error': 'no_key'}
+    last = {'error': 'ai_failed'}
+    for key, url in pairs:
+        result = call_ai_text(key, url, prompt)
+        if not result.get('error'):
+            return result
+        last = result
+        print('ai search try failed:', url, result.get('status'), str(result.get('detail'))[:120])
+    return last
+
+
+def smart_search(query: str) -> dict:
+    """Подбор товаров по смыслу запроса. Повторные запросы берём из памяти."""
+    query = query.strip()[:QUERY_LIMIT]
+    if len(query) < 3:
+        return {'error': 'short'}
+
+    key = normalize_query(query)
+    cached = cache_get(key)
+    if cached:
+        return {'slugs': cached['slugs'], 'explain': cached['explain'], 'cached': True}
+
+    products = load_catalog()
+    if not products:
+        return {'slugs': [], 'explain': ''}
+
+    lines = [
+        f"{i + 1} | {p['name']} | {p['category']}" for i, p in enumerate(products)
+    ]
+    prompt = (
+        f"{SEARCH_PROMPT}\n\nЗапрос покупателя: «{query}»\n\nТовары:\n" + '\n'.join(lines)
+    )
+
+    answer = ask_ai_text(prompt)
+    if answer.get('error'):
+        return answer
+
+    numbers = answer.get('items') or []
+    slugs = []
+    for n in numbers[:SEARCH_LIMIT]:
+        if isinstance(n, int) and 1 <= n <= len(products):
+            slug = products[n - 1]['slug']
+            if slug not in slugs:
+                slugs.append(slug)
+
+    explain = str(answer.get('explain') or '')[:300]
+    cache_put(key, query, slugs, explain)
+    return {'slugs': slugs, 'explain': explain, 'cached': False}
+
+
 def handler(event: dict, context) -> dict:
-    """Распознаёт марку и модель автомобиля по фото торпедо или штатной магнитолы."""
+    """Распознаёт авто по фото торпедо, а по действию search — подбирает товары по смыслу запроса."""
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': {**CORS, 'Access-Control-Max-Age': '86400'}, 'body': ''}
 
@@ -147,6 +300,18 @@ def handler(event: dict, context) -> dict:
         return resp(405, {'error': 'method not allowed'})
 
     body = json.loads(event.get('body') or '{}')
+
+    params = event.get('queryStringParameters') or {}
+    if params.get('action') == 'search' or body.get('query'):
+        found = smart_search(str(body.get('query') or ''))
+        if found.get('error') == 'short':
+            return resp(400, {'error': 'Запрос слишком короткий'})
+        if found.get('error') == 'no_key':
+            return resp(503, {'error': 'Поиск по смыслу пока не подключён'})
+        if found.get('error'):
+            print('ai search failed:', json.dumps(found, ensure_ascii=False)[:400])
+            return resp(502, {'error': 'Не удалось разобрать запрос, попробуйте ещё раз'})
+        return resp(200, found)
 
     image = (body.get('image') or '').strip()
     if not image.startswith('data:image'):

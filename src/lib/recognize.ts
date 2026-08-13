@@ -29,6 +29,29 @@ const shrink = (dataUrl: string, max = 1024): Promise<string> =>
     img.src = dataUrl;
   });
 
+export interface AiSearchResult {
+  slugs: string[];
+  explain: string;
+  cached?: boolean;
+}
+
+/**
+ * Подбор товаров по смыслу запроса. Обращается к ИИ, поэтому вызываем
+ * только когда обычный поиск не справился или покупатель попросил сам.
+ */
+export const aiSearch = async (query: string): Promise<AiSearchResult> => {
+  const res = await fetch(`${RECOGNIZE_URL}?action=search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || 'Не удалось разобрать запрос');
+  }
+  return { slugs: data.slugs ?? [], explain: data.explain ?? '', cached: data.cached };
+};
+
 /** Отправляет фото салона и получает предполагаемую марку с моделью. */
 export const recognizeVehicle = async (dataUrl: string): Promise<RecognizeResult> => {
   const image = await shrink(dataUrl);

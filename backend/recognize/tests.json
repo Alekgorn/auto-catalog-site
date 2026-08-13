@@ -20,6 +20,24 @@
       "method": "GET",
       "path": "/",
       "expectedStatus": 405
+    },
+    {
+      "name": "Слишком короткий запрос поиска",
+      "method": "POST",
+      "path": "/?action=search",
+      "body": {"query": "ма"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Поиск по смыслу возвращает товары",
+      "method": "POST",
+      "path": "/?action=search",
+      "body": {"query": "хочу чтобы в машине было тише"},
+      "expectedStatus": 200,
+      "expectedBody": {"explain": "string"},
+      "bodyMatcher": "partial"
     }
   ]
 }
