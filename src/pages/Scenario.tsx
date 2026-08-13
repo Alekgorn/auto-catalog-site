@@ -259,8 +259,8 @@ const ScenarioPage = () => {
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 py-9 md:grid-cols-12 md:py-12">
           <div className="md:col-span-7">
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
-                <Icon name={scenario.icon} fallback="CircleAlert" size={24} />
+              <span className="flex h-16 w-16 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
+                <Icon name={scenario.icon} fallback="CircleAlert" size={32} />
               </span>
               <div className="eyebrow">«{scenario.title}»</div>
             </div>
@@ -538,7 +538,7 @@ const ScenarioPage = () => {
                 <Icon
                   name={s.icon}
                   fallback="CircleAlert"
-                  size={20}
+                  size={30}
                   className="text-primary"
                 />
                 <span className="mt-3 block font-head text-[0.95rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">

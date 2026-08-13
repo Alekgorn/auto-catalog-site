@@ -41,8 +41,8 @@ const Scenarios = () => {
           onClick={() => open(s.slug)}
           className="group flex h-full flex-col border border-border bg-surface p-5 text-left transition-colors hover:border-primary"
         >
-          <span className="flex h-11 w-11 flex-none items-center justify-center border border-border bg-background transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon name={s.icon} fallback="CircleAlert" size={21} />
+          <span className="flex h-16 w-16 flex-none items-center justify-center border border-border bg-background transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+            <Icon name={s.icon} fallback="CircleAlert" size={32} />
           </span>
 
           <span className="mt-4 block font-head text-[1.02rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">
