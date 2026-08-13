@@ -64,11 +64,54 @@ const ScenarioPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, scenario?.kit]);
 
-  /** Прокрутка к панели выбора машины */
-  const scrollToVehicle = () => {
-    document
-      .getElementById("kit-vehicle")
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  /** Плавно подводим экран к нужному месту сборки */
+  const scrollTo = (id: string, block: ScrollLogicalPosition = "start") => {
+    // Ждём перерисовку: после выбора список сворачивается и высота меняется
+    requestAnimationFrame(() =>
+      setTimeout(
+        () =>
+          document
+            .getElementById(id)
+            ?.scrollIntoView({ behavior: "smooth", block }),
+        60,
+      ),
+    );
+  };
+
+  const scrollToVehicle = () => scrollTo("kit-vehicle", "center");
+
+  /** id блока шага по его номеру */
+  const stepId = (i: number) => `kit-step-${i}`;
+
+  /**
+   * Куда вести покупателя дальше: первый шаг, который ещё не заполнен
+   * и уже доступен. Шаги с подбором по машине до выбора авто пропускаем —
+   * там всё равно нечего выбирать.
+   */
+  const nextStop = (
+    kit: NonNullable<typeof scenario>["kit"],
+    nextPicks: Record<string, string>,
+    car: Vehicle | null,
+  ): string => {
+    if (!kit) return "";
+    const i = kit.findIndex(
+      (step) => !nextPicks[step.category] && (!step.needVehicle || car),
+    );
+    if (i >= 0) return stepId(i);
+    // Всё собрано — показываем, чем дополнить
+    const done = kit.every((step) => nextPicks[step.category]);
+    return done ? "kit-recommend" : "";
+  };
+
+  /** Выбор позиции — сразу подводим к следующему незакрытому шагу */
+  const pickAndAdvance = (product: Parameters<typeof pickForKit>[0]) => {
+    pickForKit(product);
+    if (!scenario?.kit) return;
+    // Повторное нажатие снимает выбор — тогда никуда не уводим
+    if (picks[product.category] === product.id) return;
+    const next = { ...picks, [product.category]: product.id };
+    const target = nextStop(scenario.kit, next, vehicle);
+    if (target) scrollTo(target);
   };
 
   const bounds = useMemo(() => {
@@ -229,6 +272,11 @@ const ScenarioPage = () => {
     setVehicle(v);
     saveVehicle(v);
     setShown(PAGE_SIZE);
+    // Машина известна — ведём к шагу, который ещё не закрыт
+    if (scenario?.kit) {
+      const target = nextStop(scenario.kit, picks, v);
+      if (target) scrollTo(target);
+    }
   };
 
   const resetVehicle = () => {
@@ -370,8 +418,9 @@ const ScenarioPage = () => {
                   vehicle={vehicle}
                   brandsCount={brands.length}
                   pickedId={picks[step.category]}
-                  onPick={pickForKit}
+                  onPick={pickAndAdvance}
                   onNeedVehicle={scrollToVehicle}
+                  anchorId={stepId(i)}
                 />
               </div>
             ))}

@@ -62,7 +62,7 @@ const KitRecommend = ({ products, vehicle, picks, onPick, ready }: Props) => {
   return (
     <>
       <div className="rule" />
-      <section className="py-8">
+      <section id="kit-recommend" className="scroll-mt-24 py-8">
         <div className="flex items-start gap-4">
           <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-foreground text-background">
             <Icon name="Sparkles" size={24} />

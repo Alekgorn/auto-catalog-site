@@ -20,6 +20,8 @@ interface Props {
   onPick: (product: Product) => void;
   /** Прокрутить наверх, к выбору машины */
   onNeedVehicle: () => void;
+  /** Якорь для автоматической прокрутки между шагами */
+  anchorId: string;
 }
 
 const STEP_SIZE = 6;
@@ -37,6 +39,7 @@ const KitSection = ({
   pickedId,
   onPick,
   onNeedVehicle,
+  anchorId,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
   /** Ограничение по цене снято — «бюджетно» у каждого своё */
@@ -80,7 +83,7 @@ const KitSection = ({
   const collapsed = !!chosen && !replacing;
 
   return (
-    <section className="py-7">
+    <section id={anchorId} className="scroll-mt-24 py-7">
       <div className="flex items-start gap-4">
         <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
           <Icon name={step.icon} fallback="Package" size={24} />
