@@ -701,7 +701,8 @@ def import_categories(conn, items: list) -> int:
     if not items:
         return 0
     cur = conn.cursor()
-    saved = 0
+    # Одним запросом на все категории: по строке на каждую было слишком медленно
+    values = []
     for i, item in enumerate(items):
         name = str(item.get('name', '')).strip()[:128]
         if not name:
@@ -710,19 +711,16 @@ def import_categories(conn, items: list) -> int:
         fields = [
             str(f).strip()[:64] for f in (item.get('specFields') or []) if str(f).strip()
         ]
-        cur.execute(f"SELECT id FROM {schema()}.categories WHERE name = {q(name)}")
-        if cur.fetchone():
-            cur.execute(
-                f"UPDATE {schema()}.categories SET sort_order = {order}, "
-                f"spec_fields = {qjson(fields)}, is_active = TRUE WHERE name = {q(name)}"
-            )
-        else:
-            slug = 'cat-' + uuid.uuid4().hex[:8]
-            cur.execute(
-                f"INSERT INTO {schema()}.categories (slug, name, sort_order, spec_fields) "
-                f"VALUES ({q(slug)}, {q(name)}, {order}, {qjson(fields)})"
-            )
-        saved += 1
+        slug = 'cat-' + uuid.uuid4().hex[:8]
+        values.append(f"({q(slug)}, {q(name)}, {order}, {qjson(fields)})")
+    saved = len(values)
+    if values:
+        cur.execute(
+            f"INSERT INTO {schema()}.categories (slug, name, sort_order, spec_fields) "
+            f"VALUES {', '.join(values)} "
+            f"ON CONFLICT (name) DO UPDATE SET sort_order = EXCLUDED.sort_order, "
+            f"spec_fields = EXCLUDED.spec_fields, is_active = TRUE"
+        )
     conn.commit()
     cur.close()
     return saved
@@ -734,9 +732,13 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
     updated = 0
 
     skipped: list = []
+    statements: list = []
 
-    cur.execute(f"SELECT slug FROM {schema()}.products")
-    taken = {row[0] for row in cur.fetchall()}
+    # Забираем все коды товаров разом: искать каждый отдельным запросом
+    # слишком долго — на большом каталоге загрузка не успевала завершиться
+    cur.execute(f"SELECT slug, id FROM {schema()}.products")
+    existing = {row[0]: row[1] for row in cur.fetchall()}
+    taken = set(existing)
 
     for i, p in enumerate(in_products):
         name = str(p.get('name', '')).strip()[:255]
@@ -788,38 +790,62 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             allowed |= {'slug', 'sku', 'name', 'category'}
             fields = {k: v for k, v in fields.items() if k in allowed}
 
+        found_id = existing.get(slug)
+        if found_id:
+            if mode == 'skip':
+                continue
+            sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+            statements.append(
+                (i, name, f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
+                          f"WHERE id = {found_id}")
+            )
+            updated += 1
+        else:
+            existing[slug] = -1  # код занят: следующая такая же строка станет обновлением
+            statements.append(
+                (i, name, f"INSERT INTO {schema()}.products "
+                          f"({', '.join(full_fields.keys())}) "
+                          f"VALUES ({', '.join(full_fields.values())})")
+            )
+            created += 1
+
+    # Отправляем все строки одним запросом — так загрузка каталога укладывается
+    # в отведённое время. Если где-то ошибка, разбираем построчно, чтобы
+    # назвать проблемную строку и сохранить всё остальное
+    if statements:
         try:
-            cur.execute(f"SELECT id FROM {schema()}.products WHERE slug = {q(slug)}")
-            found = cur.fetchone()
-            if found:
-                if mode == 'skip':
-                    continue
-                sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
-                cur.execute(
-                    f"UPDATE {schema()}.products SET {sets}, updated_at = NOW() "
-                    f"WHERE id = {found[0]}"
-                )
-                updated += 1
-            else:
-                cur.execute(
-                    f"INSERT INTO {schema()}.products ({', '.join(full_fields.keys())}) "
-                    f"VALUES ({', '.join(full_fields.values())})"
-                )
-                created += 1
-        except Exception as exc:
-            # Одна кривая строка не должна ронять всю загрузку
+            cur.execute('; '.join(sql for _i, _n, sql in statements))
+        except Exception:
             conn.rollback()
             cur = conn.cursor()
-            skipped.append(f'строка {i + 2} ({name[:40]}): {str(exc).strip()[:90]}')
+            created = 0
+            updated = 0
+            for i, name, sql in statements:
+                try:
+                    cur.execute(sql)
+                    if sql.startswith('UPDATE'):
+                        updated += 1
+                    else:
+                        created += 1
+                except Exception as exc:
+                    conn.rollback()
+                    cur = conn.cursor()
+                    skipped.append(
+                        f'строка {i + 2} ({name[:40]}): {str(exc).strip()[:90]}'
+                    )
 
+    # Все марки одним запросом — так загрузка укладывается в отведённое время
+    brand_values = []
     for i, b in enumerate(in_brands):
         bname = str(b.get('name', '')).strip()[:64]
         if not bname:
             continue
         models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+        brand_values.append(f"({q(bname)}, {qjson(models)}, {(i + 1) * 10})")
+    if brand_values:
         cur.execute(
             f"INSERT INTO {schema()}.brands (name, models, sort_order) "
-            f"VALUES ({q(bname)}, {qjson(models)}, {(i + 1) * 10}) "
+            f"VALUES {', '.join(brand_values)} "
             f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models"
         )
 
