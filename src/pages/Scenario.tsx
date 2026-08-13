@@ -25,6 +25,10 @@ import { useCatalog } from "@/context/CatalogContext";
 import { smartSearch } from "@/lib/smart-search";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
+import KitSection from "@/components/kit/KitSection";
+import KitBar from "@/components/kit/KitBar";
+import { useCart } from "@/context/CartContext";
+import { Product } from "@/data/catalog";
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
@@ -52,6 +56,43 @@ const ScenarioPage = () => {
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
+
+  /** Сборка комплекта: по одной позиции из каждого шага */
+  const { add, setOpen } = useCart();
+  const [picked, setPicked] = useState<Record<string, Product | undefined>>({});
+  const [kitAdded, setKitAdded] = useState(false);
+
+  /** Смена сценария — сбрасываем набранный комплект */
+  useEffect(() => {
+    setPicked({});
+    setKitAdded(false);
+  }, [slug]);
+
+  const pickForKit = (product: Product) => {
+    setKitAdded(false);
+    setPicked((prev) => ({
+      ...prev,
+      // Повторное нажатие снимает выбор
+      [product.category]:
+        prev[product.category]?.id === product.id ? undefined : product,
+    }));
+  };
+
+  const removeFromKit = (category: string) =>
+    setPicked((prev) => ({ ...prev, [category]: undefined }));
+
+  const addKitToCart = () => {
+    Object.values(picked).forEach((p) => p && add(p));
+    setKitAdded(true);
+    setOpen(true);
+  };
+
+  /** Прокрутка к панели выбора машины */
+  const scrollToVehicle = () => {
+    document
+      .getElementById("kit-vehicle")
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   const bounds = useMemo(() => {
     const prices = products.map((p) => p.price);
@@ -322,7 +363,7 @@ const ScenarioPage = () => {
         )}
 
         {/* Подбор по машине */}
-        <div className="py-6">
+        <div id="kit-vehicle" className="scroll-mt-28 py-6">
           <VehicleFilterBar
             vehicle={vehicle}
             onApply={applyVehicle}
@@ -341,6 +382,30 @@ const ScenarioPage = () => {
           <div className="py-20 text-center text-muted-foreground">
             Загружаем каталог…
           </div>
+        ) : scenario.kit ? (
+          <>
+            {scenario.kit.map((step, i) => (
+              <div key={step.category}>
+                {i > 0 && <div className="rule-hair" />}
+                <KitSection
+                  step={step}
+                  products={products}
+                  vehicle={vehicle}
+                  brandsCount={brands.length}
+                  pickedId={picked[step.category]?.id}
+                  onPick={pickForKit}
+                  onNeedVehicle={scrollToVehicle}
+                />
+              </div>
+            ))}
+            <KitBar
+              steps={scenario.kit}
+              picked={picked}
+              onRemove={removeFromKit}
+              onAddAll={addKitToCart}
+              added={kitAdded}
+            />
+          </>
         ) : hits.length === 0 ? (
           <div className="py-16 text-center">
             <div className="font-head text-xl font-bold">
@@ -362,7 +427,7 @@ const ScenarioPage = () => {
           <>
             <div className="flex flex-wrap items-center justify-between gap-4 py-5">
               <div className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Подходит товаров: {list.length}
+                Всего товаров: {list.length}
               </div>
               <label className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
                 Сортировка

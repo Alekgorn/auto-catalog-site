@@ -1,0 +1,136 @@
+import { useMemo, useState } from 'react';
+import Icon from '@/components/ui/icon';
+import { Product, Vehicle, matchVehicle } from '@/data/catalog';
+import { KitStep } from '@/data/scenarios';
+import KitProductCard from '@/components/kit/KitProductCard';
+
+interface Props {
+  step: KitStep;
+  products: Product[];
+  vehicle: Vehicle | null;
+  brandsCount: number;
+  /** id выбранной позиции на этом шаге */
+  pickedId?: string;
+  onPick: (product: Product) => void;
+  /** Прокрутить наверх, к выбору машины */
+  onNeedVehicle: () => void;
+}
+
+const STEP_SIZE = 6;
+
+/**
+ * Один шаг сборки комплекта: раздел каталога с товарами.
+ * Рамки и проводка без выбранной машины не показываются — вместо списка
+ * покупатель видит просьбу указать авто, иначе подойдёт что угодно.
+ */
+const KitSection = ({
+  step,
+  products,
+  vehicle,
+  brandsCount,
+  pickedId,
+  onPick,
+  onNeedVehicle,
+}: Props) => {
+  const [shown, setShown] = useState(STEP_SIZE);
+
+  const list = useMemo(() => {
+    let out = products.filter((p) => p.category === step.category);
+    if (step.maxPrice) out = out.filter((p) => p.price <= step.maxPrice!);
+    if (vehicle) {
+      out = out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
+    }
+    // Дешёвые сначала — сценарий про ограниченный бюджет
+    return [...out].sort((a, b) => a.price - b.price);
+  }, [products, step, vehicle, brandsCount]);
+
+  const needCar = step.needVehicle && !vehicle;
+
+  return (
+    <section className="py-7">
+      <div className="flex items-start gap-4">
+        <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
+          <Icon name={step.icon} fallback="Package" size={24} />
+        </span>
+        <div className="flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="font-head text-[1.25rem] font-bold uppercase tracking-tight">
+              {step.title}
+            </h2>
+            {pickedId && (
+              <span className="flex items-center gap-1.5 border border-success px-2.5 py-1 text-[0.7rem] font-medium uppercase tracking-[0.08em] text-success">
+                <Icon name="Check" size={12} strokeWidth={3} />
+                Выбрано
+              </span>
+            )}
+          </div>
+          <p className="mt-1.5 max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
+            {step.text}
+          </p>
+        </div>
+      </div>
+
+      {needCar ? (
+        <div className="mt-5 border border-primary bg-surface px-5 py-6">
+          <div className="flex items-start gap-3">
+            <Icon
+              name="CarFront"
+              size={22}
+              className="mt-0.5 flex-none text-primary"
+            />
+            <div>
+              <div className="font-head text-[1rem] font-bold tracking-tight">
+                Сначала укажите свой автомобиль
+              </div>
+              <p className="mt-2 max-w-[42em] text-[0.87rem] leading-relaxed text-muted-foreground">
+                Рамки и переходники подбираются строго под конкретную машину:
+                марку, модель и год. Выберите авто в панели вверху страницы —
+                покажем только то, что действительно встанет, без лишнего
+                списка.
+              </p>
+              <button
+                onClick={onNeedVehicle}
+                className="mt-4 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                Выбрать автомобиль
+                <Icon name="ArrowUp" size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : list.length === 0 ? (
+        <div className="mt-5 border border-border bg-surface px-5 py-6 text-[0.88rem] leading-relaxed text-muted-foreground">
+          Под эту машину в разделе пока ничего нет. Позвоните — подберём и
+          привезём под заказ.
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+            {list.slice(0, shown).map((p) => (
+              <KitProductCard
+                key={p.id}
+                product={p}
+                vehicle={vehicle}
+                picked={pickedId === p.id}
+                onPick={() => onPick(p)}
+              />
+            ))}
+          </div>
+
+          {shown < list.length && (
+            <div className="mt-5 text-center">
+              <button
+                onClick={() => setShown((s) => s + STEP_SIZE)}
+                className="border border-foreground px-6 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+              >
+                Показать ещё ({list.length - shown})
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </section>
+  );
+};
+
+export default KitSection;
