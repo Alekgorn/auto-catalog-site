@@ -207,17 +207,65 @@ const MODEL_ALIASES: Record<string, string> = {
   чероки: 'cherokee',
   рэнглер: 'wrangler',
   компас: 'compass',
+  сид: 'ceed',
+  сиид: 'ceed',
+  гетц: 'getz',
+  аурис: 'auris',
+  демио: 'demio',
+  аксела: 'axela',
+  атенза: 'atenza',
+  премаси: 'premacy',
+  вояджер: 'voyager',
+  альфард: 'alphard',
+  харриер: 'harrier',
+  ноах: 'noah',
+  вокси: 'voxy',
+  витц: 'vitz',
+  пассо: 'passo',
+  премио: 'premio',
+  аллион: 'allion',
+  ипсум: 'ipsum',
+  калдина: 'caldina',
+  эстима: 'estima',
+  марч: 'march',
+  тиана: 'teana',
+  сафари: 'safari',
+  лаурель: 'laurel',
+  эпика: 'epica',
+  ланос: 'lanos',
+  лачетти: 'lacetti',
+  авео: 'aveo',
+  круз: 'cruze',
+  каптива: 'captiva',
+  экоспорт: 'ecosport',
+  шаран: 'sharan',
+  туран: 'touran',
+  каравелла: 'caravelle',
+  доккер: 'dokker',
+  эскудо: 'escudo',
+  хтрейл: 'xtrail',
+  икстрейл: 'xtrail',
+  лендкрузер: 'landcruiser',
+  лэндкрузер: 'landcruiser',
+  сантафе: 'santafe',
+  рафчетыре: 'rav4',
 };
 
 /** Слово похоже на название модели? Сверяем и как есть, и в транслите. */
 const sameModel = (word: string, model: string): boolean => {
   if (word === model) return true;
-  const wt = MODEL_ALIASES[word] ?? translit(word);
+  // «х трейл» — первая буква читается как латинская x, а не h
+  const ru = word.startsWith('х') ? 'x' + word.slice(1) : word;
+  const wt = MODEL_ALIASES[word] ?? translit(ru);
   if (wt === model) return true;
-  // Точное совпадение после сведения похожих букв и гласных:
-  // «камри» = Camry, «дастер» = Duster, «рав4» = RAV4.
+  const a = fold(wt);
+  const b = fold(model);
+  // От названий вроде «X-Класс» после сведения остаётся один символ —
+  // такие сравнивать бессмысленно, поймают что угодно
+  if (a.length < 3 || b.length < 3) return false;
+  // Точное совпадение: «камри» = Camry, «дастер» = Duster, «рав4» = RAV4.
   // Опечатки не прощаем — иначе «фокус» поймает Catera
-  return fold(wt) === fold(model);
+  return a === b;
 };
 
 /* ---------- разбор запроса ---------- */
@@ -248,9 +296,15 @@ export interface ParsedQuery {
 }
 
 /** Разбирает «магнитола хонда подешевле» на сущности и намерение. */
+export interface BrandBook {
+  name: string;
+  models: string[];
+}
+
 export const parseQuery = (
   query: string,
   products: Product[] = [],
+  brandBook: BrandBook[] = [],
 ): ParsedQuery => {
   const cleanedRaw = normalize(query);
 
@@ -271,27 +325,47 @@ export const parseQuery = (
 
   /* марки: латиница как есть + русские названия */
   const brands: string[] = [];
+  // Народные названия моделей маркой не считаем: «аурис» — это Toyota Auris,
+  // а не марка Aurus
+  const modelWords = new Set(words.filter((w) => w in MODEL_ALIASES));
+
   Object.entries(BRAND_ALIASES).forEach(([brand, aliases]) => {
     const brandWords = normalize(brand).split(' ').filter(Boolean);
+    if (brandWords.some((bw) => modelWords.has(bw))) return;
     const hit =
       brandWords.some((bw) => words.some((w) => w === bw || (bw.length > 3 && distance(w, bw, 1) <= 1))) ||
       aliases.some((a) => {
         const an = normalize(a);
         return words.some(
-          (w) => w === an || (an.length > 4 && distance(w, an, 1) <= 1),
+          (w) =>
+            w === an ||
+            // Похожие слова прощаем, но не когда слово — известная модель:
+            // «аурис» (Toyota Auris) не должен превращаться в марку Aurus
+            (an.length > 4 && !modelWords.has(w) && distance(w, an, 1) <= 1),
         );
       }) ||
       cleaned.includes(normalize(brand));
     if (hit) brands.push(brand);
   });
 
-  /* модели: сверяем со списком из самих товаров */
+  /* модели: сверяем со справочником марок и с товарами */
   const models: string[] = [];
-  if (products.length) {
+  const modelBrand = new Map<string, string>();
+  if (products.length || brandBook.length) {
     const known = new Set<string>();
+    // Справочник из админки — там моделей больше, чем указано у товаров
+    brandBook.forEach((b) =>
+      (b.models ?? []).forEach((m) => {
+        known.add(m);
+        if (!modelBrand.has(m)) modelBrand.set(m, b.name);
+      }),
+    );
     products.forEach((p) =>
-      Object.values(p.fits ?? {}).forEach((list) =>
-        list.forEach((m) => known.add(m)),
+      Object.entries(p.fits ?? {}).forEach(([b, list]) =>
+        list.forEach((m) => {
+          known.add(m);
+          if (!modelBrand.has(m)) modelBrand.set(m, b);
+        }),
       ),
     );
     known.forEach((m) => {
@@ -306,7 +380,18 @@ export const parseQuery = (
         return;
       }
       // Модель могли написать по-русски: «рав4», «камри», «солярис»
-      if (words.some((w) => sameModel(w, mn))) models.push(m);
+      if (words.some((w) => sameModel(w, mn))) {
+        models.push(m);
+        return;
+      }
+      // Название из двух слов пишут по-разному: «х трейл», «санта фе»,
+      // «ленд крузер» — склеиваем соседние слова и сверяем
+      for (let i = 0; i < words.length - 1; i += 1) {
+        if (sameModel(words[i] + words[i + 1], mn)) {
+          models.push(m);
+          return;
+        }
+      }
     });
   }
 
@@ -314,17 +399,9 @@ export const parseQuery = (
    * Модель назвали без марки («камри 2012 проводка») — восстанавливаем марку
    * по каталогу, иначе подбор по машине не сработает
    */
-  if (models.length && !brands.length && products.length) {
-    const byModel = new Map<string, string>();
-    products.forEach((p) =>
-      Object.entries(p.fits ?? {}).forEach(([b, list]) =>
-        list.forEach((m) => {
-          if (!byModel.has(m)) byModel.set(m, b);
-        }),
-      ),
-    );
+  if (models.length && !brands.length) {
     models.forEach((m) => {
-      const b = byModel.get(m);
+      const b = modelBrand.get(m);
       if (b && !brands.includes(b)) brands.push(b);
     });
   }
@@ -630,8 +707,9 @@ export const smartSearch = (
   products: Product[],
   query: string,
   limit?: number,
+  brandBook: BrandBook[] = [],
 ): SearchHit[] => {
-  const q = parseQuery(query, products);
+  const q = parseQuery(query, products, brandBook);
   if (!q.words.length && !q.brands.length && !q.concepts.length) return [];
 
   const index = buildIndex(products);

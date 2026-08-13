@@ -12,7 +12,7 @@ interface Props {
 
 const SearchBar = ({ autoFocus = false, onDone }: Props) => {
   const navigate = useNavigate();
-  const { products } = useCatalog();
+  const { products, brands } = useCatalog();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
@@ -31,7 +31,10 @@ const SearchBar = ({ autoFocus = false, onDone }: Props) => {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const hits = useMemo(() => smartSearch(products, query), [products, query]);
+  const hits = useMemo(
+    () => smartSearch(products, query, undefined, brands),
+    [products, query, brands],
+  );
   const results = useMemo(() => hits.slice(0, 6).map((h) => h.product), [hits]);
 
   useEffect(() => setHighlight(0), [query]);

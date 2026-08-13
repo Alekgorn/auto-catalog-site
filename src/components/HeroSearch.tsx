@@ -21,13 +21,13 @@ const EXAMPLES = [
  */
 const HeroSearch = () => {
   const navigate = useNavigate();
-  const { products } = useCatalog();
+  const { products, brands } = useCatalog();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
 
   const hits = useMemo(
-    () => (query.trim() ? smartSearch(products, query, 5) : []),
-    [products, query],
+    () => (query.trim() ? smartSearch(products, query, 5, brands) : []),
+    [products, query, brands],
   );
 
   const go = (q: string) => {

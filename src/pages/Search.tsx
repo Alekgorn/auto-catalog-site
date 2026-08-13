@@ -45,7 +45,10 @@ const SearchPage = () => {
     setCategory("");
   }, [query]);
 
-  const found = useMemo(() => smartSearch(products, query), [products, query]);
+  const found = useMemo(
+    () => smartSearch(products, query, undefined, brands),
+    [products, query, brands],
+  );
 
   /**
    * Подбор по машине: оставляем совместимые товары и универсальные —
@@ -58,7 +61,10 @@ const SearchPage = () => {
     );
   }, [found, vehicle, brands.length]);
 
-  const parsed = useMemo(() => parseQuery(query, products), [query, products]);
+  const parsed = useMemo(
+    () => parseQuery(query, products, brands),
+    [query, products, brands],
+  );
 
   const understood = useMemo(() => describeQuery(parsed), [parsed]);
 
