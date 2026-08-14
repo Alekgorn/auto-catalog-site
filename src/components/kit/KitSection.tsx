@@ -114,6 +114,18 @@ const KitSection = ({
                 Выбрано
               </span>
             )}
+
+            {/* Разъёмы — самое непонятное место. Кнопка стоит у заголовка,
+                чтобы сомневающийся увидел её сразу, не пролистывая список */}
+            {helpOffer && !collapsed && (
+              <button
+                onClick={() => setHelp(true)}
+                className="flex items-center gap-2 border-2 border-dashed border-foreground px-4 py-2 font-head text-[0.75rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="CircleHelp" size={16} />
+                Не уверен, нужна помощь
+              </button>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
@@ -228,17 +240,6 @@ const KitSection = ({
             </div>
           )}
         </>
-      )}
-
-      {/* Разъёмы — самое непонятное место: даём выход сомневающимся */}
-      {helpOffer && !collapsed && (
-        <button
-          onClick={() => setHelp(true)}
-          className="mt-5 flex w-full items-center justify-center gap-3 border-2 border-dashed border-foreground px-5 py-5 font-head text-[0.85rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground sm:text-[0.95rem]"
-        >
-          <Icon name="CircleHelp" size={22} />
-          Не уверен, нужна помощь
-        </button>
       )}
 
       <KitHelpDialog
