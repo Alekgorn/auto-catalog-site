@@ -159,6 +159,20 @@ const ScenarioPage = () => {
    */
   const found = useMemo(() => {
     if (!scenario) return [];
+    // Разделы заданы прямо — умный поиск только мешал бы, притаскивая
+    // переходники и провода вместо самих камер
+    if (scenario.onlyCategories) {
+      const only = scenario.onlyCategories;
+      return products
+        .filter((p) => only.includes(p.category))
+        .sort((a, b) => {
+          const ia = only.indexOf(a.category);
+          const ib = only.indexOf(b.category);
+          if (ia !== ib) return ia - ib;
+          return a.price - b.price;
+        })
+        .map((p) => ({ product: p, score: 0, reason: "" }));
+    }
     if (scenario.fullCatalog) {
       return [...products]
         .sort((a, b) => {
@@ -368,20 +382,38 @@ const ScenarioPage = () => {
         )}
 
         {/* Подбор по машине */}
-        <div id="kit-vehicle" className="scroll-mt-28 py-6">
-          <VehicleFilterBar
-            vehicle={vehicle}
-            onApply={applyVehicle}
-            onReset={resetVehicle}
-            count={hits.length}
-          />
-          {vehicle && found.length > hits.length && (
-            <p className="mt-2 text-[0.78rem] text-muted-foreground">
-              Скрыто несовместимых: {found.length - hits.length}. Универсальные
-              товары остаются в списке.
+        {scenario.noVehicle ? (
+          <div className="flex items-start gap-3 border border-border bg-surface px-5 py-4">
+            <Icon
+              name="CircleCheck"
+              size={19}
+              className="mt-0.5 flex-none text-success"
+            />
+            <p className="text-[0.87rem] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">
+                Подбор по машине здесь не нужен.
+              </span>{' '}
+              Всё оборудование в этом разделе универсальное — камеры,
+              парктроники и системы кругового обзора встают на любой
+              автомобиль.
             </p>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div id="kit-vehicle" className="scroll-mt-28 py-6">
+            <VehicleFilterBar
+              vehicle={vehicle}
+              onApply={applyVehicle}
+              onReset={resetVehicle}
+              count={hits.length}
+            />
+            {vehicle && found.length > hits.length && (
+              <p className="mt-2 text-[0.78rem] text-muted-foreground">
+                Скрыто несовместимых: {found.length - hits.length}.
+                Универсальные товары остаются в списке.
+              </p>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div className="py-20 text-center text-muted-foreground">
