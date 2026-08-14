@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import {
   Link,
   useNavigate,
@@ -16,7 +16,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
-import { Product, Vehicle, matchVehicle } from "@/data/catalog";
+import {
+  Product,
+  Vehicle,
+  matchVehicle,
+  splitByFit,
+} from "@/data/catalog";
+import UniversalDivider from "@/components/UniversalDivider";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -295,6 +301,21 @@ const ScenarioPage = () => {
       : { title: "Сценарий не найден · ШТАТНО" },
   );
 
+  /**
+   * Точные совпадения по машине идут первыми, универсальные — ниже
+   * отдельным блоком: покупатель не должен путать «подобрано под ваше авто»
+   * с «подойдёт почти всем».
+   */
+  const fit = useMemo(
+    () => splitByFit(list, (h) => h.product, vehicle),
+    [list, vehicle],
+  );
+  const ordered = useMemo(
+    () => [...fit.exact, ...fit.universal],
+    [fit.exact, fit.universal],
+  );
+  const visible = ordered.slice(0, shown);
+
   const applyVehicle = (v: Vehicle) => {
     setVehicle(v);
     saveVehicle(v);
@@ -332,7 +353,6 @@ const ScenarioPage = () => {
   }
 
   const others = SCENARIOS.filter((s) => s.slug !== scenario.slug).slice(0, 4);
-  const visible = list.slice(0, shown);
 
   return (
     <div className="min-h-screen bg-background">
@@ -586,16 +606,18 @@ const ScenarioPage = () => {
                     scenario.fullCatalog ? "lg:grid-cols-3" : "lg:grid-cols-4"
                   }`}
                 >
-                  {visible.map((h) => (
-                    <ProductCard
-                      key={h.product.id}
-                      product={h.product}
-                      vehicle={vehicle}
-                    />
+                  {visible.map((h, i) => (
+                    <Fragment key={h.product.id}>
+                      {/* Граница между «точно встанет» и «подойдёт почти всем» */}
+                      {i === fit.exact.length && fit.universal.length > 0 && (
+                        <UniversalDivider count={fit.universal.length} />
+                      )}
+                      <ProductCard product={h.product} vehicle={vehicle} />
+                    </Fragment>
                   ))}
                 </div>
 
-                {shown < list.length && (
+                {shown < ordered.length && (
                   <div className="pb-10 text-center">
                     <button
                       onClick={() => setShown((s) => s + PAGE_SIZE)}

@@ -417,5 +417,26 @@ export const matchVehicle = (
   return null;
 };
 
+/**
+ * Делит подборку на точные попадания и универсальные позиции.
+ * Покупателю важно видеть сначала то, что гарантированно встанет на его
+ * машину, а «подойдёт почти всем» — отдельным блоком ниже, чтобы он не
+ * принял расходник за подобранную под авто деталь.
+ */
+export const splitByFit = <T,>(
+  items: T[],
+  getProduct: (item: T) => Product,
+  vehicle: Vehicle | null,
+): { exact: T[]; universal: T[] } => {
+  if (!vehicle) return { exact: items, universal: [] };
+  const exact: T[] = [];
+  const universal: T[] = [];
+  items.forEach((item) => {
+    if (isCompatible(getProduct(item), vehicle)) exact.push(item);
+    else universal.push(item);
+  });
+  return { exact, universal };
+};
+
 export const formatPrice = (n: number): string =>
   n.toLocaleString('ru-RU') + ' ₽';

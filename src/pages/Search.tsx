@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
-import { Vehicle, matchVehicle } from "@/data/catalog";
+import { Vehicle, matchVehicle, splitByFit } from "@/data/catalog";
+import UniversalDivider from "@/components/UniversalDivider";
 import { loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
@@ -149,7 +150,16 @@ const SearchPage = () => {
     if (q) setParams({ q });
   };
 
-  const visible = list.slice(0, shown);
+  /** Точные совпадения по машине первыми, универсальные — отдельно ниже */
+  const fit = useMemo(
+    () => splitByFit(list, (h) => h.product, vehicle),
+    [list, vehicle],
+  );
+  const ordered = useMemo(
+    () => [...fit.exact, ...fit.universal],
+    [fit.exact, fit.universal],
+  );
+  const visible = ordered.slice(0, shown);
 
   return (
     <div className="min-h-screen bg-background">
@@ -331,16 +341,17 @@ const SearchPage = () => {
             )}
 
             <div className="grid grid-cols-2 gap-3 pb-10 md:gap-4 lg:grid-cols-3">
-              {visible.map((h) => (
-                <ProductCard
-                  key={h.product.id}
-                  product={h.product}
-                  vehicle={vehicle}
-                />
+              {visible.map((h, i) => (
+                <Fragment key={h.product.id}>
+                  {i === fit.exact.length && fit.universal.length > 0 && (
+                    <UniversalDivider count={fit.universal.length} />
+                  )}
+                  <ProductCard product={h.product} vehicle={vehicle} />
+                </Fragment>
               ))}
             </div>
 
-            {shown < list.length && (
+            {shown < ordered.length && (
               <div className="pb-14 text-center">
                 <button
                   onClick={() => setShown((s) => s + PAGE_SIZE)}

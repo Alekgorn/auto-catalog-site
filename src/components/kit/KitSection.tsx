@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import {
   Product,
@@ -6,9 +6,11 @@ import {
   formatPrice,
   isCompatible,
   matchVehicle,
+  splitByFit,
 } from '@/data/catalog';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
+import UniversalDivider from '@/components/UniversalDivider';
 import KitHelpDialog from '@/components/kit/KitHelpDialog';
 
 interface Props {
@@ -70,9 +72,12 @@ const KitSection = ({
         : out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
     }
     // В премиум-подборке сначала топовые, в остальных — доступные
-    return [...out].sort((a, b) =>
+    const sorted = [...out].sort((a, b) =>
       step.minPrice ? b.price - a.price : a.price - b.price,
     );
+    // Точно подходящие вперёд, универсальные — в конец списка
+    const split = splitByFit(sorted, (p) => p, vehicle);
+    return [...split.exact, ...split.universal];
   }, [
     products,
     step.category,
@@ -104,6 +109,12 @@ const KitSection = ({
   const fallback = useMemo(
     () => full.find((p) => p.price >= 500) ?? null,
     [full],
+  );
+
+  /** Сколько в списке позиций, точно подходящих машине */
+  const exactCount = useMemo(
+    () => splitByFit(list, (p) => p, vehicle).exact.length,
+    [list, vehicle],
   );
 
   const needCar = step.needVehicle && !vehicle;
@@ -248,18 +259,25 @@ const KitSection = ({
       ) : (
         <>
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
-            {(collapsed ? [chosen!] : list.slice(0, shown)).map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                vehicle={vehicle}
-                picked={pickedId === p.id}
-                onPick={(prod) => {
-                  onPick(prod);
-                  // Выбрали замену — снова сворачиваем список
-                  setReplacing(false);
-                }}
-              />
+            {(collapsed ? [chosen!] : list.slice(0, shown)).map((p, i) => (
+              <Fragment key={p.id}>
+                {/* Ниже — то, что подходит почти всем, а не именно этой машине */}
+                {!collapsed &&
+                  i === exactCount &&
+                  exactCount < list.length && (
+                    <UniversalDivider count={list.length - exactCount} />
+                  )}
+                <ProductCard
+                  product={p}
+                  vehicle={vehicle}
+                  picked={pickedId === p.id}
+                  onPick={(prod) => {
+                    onPick(prod);
+                    // Выбрали замену — снова сворачиваем список
+                    setReplacing(false);
+                  }}
+                />
+              </Fragment>
             ))}
           </div>
 

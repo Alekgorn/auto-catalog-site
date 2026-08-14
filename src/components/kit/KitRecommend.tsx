@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { Product, Vehicle, matchVehicle } from '@/data/catalog';
+import {
+  Product,
+  Vehicle,
+  matchVehicle,
+  splitByFit,
+} from '@/data/catalog';
 import ProductCard from '@/components/ProductCard';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -58,9 +63,13 @@ const KitRecommend = ({
             (p) => matchVehicle(p, vehicle, brands.length) !== null,
           );
         }
+        const sorted = [...list].sort((a, b) => a.price - b.price);
+        // Точно подходящие машине — первыми
+        const split = splitByFit(sorted, (p) => p, vehicle);
         return {
           ...g,
-          list: [...list].sort((a, b) => a.price - b.price),
+          list: [...split.exact, ...split.universal],
+          exactCount: split.exact.length,
         };
       }).filter((g) => g.list.length > 0),
     [products, vehicle, brands.length, exclude],
