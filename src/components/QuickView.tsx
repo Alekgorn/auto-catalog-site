@@ -15,7 +15,6 @@ import {
 import { isVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
-import { useCart } from '@/context/CartContext';
 
 interface Props {
   product: Product | null;
@@ -27,14 +26,12 @@ interface Props {
 const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(rawVehicle) ? rawVehicle : null;
-  const { add, has } = useCart();
   const { brands } = useCatalog();
   /**
    * Идёт сборка комплекта — товар кладём в плавающую панель внизу,
    * а не сразу в корзину. В корзину всё уходит одной кнопкой из панели.
    */
-  const { steps, pick, has: inKit } = useKit();
-  const building = steps.length > 0;
+  const { pick, has: inKit } = useKit();
   const [active, setActive] = useState(0);
 
   useEffect(() => {
@@ -68,7 +65,7 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   const fits = isCompatible(product, vehicle);
   /** Подходит любой машине по данным товара, а не «машина не выбрана» */
   const universal = isUniversal(product, brands.length);
-  const inCart = building ? inKit(product.id) : has(product.id);
+  const inCart = inKit(product.id);
   const kit = productKit(product);
 
   return (
@@ -211,24 +208,15 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
             Закрыть
           </button>
           <button
-            onClick={() => (building ? pick(product) : add(product))}
+            onClick={() => pick(product)}
             className={`flex flex-1 items-center justify-center gap-2 px-6 py-3.5 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors ${
               inCart
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground'
             }`}
           >
-            {inCart
-              ? building
-                ? 'В сборке'
-                : 'В заказе'
-              : building
-                ? 'Добавить в сборку'
-                : 'Добавить в заказ'}
-            <Icon
-              name={inCart ? 'Check' : building ? 'Package' : 'ShoppingCart'}
-              size={17}
-            />
+            {inCart ? 'В заказе' : 'В заказ'}
+            <Icon name={inCart ? 'Check' : 'Plus'} size={17} />
           </button>
           <Link
             to={`/product/${product.id}`}

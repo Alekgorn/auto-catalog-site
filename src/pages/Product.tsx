@@ -22,7 +22,6 @@ import { loadVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
-import { useCart } from "@/context/CartContext";
 import { useKit } from "@/context/KitContext";
 import PriceBlock from "@/components/PriceBlock";
 import MarketButtons from "@/components/MarketButtons";
@@ -37,10 +36,8 @@ const Product = () => {
     [id, products],
   );
 
-  const { add } = useCart();
   /** Идёт сборка — товар кладём в панель комплекта, а не в корзину */
-  const { steps, pick: pickKit, has: inKit } = useKit();
-  const building = steps.length > 0;
+  const { pick: pickKit, has: inKit } = useKit();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -244,24 +241,12 @@ const Product = () => {
                   </button>
                 </div>
                 <button
-                  onClick={() =>
-                    building ? pickKit(product) : add(product, qty)
-                  }
+                  onClick={() => pickKit(product)}
                   className="flex flex-1 items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
-                  {building
-                    ? inKit(product.id)
-                      ? "В сборке"
-                      : "Добавить в сборку"
-                    : "Добавить в заказ"}
+                  {inKit(product.id) ? "В заказе" : "Добавить в заказ"}
                   <Icon
-                    name={
-                      building
-                        ? inKit(product.id)
-                          ? "Check"
-                          : "Package"
-                        : "ShoppingCart"
-                    }
+                    name={inKit(product.id) ? "Check" : "Plus"}
                     size={18}
                   />
                 </button>

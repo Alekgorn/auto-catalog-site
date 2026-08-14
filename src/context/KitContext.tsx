@@ -95,14 +95,24 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
     setSteps(nextSteps);
   }, []);
 
-  const pick = useCallback((product: Product) => {
-    setPicks((prev) => {
-      const next = { ...prev };
-      if (next[product.category] === product.id) delete next[product.category];
-      else next[product.category] = product.id;
-      return next;
-    });
-  }, []);
+  /**
+   * Кладём товар в панель. На шаге сценария позиция одна на раздел —
+   * новый выбор заменяет прежний. Всё остальное копится свободно,
+   * поэтому такие товары храним по своему id, а не по разделу.
+   */
+  const pick = useCallback(
+    (product: Product) => {
+      const isStep = steps.some((s) => s.category === product.category);
+      const key = isStep ? product.category : product.id;
+      setPicks((prev) => {
+        const next = { ...prev };
+        if (next[key] === product.id) delete next[key];
+        else next[key] = product.id;
+        return next;
+      });
+    },
+    [steps],
+  );
 
   const drop = useCallback((category: string) => {
     setPicks((prev) => {

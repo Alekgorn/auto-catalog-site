@@ -11,6 +11,16 @@ import { useCatalog } from '@/context/CatalogContext';
  * Пока покупатель ходит по каталогу и карточкам товара, собранный комплект
  * остаётся перед глазами: фото позиций, итоговая цена и кнопка в корзину.
  */
+/** «1 позиция», «2 позиции», «5 позиций» */
+const plural = (n: number) => {
+  const ten = n % 100;
+  const one = n % 10;
+  if (ten > 10 && ten < 20) return 'позиций';
+  if (one === 1) return 'позиция';
+  if (one >= 2 && one <= 4) return 'позиции';
+  return 'позиций';
+};
+
 const KitBar = () => {
   const { picks, steps, slug, drop, finish } = useKit();
   const { products } = useCatalog();
@@ -78,10 +88,12 @@ const KitBar = () => {
             <div className="flex items-center gap-2">
               <Icon name="Package" size={17} className="text-primary" />
               <span className="font-head text-[0.8rem] font-bold uppercase tracking-[0.08em]">
-                Ваша сборка
+                {steps.length ? 'Ваша сборка' : 'Ваш выбор'}
               </span>
               <span className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                {chosen.length} {chosen.length > steps.length ? 'позиций' : `из ${steps.length}`}
+                {steps.length && chosen.length <= steps.length
+                  ? `${chosen.length} из ${steps.length}`
+                  : `${chosen.length} ${plural(chosen.length)}`}
               </span>
             </div>
 
@@ -166,7 +178,7 @@ const KitBar = () => {
             </div>
 
             <div className="flex items-center gap-2">
-              {!onScenario && (
+              {!onScenario && slug && (
                 <button
                   onClick={() => navigate(`/scenario/${slug}`)}
                   className="hidden items-center gap-2 border border-foreground px-4 py-3.5 font-head text-[0.75rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary sm:flex"
@@ -191,7 +203,9 @@ const KitBar = () => {
                   </>
                 ) : (
                   <>
-                    <span className="hidden sm:inline">Добавить комплект</span>
+                    <span className="hidden sm:inline">
+                      {steps.length ? 'Добавить комплект' : 'Добавить в заказ'}
+                    </span>
                     <span className="sm:hidden">В корзину</span>
                     <Icon name="ShoppingCart" size={16} />
                   </>
