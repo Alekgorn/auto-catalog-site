@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { formatPrice, productImages } from '@/data/catalog';
 import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
+import Confetti from '@/components/kit/Confetti';
 
 /**
  * Плавающая панель сборки — живёт на всех страницах сайта.
@@ -29,6 +30,11 @@ const KitBar = () => {
   const { pathname } = useLocation();
   const [added, setAdded] = useState(false);
   const [hidden, setHidden] = useState(false);
+  /** Счётчик залпов салюта: растёт — значит пора праздновать */
+  const [boom, setBoom] = useState(0);
+  const wasFull = useRef(false);
+  /** Первый заход: сборка могла быть готова ещё до перезагрузки страницы */
+  const firstRun = useRef(true);
 
   // Сначала шаги сценария по порядку, следом добавленное из рекомендаций
   const order = [
@@ -47,6 +53,26 @@ const KitBar = () => {
       count: qty[category] ?? 1,
     }))
     .filter((x) => !!x.product);
+
+  /** Все шаги сценария закрыты — комплект готов к заказу */
+  const complete =
+    steps.length > 0 && steps.every((s) => !!picks[s.category]);
+
+  // Последняя позиция встала на место — салют и подсказка на кнопку
+  useEffect(() => {
+    // На перезагрузке салют не повторяем — празднуем только живой выбор
+    if (firstRun.current) {
+      firstRun.current = false;
+      wasFull.current = complete;
+      return;
+    }
+    if (complete && !wasFull.current) {
+      setBoom((n) => n + 1);
+      // Свёрнутую панель разворачиваем — иначе праздновать некуда
+      setHidden(false);
+    }
+    wasFull.current = complete;
+  }, [complete]);
 
   // Пустая сборка или оформление заказа — панель только мешает
   if (!chosen.length || pathname.startsWith('/checkout')) return null;
@@ -70,6 +96,8 @@ const KitBar = () => {
     setTimeout(finish, 400);
   };
 
+  const celebrate = complete && !added;
+
   if (hidden) {
     return (
       <button
@@ -84,6 +112,8 @@ const KitBar = () => {
 
   return (
     <>
+      <Confetti fire={boom} />
+
       {/* Панель перекрывает низ страницы — освобождаем под неё место */}
       <div aria-hidden className="h-[132px] xl:h-[104px]" />
       <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-foreground bg-background shadow-[0_-10px_30px_rgba(0,0,0,0.15)]">
@@ -214,7 +244,28 @@ const KitBar = () => {
                 </button>
               )}
 
-              <button
+              <div className="relative">
+                {/* Комплект собран — ведём взгляд прямо на кнопку заказа */}
+                {celebrate && (
+                  <div className="pointer-events-none absolute bottom-[calc(100%+2.1rem)] right-0 z-10 w-max animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="relative border-2 border-primary bg-primary px-4 py-2.5 text-primary-foreground shadow-lg">
+                      <div className="font-head text-[0.78rem] font-bold uppercase tracking-[0.06em]">
+                        Комплект для вашего авто готов
+                      </div>
+                      <div className="mt-0.5 text-[0.72rem] opacity-90">
+                        Осталось нажать — и заказ у нас
+                      </div>
+                    </div>
+                    <Icon
+                      name="ArrowDown"
+                      size={22}
+                      className="absolute -bottom-[1.7rem] right-[5.5rem] animate-bounce text-primary"
+                      strokeWidth={3}
+                    />
+                  </div>
+                )}
+
+                <button
                 onClick={addAll}
                 className={`flex flex-none items-center gap-2 px-5 py-3.5 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em] transition-colors ${
                   added
@@ -236,7 +287,8 @@ const KitBar = () => {
                     <Icon name="ShoppingCart" size={16} />
                   </>
                 )}
-              </button>
+                </button>
+              </div>
 
               <div className="hidden items-center gap-1 xl:flex">
                 <button
