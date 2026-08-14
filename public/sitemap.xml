@@ -103,6 +103,12 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://xn--80a0adnb7a.xn--p1ai/catalog/drugoe</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/brand/audi</loc>
     <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
@@ -1184,6 +1190,12 @@
   </url>
   <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/product/ramka-vw-tiguan-10</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://xn--80a0adnb7a.xn--p1ai/product/perehodnaya-ramka-mazda-2-demio-2002-2007-10-dyuymov-vzamen</loc>
     <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>

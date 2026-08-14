@@ -59,7 +59,8 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
 
   return (
     <div>
-      <div className="flex flex-wrap gap-x-6 gap-y-2 border-b border-border">
+      {/* Вкладки — заметные кнопки: раньше выглядели как бледный текст и их пролистывали */}
+      <div className="flex flex-wrap gap-2">
         {tabs.map((t) => {
           const isActive = active === t.key && !t.disabled;
           return (
@@ -73,12 +74,12 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
                   ? 'Особенностей нет — ставится штатно, без доработок'
                   : undefined
               }
-              className={`-mb-px flex items-center gap-2 border-b-2 pb-3 pt-1 font-head text-[0.8rem] uppercase tracking-[0.08em] transition-colors ${
+              className={`flex items-center gap-2 border px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors ${
                 isActive
-                  ? 'border-primary text-primary'
+                  ? 'border-primary bg-primary text-primary-foreground'
                   : t.disabled
-                    ? 'cursor-default border-transparent text-muted-foreground/50'
-                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                    ? 'cursor-default border-border bg-surface-muted text-muted-foreground'
+                    : 'border-foreground text-foreground hover:border-primary hover:text-primary'
               }`}
             >
               <Icon name={t.icon} size={15} />
