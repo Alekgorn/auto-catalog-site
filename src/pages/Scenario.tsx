@@ -86,21 +86,19 @@ const ScenarioPage = () => {
   const stepId = (i: number) => `kit-step-${i}`;
 
   /**
-   * Куда вести покупателя дальше: первый шаг, который ещё не заполнен
-   * и уже доступен. Шаги с подбором по машине до выбора авто пропускаем —
-   * там всё равно нечего выбирать.
+   * Куда вести покупателя дальше: первый шаг, который ещё не заполнен.
+   * Порядок не перепрыгиваем: если машина не указана, шаг всё равно
+   * показываем — там ждёт просьба выбрать авто, а не пустота. Иначе
+   * покупателя унесло бы мимо рамки сразу к необязательной камере.
    */
   const nextStop = (
     kit: NonNullable<typeof scenario>["kit"],
     nextPicks: Record<string, string>,
-    car: Vehicle | null,
+    _car: Vehicle | null,
   ): string => {
     if (!kit) return "";
     const i = kit.findIndex(
-      (step) =>
-        !nextPicks[step.category] &&
-        !skipped[step.category] &&
-        (!step.needVehicle || car),
+      (step) => !nextPicks[step.category] && !skipped[step.category],
     );
     return i >= 0 ? stepId(i) : "";
   };
