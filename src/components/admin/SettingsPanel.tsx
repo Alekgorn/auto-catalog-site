@@ -88,13 +88,18 @@ const SettingsPanel = ({ onImported }: Props) => {
         toast({ title: 'Ошибка', description: data.error ?? 'Не удалось загрузить' });
         return;
       }
+      // Фото с чужих сайтов лучше перенести к нам — подсказываем сразу
+      const external = data.external_images
+        ? ` Фото с других сайтов: ${data.external_images} — перенесите их к нам в разделе «Сайт».`
+        : '';
       toast({
         title: data.skipped ? 'Загружено с замечаниями' : 'Каталог обновлён',
-        description: data.skipped
-          ? `Добавлено: ${data.created}, обновлено: ${data.updated}. Пропущено строк: ${data.skipped} — проверьте их в файле.`
-          : `Добавлено: ${data.created}, обновлено: ${data.updated}${
-              data.categories ? `, категорий: ${data.categories}` : ''
-            }`,
+        description:
+          (data.skipped
+            ? `Добавлено: ${data.created}, обновлено: ${data.updated}. Пропущено строк: ${data.skipped} — проверьте их в файле.`
+            : `Добавлено: ${data.created}, обновлено: ${data.updated}${
+                data.categories ? `, категорий: ${data.categories}` : ''
+              }`) + external,
       });
       onImported();
     } catch {

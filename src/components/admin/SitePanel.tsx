@@ -4,6 +4,7 @@ import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import ShortcutsEditor from '@/components/admin/ShortcutsEditor';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
+import ExternalImages from '@/components/admin/ExternalImages';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
@@ -98,8 +99,9 @@ const SitePanel = ({ onSaved, categories }: Props) => {
 
   return (
     <div className="py-8">
-      <div className="mb-12">
+      <div className="mb-12 space-y-5">
         <ImageOptimizer />
+        <ExternalImages />
       </div>
 
       <div className="grid grid-cols-1 gap-x-6 gap-y-12 lg:grid-cols-12">

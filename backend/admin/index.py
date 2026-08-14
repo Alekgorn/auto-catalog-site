@@ -110,6 +110,9 @@ def upload_image(data_url: str) -> str:
 
 CDN_PREFIX = 'https://cdn.poehali.dev/projects/'
 
+# Больше 15 МБ на одно фото — почти наверняка не товарный снимок
+MAX_IMAGE_BYTES = 15 * 1024 * 1024
+
 
 def _is_own_cdn(url: str) -> bool:
     key = os.environ.get('AWS_ACCESS_KEY_ID', '')
@@ -149,6 +152,81 @@ def reoptimize_url(url: str) -> str:
         CacheControl='public, max-age=31536000, immutable',
     )
     return f"{CDN_PREFIX}{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{new_key}"
+
+
+def _is_external_image(url: str) -> bool:
+    """Ссылка на картинку с чужого сайта, которую стоит перенести к нам."""
+    u = str(url or '').strip()
+    if not u.lower().startswith(('http://', 'https://')):
+        return False
+    return not u.startswith(CDN_PREFIX)
+
+
+def fetch_external_url(url: str) -> tuple:
+    """Скачивает чужую картинку, сжимает и кладёт к нам.
+
+    Возвращает (наш_адрес, причина_отказа). Если не получилось — адрес None,
+    а причину показываем в админке: пусть владелец каталога видит,
+    какие именно ссылки не сработали и почему.
+    """
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            # Часть сайтов не отдаёт файлы «неизвестным» клиентам
+            'User-Agent': 'Mozilla/5.0 (compatible; ShtatnoBot/1.0)',
+            'Accept': 'image/*,*/*',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as r:
+            ctype = str(r.headers.get('Content-Type', '')).lower()
+            raw = r.read(MAX_IMAGE_BYTES + 1)
+    except urllib.error.HTTPError as e:
+        return None, f'сайт ответил отказом ({e.code})'
+    except Exception:
+        return None, 'не удалось скачать'
+
+    if len(raw) > MAX_IMAGE_BYTES:
+        return None, 'файл слишком большой'
+    if not raw:
+        return None, 'пустой файл'
+
+    ext = 'jpg'
+    for name in ('png', 'webp', 'gif', 'jpeg', 'jpg'):
+        if name in ctype:
+            ext = 'jpg' if name == 'jpeg' else name
+            break
+    else:
+        tail = url.lower().split('?')[0].rsplit('.', 1)
+        if len(tail) == 2 and tail[1] in ('png', 'webp', 'gif', 'jpg', 'jpeg'):
+            ext = 'jpg' if tail[1] == 'jpeg' else tail[1]
+        elif 'image' not in ctype:
+            return None, 'по ссылке не картинка'
+
+    from image_optimizer import optimize
+
+    try:
+        data, new_ext, content_type = optimize(raw, ext)
+    except Exception:
+        return None, 'не удалось обработать картинку'
+
+    key = f"catalog/{uuid.uuid4().hex}.{new_ext}"
+    try:
+        _s3().put_object(
+            Bucket='files',
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+            CacheControl='public, max-age=31536000, immutable',
+        )
+    except Exception:
+        return None, 'не удалось сохранить у нас'
+
+    own = f"{CDN_PREFIX}{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+    return own, None
 
 
 def row_to_product(r: dict) -> dict:
@@ -284,7 +362,7 @@ XLS_COLUMNS = [
     ('sortOrder', 'Порядок', 10),
     ('isActive', 'На сайте (да/нет)', 17),
     ('fits', 'Совместимость', 60),
-    ('images', 'Фото (ссылки через ;)', 40),
+    ('images', 'Фото (ссылки через ; — можно с других сайтов)', 46),
     ('description', 'Описание (абзацы через |)', 50),
     ('specs', 'Характеристики (Имя=Значение;)', 50),
     ('kit', 'Комплектация (через ;)', 40),
@@ -424,7 +502,9 @@ def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
         ['Ozon и Wildberries', 'Ссылки на товар на маркетплейсах. Пусто — кнопка не показывается.'],
         ['На сайте', '«да» — товар виден покупателям, «нет» — скрыт.'],
         ['Совместимость', 'Формат: Lada: Vesta SW Cross, Granta | Kia: Rio, Seltos'],
-        ['Фото', 'Ссылки на картинки через точку с запятой.'],
+        ['Фото', 'Ссылки на картинки через точку с запятой. Можно вставлять '
+                 'адреса с других сайтов — после загрузки файла нажмите '
+                 '«Перенести фото к нам» в разделе настроек.'],
         ['Описание', 'Абзацы разделяйте вертикальной чертой |. Внутри самого текста черту не используйте — она разорвёт абзац.'],
         ['Характеристики', 'Формат: Гарантия=5 лет; Материал=сталь 2 мм'],
         ['Комплектация', 'Пункты через точку с запятой.'],
@@ -922,6 +1002,92 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'Некорректный файл'})
             return resp(200, {'url': upload_image(data_url)})
 
+        if action == 'external-images':
+            """Переносит к нам картинки, которые в каталоге указаны ссылками
+            на чужие сайты. За один вызов — одна картинка: скачивание идёт
+            через интернет и легко упирается в таймаут функции."""
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            if method == 'DELETE':
+                # Сбросить список неудачных — чтобы попробовать заново
+                cur.execute(f"DELETE FROM {schema()}.failed_images")
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            cur.execute(f"SELECT url, reason, product_slug FROM {schema()}.failed_images")
+            failed_rows = cur.fetchall()
+            skip = {r['url'] for r in failed_rows}
+
+            cur.execute(
+                f"SELECT id, slug, images FROM {schema()}.products "
+                f"WHERE images::text LIKE '%http%' ORDER BY id"
+            )
+            rows = cur.fetchall()
+
+            def pending_of(r):
+                return [
+                    u for u in (r['images'] or [])
+                    if _is_external_image(u) and u not in skip
+                ]
+
+            left = sum(len(pending_of(r)) for r in rows)
+            failed = [
+                {
+                    'url': r['url'],
+                    'reason': r['reason'],
+                    'product': r['product_slug'],
+                }
+                for r in failed_rows
+            ]
+
+            if method == 'GET':
+                cur.close()
+                return resp(200, {'left': left, 'failed': failed})
+
+            # POST — переносим одну картинку
+            saved = 0
+            problem = None
+            for r in rows:
+                urls = list(r['images'] or [])
+                idx = next(
+                    (i for i, u in enumerate(urls)
+                     if _is_external_image(u) and u not in skip),
+                    None,
+                )
+                if idx is None:
+                    continue
+
+                src = urls[idx]
+                own, reason = fetch_external_url(src)
+
+                if own:
+                    urls[idx] = own
+                    cur.execute(
+                        f"UPDATE {schema()}.products SET images = {qjson(urls)}, "
+                        f"updated_at = NOW() WHERE id = {r['id']}"
+                    )
+                    saved = 1
+                else:
+                    # Запоминаем отказ, чтобы не биться в эту ссылку снова
+                    cur.execute(
+                        f"INSERT INTO {schema()}.failed_images "
+                        f"(url, reason, product_slug) VALUES "
+                        f"({q(src)}, {q(reason or 'неизвестная ошибка')}, {q(r['slug'])}) "
+                        f"ON CONFLICT (url) DO UPDATE SET tries = failed_images.tries + 1, "
+                        f"reason = EXCLUDED.reason"
+                    )
+                    problem = {'url': src, 'reason': reason, 'product': r['slug']}
+                conn.commit()
+                break
+
+            cur.close()
+            return resp(200, {
+                'saved': saved,
+                'left': max(left - 1, 0) if (saved or problem) else 0,
+                'problem': problem,
+            })
+
         if action == 'optimize-images':
             """Пережимает фото товаров в WebP порциями, чтобы уложиться в таймаут."""
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1280,12 +1446,18 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'В таблице не нашлось строк с товарами'})
             stats = import_rows(conn, in_products, in_brands, str(body.get('mode', 'merge')))
             saved_cats = import_categories(conn, in_categories)
+            # Сколько фото указано ссылками на чужие сайты — их можно перенести к нам
+            external = sum(
+                len([u for u in (p.get('images') or []) if _is_external_image(u)])
+                for p in in_products
+            )
             return resp(
                 200,
                 {
                     'ok': True,
                     'brands': len(in_brands),
                     'categories': saved_cats,
+                    'external_images': external,
                     **stats,
                 },
             )
