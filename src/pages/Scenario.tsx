@@ -343,26 +343,6 @@ const ScenarioPage = () => {
           </div>
         </div>
 
-        {/* Что входит в решение */}
-        <div className="rule-hair" />
-        <div className="grid grid-cols-1 gap-x-6 gap-y-6 py-8 md:grid-cols-3">
-          {scenario.steps.map((step, i) => (
-            <div key={step.title} className="flex gap-4">
-              <span className="font-head text-2xl font-bold text-primary">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <div>
-                <div className="font-head text-[1.02rem] font-bold tracking-tight">
-                  {step.title}
-                </div>
-                <p className="mt-1.5 text-[0.87rem] leading-relaxed text-muted-foreground">
-                  {step.text}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
         <div className="rule-hair" />
 
         {/* Пришли по ссылке с маркой */}
