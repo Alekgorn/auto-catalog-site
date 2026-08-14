@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { Product } from '@/data/catalog';
@@ -82,13 +83,19 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   const [steps, setSteps] = useState<KitStep[]>([]);
   const [slug, setSlug] = useState('');
   const [ready, setReady] = useState(false);
+  /**
+   * Страница сценария успевает объявить свои шаги раньше, чем сюда доедет
+   * сохранённая сборка: эффекты дочерних компонентов срабатывают первыми.
+   * Флаг бережёт свежие шаги от затирания старыми.
+   */
+  const started = useRef(false);
 
   useEffect(() => {
     const saved = read();
     setPicks(saved.picks);
     setQtyMap(saved.qty);
-    setSteps(saved.steps);
-    setSlug(saved.slug);
+    if (!started.current) setSteps(saved.steps);
+    setSlug((prev) => prev || saved.slug);
     setReady(true);
   }, []);
 
@@ -102,6 +109,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   }, [picks, qty, steps, slug, ready]);
 
   const begin = useCallback((nextSlug: string, nextSteps: KitStep[]) => {
+    started.current = true;
     setSlug((prev) => {
       // Зашли в другой сценарий — старую сборку не тащим
       if (prev && prev !== nextSlug) setPicks({});

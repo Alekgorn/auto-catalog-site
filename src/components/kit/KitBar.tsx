@@ -23,7 +23,7 @@ const plural = (n: number) => {
 };
 
 const KitBar = () => {
-  const { picks, qty, setQty, steps, slug, drop, finish } = useKit();
+  const { picks, qty, setQty, steps, slug, drop, reset, finish } = useKit();
   const { products } = useCatalog();
   const { add, setOpen } = useCart();
   const navigate = useNavigate();
@@ -71,6 +71,9 @@ const KitBar = () => {
       // Свёрнутую панель разворачиваем — иначе праздновать некуда
       setHidden(false);
     }
+    // Сборку разобрали — гасим салют, иначе он повторится при новом выборе:
+    // панель на пустой сборке скрывается, а вместе с ней и холст конфетти
+    if (!complete) setBoom(0);
     wasFull.current = complete;
   }, [complete]);
 
@@ -134,7 +137,7 @@ const KitBar = () => {
 
             <div className="flex items-center gap-1 xl:hidden">
               <button
-                onClick={finish}
+                onClick={reset}
                 aria-label="Очистить сборку"
                 className="p-2 text-muted-foreground transition-colors hover:text-primary"
               >
@@ -292,7 +295,7 @@ const KitBar = () => {
 
               <div className="hidden items-center gap-1 xl:flex">
                 <button
-                  onClick={finish}
+                  onClick={reset}
                   aria-label="Очистить сборку"
                   className="p-2 text-muted-foreground transition-colors hover:text-primary"
                 >
