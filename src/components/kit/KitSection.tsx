@@ -186,7 +186,7 @@ const KitSection = ({
         </div>
       ) : (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
             {(collapsed ? [chosen!] : list.slice(0, shown)).map((p) => (
               <ProductCard
                 key={p.id}

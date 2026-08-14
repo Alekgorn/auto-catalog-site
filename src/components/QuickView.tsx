@@ -195,6 +195,14 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
         </div>
 
         <div className="sticky bottom-0 flex flex-col gap-3 border-t border-border bg-surface px-5 py-4 sm:flex-row sm:px-7">
+          {/* Закрыть можно снизу — не нужно тянуться к крестику наверху */}
+          <button
+            onClick={onClose}
+            className="flex items-center justify-center gap-2 border border-border px-6 py-3.5 font-head text-[0.85rem] font-medium uppercase tracking-[0.02em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:flex-none"
+          >
+            <Icon name="X" size={16} />
+            Закрыть
+          </button>
           <button
             onClick={() => add(product)}
             className={`flex flex-1 items-center justify-center gap-2 px-6 py-3.5 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors ${

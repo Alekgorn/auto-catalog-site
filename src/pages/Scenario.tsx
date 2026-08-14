@@ -540,7 +540,11 @@ const ScenarioPage = () => {
               )}
 
               <div className={scenario.fullCatalog ? "lg:col-span-9" : ""}>
-                <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-3">
+                <div
+                  className={`grid grid-cols-2 gap-3 pb-8 md:gap-4 ${
+                    scenario.fullCatalog ? "lg:grid-cols-3" : "lg:grid-cols-4"
+                  }`}
+                >
                   {visible.map((h) => (
                     <ProductCard
                       key={h.product.id}

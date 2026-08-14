@@ -116,7 +116,7 @@ const KitRecommend = ({ products, vehicle, picks, onPick, ready }: Props) => {
                 )}
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-3">
+              <div className="mt-4 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
                 {shown.map((p) => (
                   <ProductCard
                     key={p.id}
