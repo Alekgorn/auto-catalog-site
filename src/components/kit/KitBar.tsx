@@ -12,7 +12,7 @@ import { useCatalog } from '@/context/CatalogContext';
  * остаётся перед глазами: фото позиций, итоговая цена и кнопка в корзину.
  */
 const KitBar = () => {
-  const { picks, steps, slug, drop, reset } = useKit();
+  const { picks, steps, slug, drop, finish } = useKit();
   const { products } = useCatalog();
   const { add, setOpen } = useCart();
   const navigate = useNavigate();
@@ -51,6 +51,8 @@ const KitBar = () => {
     chosen.forEach((x) => x.product && add(x.product));
     setAdded(true);
     setOpen(true);
+    // Комплект в корзине — выходим из режима сборки, сайт снова обычный
+    setTimeout(finish, 400);
   };
 
   if (hidden) {
@@ -85,7 +87,7 @@ const KitBar = () => {
 
             <div className="flex items-center gap-1 xl:hidden">
               <button
-                onClick={reset}
+                onClick={finish}
                 aria-label="Очистить сборку"
                 className="p-2 text-muted-foreground transition-colors hover:text-primary"
               >
@@ -198,7 +200,7 @@ const KitBar = () => {
 
               <div className="hidden items-center gap-1 xl:flex">
                 <button
-                  onClick={reset}
+                  onClick={finish}
                   aria-label="Очистить сборку"
                   className="p-2 text-muted-foreground transition-colors hover:text-primary"
                 >

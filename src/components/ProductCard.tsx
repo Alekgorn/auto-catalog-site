@@ -12,6 +12,7 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
+import { useKit } from '@/context/KitContext';
 import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import { useCatalog } from '@/context/CatalogContext';
@@ -35,8 +36,18 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const { cardFields, categorySpecs, brands } = useCatalog();
   /** Товар и правда подходит любой машине, а не «просто машина не выбрана» */
   const universal = isUniversal(product, brands.length);
-  const kitMode = !!onPick;
-  const chosen = kitMode ? !!picked : has(product.id);
+  /**
+   * Идёт сборка комплекта — товар уходит в плавающую панель внизу,
+   * а не в корзину. Так покупатель сначала собирает комплект целиком.
+   */
+  const { steps, pick: pickKit, has: inKit } = useKit();
+  const building = steps.length > 0;
+  const kitMode = !!onPick || building;
+  const chosen = onPick
+    ? !!picked
+    : building
+      ? inKit(product.id)
+      : has(product.id);
 
   const rows = CARD_FIELDS.filter((f) => cardFields.includes(f.key))
     .map((f) => ({ label: f.label, value: f.get(product) }))
@@ -195,14 +206,20 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             Подробнее
           </Link>
           <button
-            onClick={() => (onPick ? onPick(product) : add(product))}
+            onClick={() =>
+              onPick
+                ? onPick(product)
+                : building
+                  ? pickKit(product)
+                  : add(product)
+            }
             className={`flex w-full items-center justify-center gap-2 border px-4 py-2.5 font-head text-[0.75rem] font-medium uppercase tracking-[0.08em] transition-colors sm:w-auto sm:py-3 sm:text-[0.78rem] ${
               chosen
                 ? 'border-primary bg-primary text-primary-foreground'
                 : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'
             }`}
           >
-            {chosen ? 'В заказе' : 'В заказ'}
+            {chosen ? (kitMode ? 'В сборке' : 'В заказе') : 'В заказ'}
             <Icon name={chosen ? 'Check' : 'Plus'} size={15} />
           </button>
         </div>

@@ -23,6 +23,7 @@ import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useCart } from "@/context/CartContext";
+import { useKit } from "@/context/KitContext";
 import PriceBlock from "@/components/PriceBlock";
 import MarketButtons from "@/components/MarketButtons";
 import { useCatalog } from "@/context/CatalogContext";
@@ -37,6 +38,9 @@ const Product = () => {
   );
 
   const { add } = useCart();
+  /** Идёт сборка — товар кладём в панель комплекта, а не в корзину */
+  const { steps, pick: pickKit, has: inKit } = useKit();
+  const building = steps.length > 0;
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -240,11 +244,26 @@ const Product = () => {
                   </button>
                 </div>
                 <button
-                  onClick={() => add(product, qty)}
+                  onClick={() =>
+                    building ? pickKit(product) : add(product, qty)
+                  }
                   className="flex flex-1 items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
-                  Добавить в заказ
-                  <Icon name="ShoppingCart" size={18} />
+                  {building
+                    ? inKit(product.id)
+                      ? "В сборке"
+                      : "Добавить в сборку"
+                    : "Добавить в заказ"}
+                  <Icon
+                    name={
+                      building
+                        ? inKit(product.id)
+                          ? "Check"
+                          : "Package"
+                        : "ShoppingCart"
+                    }
+                    size={18}
+                  />
                 </button>
               </div>
 

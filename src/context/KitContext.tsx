@@ -33,6 +33,8 @@ interface KitValue {
   drop: (category: string) => void;
   /** Очистить сборку целиком */
   reset: () => void;
+  /** Сборка окончена: комплект уехал в корзину — сайт снова обычный */
+  finish: () => void;
   /** Товар выбран в сборке? */
   has: (id: string) => boolean;
 }
@@ -112,6 +114,12 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
 
   const reset = useCallback(() => setPicks({}), []);
 
+  const finish = useCallback(() => {
+    setPicks({});
+    setSteps([]);
+    setSlug('');
+  }, []);
+
   const value = useMemo<KitValue>(
     () => ({
       picks,
@@ -121,16 +129,26 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       pick,
       drop,
       reset,
+      finish,
       has: (id) => Object.values(picks).includes(id),
     }),
-    [picks, steps, slug, begin, pick, drop, reset],
+    [picks, steps, slug, begin, pick, drop, reset, finish],
   );
 
   return <KitContext.Provider value={value}>{children}</KitContext.Provider>;
 };
 
-export const useKit = (): KitValue => {
-  const ctx = useContext(KitContext);
-  if (!ctx) throw new Error('useKit вне KitProvider');
-  return ctx;
+/** Заглушка для страниц вне сборки (например, при предрендере) */
+const IDLE: KitValue = {
+  picks: {},
+  steps: [],
+  slug: '',
+  begin: () => {},
+  pick: () => {},
+  drop: () => {},
+  reset: () => {},
+  finish: () => {},
+  has: () => false,
 };
+
+export const useKit = (): KitValue => useContext(KitContext) ?? IDLE;
