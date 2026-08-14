@@ -16,7 +16,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
-import { Vehicle, matchVehicle } from "@/data/catalog";
+import { Product, Vehicle, matchVehicle } from "@/data/catalog";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -201,13 +201,20 @@ const ScenarioPage = () => {
     );
   }, [found, vehicle, brands.length, brandFilter]);
 
+  /** По чему группируем кнопки над каталогом: раздел или подраздел */
+  const groupOf = (p: Product) =>
+    scenario?.filterBySubcategory ? (p.subcategory ?? "") : p.category;
+
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
     hits.forEach((h) => {
-      map[h.product.category] = (map[h.product.category] ?? 0) + 1;
+      const key = groupOf(h.product);
+      if (!key) return;
+      map[key] = (map[key] ?? 0) + 1;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [hits]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hits, scenario?.filterBySubcategory]);
 
   const catalogCounts = useMemo(() => {
     const map: Record<string, number> = {};
@@ -219,7 +226,7 @@ const ScenarioPage = () => {
 
   const list = useMemo(() => {
     let out = category
-      ? hits.filter((h) => h.product.category === category)
+      ? hits.filter((h) => groupOf(h.product) === category)
       : hits;
 
     // Полный каталог — работают развёрнутые фильтры слева
@@ -393,9 +400,8 @@ const ScenarioPage = () => {
               <span className="font-medium text-foreground">
                 Подбор по машине здесь не нужен.
               </span>{' '}
-              Всё оборудование в этом разделе универсальное — камеры,
-              парктроники и системы кругового обзора встают на любой
-              автомобиль.
+              Всё оборудование в этой подборке универсальное — встаёт на
+              любой автомобиль, поэтому фильтровать по марке и модели нечего.
             </p>
           </div>
         ) : (

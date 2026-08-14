@@ -8,6 +8,8 @@ export interface Product {
   createdAt?: string | null;
   name: string;
   category: Category;
+  /** Подраздел внутри категории — например, тип регистратора */
+  subcategory?: string;
   price: number;
   oldPrice?: number;
   /** Цена для дилеров — показывается в дилерском режиме */

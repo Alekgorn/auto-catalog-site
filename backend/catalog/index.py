@@ -28,7 +28,7 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            f"SELECT slug, sku, name, category, price, old_price, pro_price, ozon_url, wb_url, install, warranty, "
+            f"SELECT slug, sku, name, category, subcategory, price, old_price, pro_price, ozon_url, wb_url, install, warranty, "
             f"year_from, year_to, badge, images, description, specs, kit, fits, popularity, created_at, notes "
             f"FROM {schema}.products WHERE is_active = TRUE ORDER BY sort_order, id"
         )
@@ -39,6 +39,7 @@ def handler(event: dict, context) -> dict:
                 'sku': r['sku'] or r['slug'].upper(),
                 'name': r['name'],
                 'category': r['category'],
+                'subcategory': r['subcategory'] or '',
                 'price': r['price'],
                 'oldPrice': r['old_price'],
                 'proPrice': r['pro_price'],
