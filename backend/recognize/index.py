@@ -339,7 +339,7 @@ def load_catalog() -> list:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            f"SELECT slug, name, category FROM {get_schema()}.products "
+            f"SELECT slug, name, category, fits FROM {get_schema()}.products "
             f"WHERE is_active = TRUE ORDER BY sort_order, id"
         )
         return [dict(r) for r in cur.fetchall()]
@@ -602,6 +602,57 @@ def direct_hits(query: str, products: list) -> list:
     return top
 
 
+def vehicle_in_query(query: str, products: list) -> tuple:
+    """
+    Ищем в запросе марку и модель авто, опираясь на список совместимости
+    самих товаров: там уже перечислены «Toyota», «Camry» и прочие.
+    """
+    words = {word_forms(w) for w in re.split(r'[^a-zA-Zа-яА-Я0-9]+', query) if w}
+    words.discard('')
+
+    brand_hit, model_hit = '', ''
+    for p in products:
+        fits = p.get('fits') or {}
+        if isinstance(fits, str):
+            try:
+                fits = json.loads(fits)
+            except Exception:
+                fits = {}
+        for brand, models in (fits or {}).items():
+            if word_forms(brand) in words:
+                brand_hit = brand_hit or brand
+            for m in models or []:
+                if len(word_forms(m)) > 2 and word_forms(m) in words:
+                    model_hit = model_hit or m
+                    brand_hit = brand_hit or brand
+    return brand_hit, model_hit
+
+
+def fits_vehicle(product: dict, brand: str, model: str) -> bool:
+    """Подходит ли товар выбранной машине. Универсальные подходят всем."""
+    fits = product.get('fits') or {}
+    if isinstance(fits, str):
+        try:
+            fits = json.loads(fits)
+        except Exception:
+            fits = {}
+    if not fits:
+        return True
+    if not brand:
+        return True
+
+    models = None
+    for b, ms in fits.items():
+        if word_forms(b) == word_forms(brand):
+            models = ms or []
+            break
+    if models is None:
+        return False
+    if not model or not models:
+        return True
+    return any(word_forms(m) == word_forms(model) for m in models)
+
+
 def smart_search(query: str) -> dict:
     """Подбор товаров по смыслу запроса. Повторные запросы берём из памяти."""
     query = query.strip()[:QUERY_LIMIT]
@@ -613,9 +664,18 @@ def smart_search(query: str) -> dict:
     if cached:
         return {'slugs': cached['slugs'], 'explain': cached['explain'], 'cached': True}
 
-    products = load_catalog()
-    if not products:
+    all_products = load_catalog()
+    if not all_products:
         return {'slugs': [], 'explain': ''}
+
+    # Назвали машину — сразу убираем товары под другие авто. Иначе на запрос
+    # «провода для новой камри» ИИ предлагал рамку Corolla и переходник Kia:
+    # список совместимости он не видит и решает по одному названию
+    brand, model = vehicle_in_query(query, all_products)
+    products = [p for p in all_products if fits_vehicle(p, brand, model)]
+    if not products:
+        products = all_products
+        brand, model = '', ''
 
     lines = [
         f"{i + 1} | {p['name']} | {p['category']}" for i, p in enumerate(products)
