@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { Product } from '@/data/catalog';
+import { Product, isUniversal } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
@@ -23,20 +23,12 @@ const FitsBrief = ({ product }: Props) => {
 
   if (models.length === 0) return null;
 
-  // Отмечены все модели из справочника — товар подходит любой машине
-  const totalModels = brands.reduce((n, b) => n + b.models.length, 0);
-  const universal = totalModels > 0 && models.length >= totalModels;
-
-  if (universal) {
-    return (
-      <div className="mt-3 flex items-center gap-2 text-[0.7rem] sm:mt-4 sm:text-[0.8rem]">
-        <span className="flex items-center gap-1.5 border border-border px-1.5 py-0.5 text-muted-foreground sm:px-2 sm:py-1">
-          <Icon name="Check" size={13} className="text-success" />
-          Совместим с любым авто
-        </span>
-      </div>
-    );
-  }
+  /**
+   * Товар подходит любой машине — список моделей не нужен: под карточкой
+   * уже стоит зелёная отметка «Подходит ко всем автомобилям».
+   * Правило то же, что и у этой отметки, иначе получалось расхождение.
+   */
+  if (isUniversal(product, brands.length)) return null;
 
   const visible = open ? models.slice(0, MAX_EXPANDED) : models.slice(0, PREVIEW);
   const hidden = models.length - visible.length;
