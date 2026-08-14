@@ -357,7 +357,9 @@ def cache_get(key: str) -> dict:
             f"WHERE query_key = {sq(key)}"
         )
         row = cur.fetchone()
-        if not row:
+        # Пустой ответ не запоминаем как готовый: такие записи остаются
+        # после сброса памяти и иначе показывали бы покупателю пустоту
+        if not row or not (row['slugs'] or []):
             return {}
         cur.execute(
             f"UPDATE {get_schema()}.ai_search_cache SET hits = hits + 1 "
@@ -511,6 +513,95 @@ def ask_ai_text(prompt: str) -> dict:
     return last
 
 
+STOP_WORDS = {
+    'для', 'на', 'под', 'в', 'с', 'и', 'а', 'к', 'по', 'из', 'от', 'до',
+    'хочу', 'нужен', 'нужна', 'нужно', 'надо', 'куплю', 'купить', 'ищу',
+    'мне', 'чтобы', 'что', 'как', 'это', 'мой', 'моя', 'авто', 'машину',
+    'машина', 'машины', 'автомобиль', 'есть', 'ли', 'у', 'вас',
+    'при', 'без', 'над', 'про', 'или', 'же', 'бы', 'не', 'ни', 'но',
+    'вижу', 'видно', 'слышно', 'очень', 'самый', 'такой', 'этот',
+}
+
+
+def fold(text: str) -> str:
+    """
+    Сглаживаем разное написание латиницей: «крета» после перевода даёт
+    kreta, а в каталоге стоит Creta. Без этого точный запрос не находил товар.
+    """
+    w = norm(text)
+    w = w.replace('ck', 'k').replace('c', 'k').replace('qu', 'kv')
+    w = w.replace('q', 'k').replace('w', 'v').replace('y', 'i')
+    w = w.replace('j', 'i').replace('h', '')
+    # «солярис» даёт soliaris, в каталоге solaris — гасим лишнюю «и»
+    w = re.sub(r'i([aou])', r'\1', w)
+    return re.sub(r'(.)\1+', r'\1', w)
+
+
+def word_forms(word: str) -> str:
+    """Отсекаем русское окончание: «рамки», «рамку», «рамка» — один корень."""
+    w = fold(word)
+    for tail in ('ami', 'iami', 'ov', 'am', 'a', 'oi', 'ei', 'iu', 'ia',
+                 'ie', 'ii', 'im', 'e', 'i', 'u', 'o'):
+        if len(w) > 4 and w.endswith(tail):
+            return w[: -len(tail)]
+    return w
+
+
+def direct_hits(query: str, products: list) -> list:
+    """
+    Прямое совпадение слов запроса с названием товара.
+
+    ИИ получает список из сотен позиций и на точных запросах промахивается:
+    на «виброизоляция» отвечал комплектами шумоизоляции, хотя виброизоляция
+    в каталоге есть. Поэтому сначала ищем буквальные совпадения — они
+    надёжнее любых догадок и ничего не стоят.
+    """
+    words = [
+        word_forms(w) for w in re.split(r'[^a-zA-Zа-яА-Я0-9]+', query.lower())
+        if w and w not in STOP_WORDS and len(w) > 3
+    ]
+    words = [w for w in words if len(w) > 3]
+    if not words:
+        return []
+
+    scored = []
+    for i, p in enumerate(products):
+        in_name = fold(p['name'])
+        in_cat = fold(p['category'])
+        # Совпадение в названии весит больше, чем в разделе: на «шумоизоляция»
+        # нужны сами материалы, а не всё подряд из этого раздела
+        name_hit = sum(1 for w in words if w in in_name)
+        cat_hit = sum(1 for w in words if w in in_cat and w not in in_name)
+        if not name_hit and not cat_hit:
+            continue
+        # Совпало всё запрошенное прямо в названии — такой товар выше прочих
+        exact = 100 if name_hit == len(words) else 0
+        # Короткое название при равном совпадении ближе к сути запроса
+        score = exact + name_hit * 30 + cat_hit * 5 - len(p['name']) / 100
+        scored.append((score, -i, i, name_hit + cat_hit))
+
+    if not scored:
+        return []
+
+    scored.sort(reverse=True)
+
+    # Есть товары, где совпали все слова запроса, — показываем только их.
+    # На «рамка на крету» не нужны рамки для всех остальных машин
+    full = [i for sc, _o, i, _h in scored if sc >= 100]
+    if full:
+        return full
+
+    # Иначе оставляем только самые полные совпадения: на «магнитола камри»
+    # подходит рамка под Camry, а не каждый товар со словом «магнитола»
+    best = max(h for _s, _o, _i, h in scored)
+    top = [i for _s, _o, i, h in scored if h == best]
+
+    # Совпало лишь одно слово из нескольких — это слабо, пусть решает ИИ
+    if best < 2 and len(words) > 1:
+        return []
+    return top
+
+
 def smart_search(query: str) -> dict:
     """Подбор товаров по смыслу запроса. Повторные запросы берём из памяти."""
     query = query.strip()[:QUERY_LIMIT]
@@ -533,19 +624,44 @@ def smart_search(query: str) -> dict:
         f"{SEARCH_PROMPT}\n\nЗапрос покупателя: «{query}»\n\nТовары:\n" + '\n'.join(lines)
     )
 
+    direct = direct_hits(query, products)
+
     answer = ask_ai_text(prompt)
     if answer.get('error'):
+        # ИИ недоступен — отдаём хотя бы буквальные совпадения,
+        # это лучше пустой страницы
+        if direct:
+            slugs = [products[i]['slug'] for i in direct[:SEARCH_LIMIT]]
+            return {'slugs': slugs, 'explain': 'Нашли по названию', 'cached': False}
         return answer
 
     numbers = answer.get('items') or []
+    ai_idx = [
+        n - 1 for n in numbers
+        if isinstance(n, int) and 1 <= n <= len(products)
+    ]
+
+    # Товары с буквальным совпадением ставим первыми: на запрос
+    # «виброизоляция» человек ждёт виброизоляцию, а не похожее по смыслу
+    order = direct + [i for i in ai_idx if i not in direct]
+
+    # Нашли прямые совпадения — не разбавляем выдачу догадками ИИ:
+    # на «рамка на крету» покупателю не нужны рамки для других машин
+    if direct:
+        order = direct if len(direct) >= 3 else direct + [
+            i for i in ai_idx if i not in direct
+        ][:3]
+
     slugs = []
-    for n in numbers[:SEARCH_LIMIT]:
-        if isinstance(n, int) and 1 <= n <= len(products):
-            slug = products[n - 1]['slug']
-            if slug not in slugs:
-                slugs.append(slug)
+    for i in order[:SEARCH_LIMIT]:
+        slug = products[i]['slug']
+        if slug not in slugs:
+            slugs.append(slug)
 
     explain = str(answer.get('explain') or '')[:300]
+    # ИИ решил, что подходящего нет, но точное совпадение в каталоге есть
+    if direct and not ai_idx:
+        explain = 'Нашли по названию'
     cache_put(key, query, slugs, explain)
     return {
         'slugs': slugs,
