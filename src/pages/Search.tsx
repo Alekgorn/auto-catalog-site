@@ -70,20 +70,30 @@ const SearchPage = () => {
   const understood = useMemo(() => describeQuery(parsed), [parsed]);
 
   /**
-   * Марка и модель названы в запросе («магнитола Kia Rio 2019») — сразу
-   * подставляем машину. Год берём из запроса; если его не назвали —
-   * машину не подставляем, а просим покупателя выбрать год сам.
+   * Марка и модель названы в запросе («магнитола Kia Rio 2019») — подставляем
+   * машину. Если раньше была выбрана другая — заменяем: покупатель прямо
+   * назвал новое авто, и держать старый фильтр значит показывать не то.
+   * Год берём из запроса; если его не назвали — просим выбрать сам.
    */
   useEffect(() => {
-    if (!parsed.brands.length || vehicle || !parsed.year) return;
+    if (!parsed.brands.length || !parsed.year) return;
     const brand = parsed.brands[0];
     const known = brands.find((b) => b.name === brand);
     if (!known) return;
     const model = parsed.models.find((m) => known.models.includes(m));
     if (!model) return;
+    // Та же машина уже выбрана — ничего не трогаем
+    if (
+      vehicle &&
+      vehicle.brand === brand &&
+      vehicle.model === model &&
+      vehicle.year === parsed.year
+    )
+      return;
     const next = { brand, model, year: parsed.year };
     setVehicle(next);
     saveVehicle(next);
+    setShown(PAGE_SIZE);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [parsed.brands.join(), parsed.models.join(), parsed.year, brands.length]);
 
@@ -92,12 +102,16 @@ const SearchPage = () => {
    * иначе подбор врёт: год влияет на совместимость.
    */
   const askYear = useMemo(() => {
-    if (vehicle || parsed.year || !parsed.brands.length) return null;
+    if (parsed.year || !parsed.brands.length) return null;
     const brand = parsed.brands[0];
     const known = brands.find((b) => b.name === brand);
     if (!known) return null;
     const model = parsed.models.find((m) => known.models.includes(m));
-    return model ? { brand, model } : null;
+    if (!model) return null;
+    // Уже стоит ровно эта машина — спрашивать не о чем
+    if (vehicle && vehicle.brand === brand && vehicle.model === model)
+      return null;
+    return { brand, model };
   }, [vehicle, parsed.year, parsed.brands, parsed.models, brands]);
 
   const categories = useMemo(() => {
@@ -218,6 +232,7 @@ const SearchPage = () => {
             <YearPrompt
               brand={askYear.brand}
               model={askYear.model}
+              current={vehicle}
               onPick={applyVehicle}
             />
           </div>

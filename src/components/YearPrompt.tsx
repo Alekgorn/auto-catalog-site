@@ -5,6 +5,8 @@ import { Vehicle } from '@/data/catalog';
 interface Props {
   brand: string;
   model: string;
+  /** Какая машина стоит в фильтре сейчас — если это другая, предупреждаем */
+  current?: Vehicle | null;
   onPick: (v: Vehicle) => void;
 }
 
@@ -15,7 +17,7 @@ const YEAR_TO = 2026;
  * Машину назвали без года («магнитола Toyota Camry»). Год влияет на
  * совместимость, поэтому просим выбрать его — иначе подбор будет неточным.
  */
-const YearPrompt = ({ brand, model, onPick }: Props) => {
+const YearPrompt = ({ brand, model, current, onPick }: Props) => {
   const [year, setYear] = useState('');
   const years = Array.from(
     { length: YEAR_TO - YEAR_FROM + 1 },
@@ -29,8 +31,17 @@ const YearPrompt = ({ brand, model, onPick }: Props) => {
         {brand} {model} — какой год?
       </div>
       <p className="mt-2 max-w-[42em] text-[0.85rem] leading-relaxed text-muted-foreground">
-        От года выпуска зависит, какой переходник и рамка подойдут. Выберите год
-        — оставим только совместимое.
+        {current ? (
+          <>
+            Сейчас подбор идёт под {current.brand} {current.model},{' '}
+            {current.year} г. Укажите год — переключим фильтр на новую машину.
+          </>
+        ) : (
+          <>
+            От года выпуска зависит, какой переходник и рамка подойдут. Выберите
+            год — оставим только совместимое.
+          </>
+        )}
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <select
