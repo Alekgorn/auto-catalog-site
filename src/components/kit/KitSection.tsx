@@ -9,6 +9,7 @@ import {
 } from '@/data/catalog';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
+import KitHelpDialog from '@/components/kit/KitHelpDialog';
 
 interface Props {
   step: KitStep;
@@ -22,6 +23,8 @@ interface Props {
   onNeedVehicle: () => void;
   /** Якорь для автоматической прокрутки между шагами */
   anchorId: string;
+  /** Показать кнопку «Не уверен» — шаг сложный для покупателя */
+  helpOffer?: boolean;
 }
 
 const STEP_SIZE = 6;
@@ -40,12 +43,14 @@ const KitSection = ({
   onPick,
   onNeedVehicle,
   anchorId,
+  helpOffer,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
   /** Ограничение по цене снято — «бюджетно» у каждого своё */
   const [allPrices, setAllPrices] = useState(false);
   /** Показать список снова, когда позиция уже выбрана */
   const [replacing, setReplacing] = useState(false);
+  const [help, setHelp] = useState(false);
 
   /** Все товары раздела, подходящие машине */
   const full = useMemo(() => {
@@ -75,6 +80,16 @@ const KitSection = ({
         ? full.filter((p) => p.price <= step.maxPrice!)
         : full,
     [full, step.maxPrice, allPrices],
+  );
+
+  /**
+   * Что предложить сомневающемуся: самый доступный из подходящих,
+   * но не дешевле 500 ₽ — совсем дешёвые позиции это отдельные
+   * мелочи (антенна, USB), а не полноценный жгут для магнитолы.
+   */
+  const fallback = useMemo(
+    () => full.find((p) => p.price >= 500) ?? null,
+    [full],
   );
 
   const needCar = step.needVehicle && !vehicle;
@@ -214,6 +229,25 @@ const KitSection = ({
           )}
         </>
       )}
+
+      {/* Разъёмы — самое непонятное место: даём выход сомневающимся */}
+      {helpOffer && !collapsed && (
+        <button
+          onClick={() => setHelp(true)}
+          className="mt-5 flex w-full items-center justify-center gap-3 border-2 border-dashed border-foreground px-5 py-5 font-head text-[0.85rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground sm:text-[0.95rem]"
+        >
+          <Icon name="CircleHelp" size={22} />
+          Не уверен, нужна помощь
+        </button>
+      )}
+
+      <KitHelpDialog
+        open={help}
+        onClose={() => setHelp(false)}
+        vehicle={vehicle}
+        fallback={fallback}
+        onTake={onPick}
+      />
     </section>
   );
 };

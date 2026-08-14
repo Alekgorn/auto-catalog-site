@@ -421,6 +421,7 @@ const ScenarioPage = () => {
                   onPick={pickAndAdvance}
                   onNeedVehicle={scrollToVehicle}
                   anchorId={stepId(i)}
+                  helpOffer={step.helpOffer}
                 />
               </div>
             ))}

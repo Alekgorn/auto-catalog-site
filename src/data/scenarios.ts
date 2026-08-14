@@ -54,6 +54,11 @@ export interface KitStep {
    * всем» означает, что покупатель возьмёт не то.
    */
   strictFit?: boolean;
+  /**
+   * Показывать большую кнопку «Не уверен, нужна помощь».
+   * Нужна там, где покупателю сложно выбрать сам — например, разъёмы.
+   */
+  helpOffer?: boolean;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -89,6 +94,7 @@ export const SCENARIOS: Scenario[] = [
         needVehicle: true,
         strictFit: true,
         unit: 'проводку',
+        helpOffer: true,
       },
     ],
     heading: 'Большой экран без переплаты',
