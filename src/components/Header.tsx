@@ -8,7 +8,7 @@ import { useCart } from '@/context/CartContext';
 import DealerDialog from '@/components/DealerDialog';
 
 const NAV: { id: string; label: string; route?: string }[] = [
-  { id: 'catalog', label: 'Каталог' },
+  { id: 'catalog', label: 'Каталог', route: '/scenario/vse-po-mashine' },
   { id: 'select', label: 'Подбор' },
   { id: 'guides', label: 'Инструкции', route: '/guides' },
   { id: 'faq', label: 'FAQ' },
