@@ -22,7 +22,7 @@ const plural = (n: number) => {
 };
 
 const KitBar = () => {
-  const { picks, steps, slug, drop, finish } = useKit();
+  const { picks, qty, setQty, steps, slug, drop, finish } = useKit();
   const { products } = useCatalog();
   const { add, setOpen } = useCart();
   const navigate = useNavigate();
@@ -43,22 +43,27 @@ const KitBar = () => {
       category,
       step: steps.find((s) => s.category === category),
       product: products.find((p) => p.id === picks[category]),
+      // Старые сохранения без количества считаем как одну штуку
+      count: qty[category] ?? 1,
     }))
     .filter((x) => !!x.product);
 
   // Пустая сборка или оформление заказа — панель только мешает
   if (!chosen.length || pathname.startsWith('/checkout')) return null;
 
-  const total = chosen.reduce((sum, x) => sum + (x.product?.price ?? 0), 0);
+  const total = chosen.reduce(
+    (sum, x) => sum + (x.product?.price ?? 0) * x.count,
+    0,
+  );
   const old = chosen.reduce(
-    (sum, x) => sum + (x.product?.oldPrice ?? x.product?.price ?? 0),
+    (sum, x) => sum + (x.product?.oldPrice ?? x.product?.price ?? 0) * x.count,
     0,
   );
   const save = old - total;
   const onScenario = pathname === `/scenario/${slug}`;
 
   const addAll = () => {
-    chosen.forEach((x) => x.product && add(x.product));
+    chosen.forEach((x) => x.product && add(x.product, x.count));
     setAdded(true);
     setOpen(true);
     // Комплект в корзине — выходим из режима сборки, сайт снова обычный
@@ -117,7 +122,7 @@ const KitBar = () => {
 
           {/* Позиции с фото — видно, что именно собрано */}
           <div className="-mx-1 flex flex-1 gap-2 overflow-x-auto px-1 pb-1 xl:pb-0">
-            {chosen.map(({ category, product }) => (
+            {chosen.map(({ category, product, count }) => (
               <div
                 key={category}
                 className="group relative flex flex-none items-center gap-2.5 border border-border bg-surface p-2 pr-8"
@@ -132,8 +137,29 @@ const KitBar = () => {
                   <div className="truncate text-[0.75rem] font-medium leading-tight">
                     {product!.name}
                   </div>
-                  <div className="mt-1 font-head text-[0.85rem] font-bold">
-                    {formatPrice(product!.price)}
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="flex items-center border border-border">
+                      <button
+                        onClick={() => setQty(category, count - 1)}
+                        aria-label="Меньше"
+                        className="px-1.5 py-0.5 text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <Icon name="Minus" size={12} />
+                      </button>
+                      <span className="min-w-[1.6em] text-center font-head text-[0.75rem] font-bold">
+                        {count}
+                      </span>
+                      <button
+                        onClick={() => setQty(category, count + 1)}
+                        aria-label="Больше"
+                        className="px-1.5 py-0.5 text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <Icon name="Plus" size={12} />
+                      </button>
+                    </div>
+                    <span className="font-head text-[0.85rem] font-bold">
+                      {formatPrice(product!.price * count)}
+                    </span>
                   </div>
                 </div>
                 <button

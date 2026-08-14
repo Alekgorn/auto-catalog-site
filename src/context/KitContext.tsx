@@ -21,6 +21,10 @@ export interface KitPick {
 interface KitValue {
   /** Что выбрано: раздел → id товара */
   picks: Record<string, string>;
+  /** Сколько штук каждой позиции: ключ позиции → количество */
+  qty: Record<string, number>;
+  /** Изменить количество позиции (меньше одной — убираем из панели) */
+  setQty: (key: string, value: number) => void;
   /** Шаги сценария, в котором идёт сборка */
   steps: KitStep[];
   /** Адрес сценария — панель ведёт обратно к сборке */
@@ -41,21 +45,30 @@ interface KitValue {
 
 const KitContext = createContext<KitValue | null>(null);
 
-const read = (): { picks: Record<string, string>; slug: string; steps: KitStep[] } => {
-  if (typeof window === 'undefined') return { picks: {}, slug: '', steps: [] };
+interface Saved {
+  picks: Record<string, string>;
+  qty: Record<string, number>;
+  slug: string;
+  steps: KitStep[];
+}
+
+const EMPTY: Saved = { picks: {}, qty: {}, slug: '', steps: [] };
+
+const read = (): Saved => {
+  if (typeof window === 'undefined') return EMPTY;
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : null;
-    if (!parsed || typeof parsed !== 'object') {
-      return { picks: {}, slug: '', steps: [] };
-    }
+    if (!parsed || typeof parsed !== 'object') return EMPTY;
     return {
       picks: parsed.picks ?? {},
+      // Старые сохранения без количеств — там везде по одной штуке
+      qty: parsed.qty ?? {},
       slug: parsed.slug ?? '',
       steps: Array.isArray(parsed.steps) ? parsed.steps : [],
     };
   } catch {
-    return { picks: {}, slug: '', steps: [] };
+    return EMPTY;
   }
 };
 
@@ -65,6 +78,7 @@ const read = (): { picks: Record<string, string>; slug: string; steps: KitStep[]
  */
 export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   const [picks, setPicks] = useState<Record<string, string>>({});
+  const [qty, setQtyMap] = useState<Record<string, number>>({});
   const [steps, setSteps] = useState<KitStep[]>([]);
   const [slug, setSlug] = useState('');
   const [ready, setReady] = useState(false);
@@ -72,6 +86,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const saved = read();
     setPicks(saved.picks);
+    setQtyMap(saved.qty);
     setSteps(saved.steps);
     setSlug(saved.slug);
     setReady(true);
@@ -80,11 +95,11 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ picks, steps, slug }));
+      localStorage.setItem(KEY, JSON.stringify({ picks, qty, steps, slug }));
     } catch {
       /* приватный режим — просто не сохраняем */
     }
-  }, [picks, steps, slug, ready]);
+  }, [picks, qty, steps, slug, ready]);
 
   const begin = useCallback((nextSlug: string, nextSteps: KitStep[]) => {
     setSlug((prev) => {
@@ -106,8 +121,18 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       const key = isStep ? product.category : product.id;
       setPicks((prev) => {
         const next = { ...prev };
-        if (next[key] === product.id) delete next[key];
-        else next[key] = product.id;
+        if (next[key] === product.id) {
+          delete next[key];
+          setQtyMap((q) => {
+            const rest = { ...q };
+            delete rest[key];
+            return rest;
+          });
+        } else {
+          next[key] = product.id;
+          // Новая позиция начинается с одной штуки
+          setQtyMap((q) => ({ ...q, [key]: 1 }));
+        }
         return next;
       });
     },
@@ -120,12 +145,33 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       delete next[category];
       return next;
     });
+    setQtyMap((prev) => {
+      const next = { ...prev };
+      delete next[category];
+      return next;
+    });
   }, []);
 
-  const reset = useCallback(() => setPicks({}), []);
+  /** Минус до нуля убирает позицию; больше 99 штук не даём набрать */
+  const setQty = useCallback(
+    (key: string, value: number) => {
+      if (value < 1) {
+        drop(key);
+        return;
+      }
+      setQtyMap((prev) => ({ ...prev, [key]: Math.min(value, 99) }));
+    },
+    [drop],
+  );
+
+  const reset = useCallback(() => {
+    setPicks({});
+    setQtyMap({});
+  }, []);
 
   const finish = useCallback(() => {
     setPicks({});
+    setQtyMap({});
     setSteps([]);
     setSlug('');
   }, []);
@@ -133,6 +179,8 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   const value = useMemo<KitValue>(
     () => ({
       picks,
+      qty,
+      setQty,
       steps,
       slug,
       begin,
@@ -142,7 +190,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       finish,
       has: (id) => Object.values(picks).includes(id),
     }),
-    [picks, steps, slug, begin, pick, drop, reset, finish],
+    [picks, qty, setQty, steps, slug, begin, pick, drop, reset, finish],
   );
 
   return <KitContext.Provider value={value}>{children}</KitContext.Provider>;
@@ -151,6 +199,8 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
 /** Заглушка для страниц вне сборки (например, при предрендере) */
 const IDLE: KitValue = {
   picks: {},
+  qty: {},
+  setQty: () => {},
   steps: [],
   slug: '',
   begin: () => {},
