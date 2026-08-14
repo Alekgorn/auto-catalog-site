@@ -201,9 +201,15 @@ const ScenarioPage = () => {
     );
   }, [found, vehicle, brands.length, brandFilter]);
 
-  /** По чему группируем кнопки над каталогом: раздел или подраздел */
-  const groupOf = (p: Product) =>
-    scenario?.filterBySubcategory ? (p.subcategory ?? "") : p.category;
+  /** По чему группируем кнопки над каталогом: раздел, подраздел или тип */
+  const groupOf = (p: Product) => {
+    if (scenario?.filterBySpec) {
+      const row = p.specs?.find(([label]) => label === scenario.filterBySpec);
+      return row?.[1] ?? "";
+    }
+    if (scenario?.filterBySubcategory) return p.subcategory ?? "";
+    return p.category;
+  };
 
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
@@ -214,7 +220,7 @@ const ScenarioPage = () => {
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hits, scenario?.filterBySubcategory]);
+  }, [hits, scenario?.filterBySubcategory, scenario?.filterBySpec]);
 
   const catalogCounts = useMemo(() => {
     const map: Record<string, number> = {};
