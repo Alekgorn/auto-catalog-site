@@ -100,7 +100,7 @@ const PhotoRecognize = ({ onApply, onManual, compact, accent }: Props) => {
       >
         <Icon name={busy ? 'Loader' : 'Camera'} size={19} className={busy ? 'animate-spin' : ''} />
         <span className={compact || accent ? 'hidden sm:inline' : ''}>
-          {busy ? 'Смотрю фото…' : accent ? 'По фото' : 'Определить по фото'}
+          {busy ? 'Смотрю фото…' : 'Определить авто по фото'}
         </span>
       </button>
 

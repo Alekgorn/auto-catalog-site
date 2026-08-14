@@ -14,8 +14,7 @@ const ProductGallery = ({ images, alt }: Props) => {
         <img
           src={images[active]}
           alt={`${alt} — фото ${active + 1}`}
-          /* Главное фото на первом экране — грузим сразу, в первую очередь */
-          fetchPriority="high"
+          /* Главное фото на первом экране — грузим сразу, без ленивой загрузки */
           decoding="async"
           width={800}
           height={600}
