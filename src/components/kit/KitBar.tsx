@@ -54,9 +54,14 @@ const KitBar = () => {
     }))
     .filter((x) => !!x.product);
 
-  /** Все шаги сценария закрыты — комплект готов к заказу */
+  /**
+   * Комплект готов к заказу: закрыты все обязательные шаги.
+   * Камера и регистратор идут сверх комплекта — их пропуск не мешает
+   * праздновать и заказывать.
+   */
+  const required = steps.filter((s) => !s.optional);
   const complete =
-    steps.length > 0 && steps.every((s) => !!picks[s.category]);
+    required.length > 0 && required.every((s) => !!picks[s.category]);
 
   // Последняя позиция встала на место — салют и подсказка на кнопку
   useEffect(() => {
@@ -129,8 +134,9 @@ const KitBar = () => {
                 {steps.length ? 'Ваша сборка' : 'Ваш выбор'}
               </span>
               <span className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                {steps.length && chosen.length <= steps.length
-                  ? `${chosen.length} из ${steps.length}`
+                {/* Считаем по обязательным: камера и регистратор — сверх */}
+                {required.length && chosen.length <= required.length
+                  ? `${chosen.length} из ${required.length}`
                   : `${chosen.length} ${plural(chosen.length)}`}
               </span>
             </div>

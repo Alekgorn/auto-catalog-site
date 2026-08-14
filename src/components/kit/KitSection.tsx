@@ -25,6 +25,10 @@ interface Props {
   anchorId: string;
   /** Показать кнопку «Не уверен» — шаг сложный для покупателя */
   helpOffer?: boolean;
+  /** Шаг пропущен покупателем — сворачиваем список */
+  skipped?: boolean;
+  /** Пропустить/вернуть необязательный шаг */
+  onSkip?: (skip: boolean) => void;
 }
 
 const STEP_SIZE = 6;
@@ -44,6 +48,8 @@ const KitSection = ({
   onNeedVehicle,
   anchorId,
   helpOffer,
+  skipped,
+  onSkip,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
   /** Ограничение по цене снято — «бюджетно» у каждого своё */
@@ -63,24 +69,32 @@ const KitSection = ({
         ? out.filter((p) => isCompatible(p, vehicle))
         : out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
     }
-    // Дешёвые сначала — сценарий про ограниченный бюджет
-    return [...out].sort((a, b) => a.price - b.price);
-  }, [products, step.category, step.strictFit, vehicle, brandsCount]);
+    // В премиум-подборке сначала топовые, в остальных — доступные
+    return [...out].sort((a, b) =>
+      step.minPrice ? b.price - a.price : a.price - b.price,
+    );
+  }, [
+    products,
+    step.category,
+    step.strictFit,
+    step.minPrice,
+    vehicle,
+    brandsCount,
+  ]);
 
   /** Сколько позиций скрывает ценовой порог */
-  const overLimit = useMemo(
-    () =>
-      step.maxPrice ? full.filter((p) => p.price > step.maxPrice!).length : 0,
-    [full, step.maxPrice],
-  );
+  const overLimit = useMemo(() => {
+    if (step.maxPrice) return full.filter((p) => p.price > step.maxPrice!).length;
+    if (step.minPrice) return full.filter((p) => p.price < step.minPrice!).length;
+    return 0;
+  }, [full, step.maxPrice, step.minPrice]);
 
-  const list = useMemo(
-    () =>
-      step.maxPrice && !allPrices
-        ? full.filter((p) => p.price <= step.maxPrice!)
-        : full,
-    [full, step.maxPrice, allPrices],
-  );
+  const list = useMemo(() => {
+    if (allPrices) return full;
+    if (step.maxPrice) return full.filter((p) => p.price <= step.maxPrice!);
+    if (step.minPrice) return full.filter((p) => p.price >= step.minPrice!);
+    return full;
+  }, [full, step.maxPrice, step.minPrice, allPrices]);
 
   /**
    * Что предложить сомневающемуся: самый доступный из подходящих,
@@ -94,8 +108,8 @@ const KitSection = ({
 
   const needCar = step.needVehicle && !vehicle;
   const chosen = full.find((p) => p.id === pickedId);
-  /** Позиция выбрана — прячем остальные, чтобы не мозолили глаза */
-  const collapsed = !!chosen && !replacing;
+  /** Позиция выбрана или шаг пропущен — прячем остальные */
+  const collapsed = (!!chosen || !!skipped) && !replacing;
 
   return (
     <section id={anchorId} className="scroll-mt-24 py-7">
@@ -126,11 +140,21 @@ const KitSection = ({
                 Не уверен, нужна помощь
               </button>
             )}
+            {/* Камера и регистратор — дело вкуса: даём спокойно пройти мимо */}
+            {step.optional && !chosen && (
+              <button
+                onClick={() => onSkip?.(!skipped)}
+                className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name={skipped ? 'Undo2' : 'SkipForward'} size={14} />
+                {skipped ? 'Вернуть шаг' : 'Пропустить'}
+              </button>
+            )}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
-              {allPrices && step.maxPrice
-                ? 'Показаны все модели раздела — от самых доступных к дорогим.'
+              {allPrices && (step.maxPrice || step.minPrice)
+                ? 'Показаны все модели раздела — вместе с теми, что вне подборки.'
                 : step.text}
             </p>
 
@@ -145,8 +169,12 @@ const KitSection = ({
               >
                 <Icon name={allPrices ? 'ChevronUp' : 'ChevronDown'} size={14} />
                 {allPrices
-                  ? `Только до ${formatPrice(step.maxPrice!)}`
-                  : `Показать все (+${overLimit})`}
+                  ? step.minPrice
+                    ? `Только от ${formatPrice(step.minPrice)}`
+                    : `Только до ${formatPrice(step.maxPrice!)}`
+                  : step.minPrice
+                    ? `Показать дешевле (+${overLimit})`
+                    : `Показать все (+${overLimit})`}
               </button>
             )}
 
@@ -210,6 +238,12 @@ const KitSection = ({
               вашему штатному разъёму и привезём под заказ.
             </div>
           </div>
+        </div>
+      ) : skipped && !chosen ? (
+        <div className="mt-5 flex items-center gap-3 border border-dashed border-border bg-surface px-5 py-4 text-[0.85rem] text-muted-foreground">
+          <Icon name="SkipForward" size={18} className="flex-none" />
+          Шаг пропущен — комплект соберётся без этой позиции. Передумаете —
+          нажмите «Вернуть шаг».
         </div>
       ) : (
         <>

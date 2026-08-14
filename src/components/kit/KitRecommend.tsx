@@ -12,6 +12,8 @@ interface Props {
   onPick: (product: Product) => void;
   /** Основные шаги собраны — только тогда есть смысл советовать */
   ready: boolean;
+  /** Разделы, которые уже идут отдельными шагами сборки */
+  exclude?: string[];
 }
 
 /** Разделы, которые дополняют магнитолу */
@@ -36,13 +38,20 @@ const SHOW = 3;
  * «Рекомендуем к вашей сборке» — камеры и регистраторы к уже выбранной
  * магнитоле. Показываем по три позиции, остальное за кнопкой.
  */
-const KitRecommend = ({ products, vehicle, picks, onPick, ready }: Props) => {
+const KitRecommend = ({
+  products,
+  vehicle,
+  picks,
+  onPick,
+  ready,
+  exclude,
+}: Props) => {
   const { brands } = useCatalog();
   const [openAll, setOpenAll] = useState<Record<string, boolean>>({});
 
   const groups = useMemo(
     () =>
-      GROUPS.map((g) => {
+      GROUPS.filter((g) => !exclude?.includes(g.category)).map((g) => {
         let list = products.filter((p) => p.category === g.category);
         if (vehicle) {
           list = list.filter(
@@ -54,7 +63,7 @@ const KitRecommend = ({ products, vehicle, picks, onPick, ready }: Props) => {
           list: [...list].sort((a, b) => a.price - b.price),
         };
       }).filter((g) => g.list.length > 0),
-    [products, vehicle, brands.length],
+    [products, vehicle, brands.length, exclude],
   );
 
   if (!ready || !groups.length) return null;

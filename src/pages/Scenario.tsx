@@ -55,6 +55,8 @@ const ScenarioPage = () => {
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
+  /** Необязательные шаги, которые покупатель решил пропустить */
+  const [skipped, setSkipped] = useState<Record<string, boolean>>({});
 
   /** Сборка комплекта живёт в общем хранилище — панель видна на всём сайте */
   const { picks, begin, pick: pickForKit } = useKit();
@@ -95,12 +97,12 @@ const ScenarioPage = () => {
   ): string => {
     if (!kit) return "";
     const i = kit.findIndex(
-      (step) => !nextPicks[step.category] && (!step.needVehicle || car),
+      (step) =>
+        !nextPicks[step.category] &&
+        !skipped[step.category] &&
+        (!step.needVehicle || car),
     );
-    if (i >= 0) return stepId(i);
-    // Всё собрано — показываем, чем дополнить
-    const done = kit.every((step) => nextPicks[step.category]);
-    return done ? "kit-recommend" : "";
+    return i >= 0 ? stepId(i) : "";
   };
 
   /** Выбор позиции — сразу подводим к следующему незакрытому шагу */
@@ -402,6 +404,19 @@ const ScenarioPage = () => {
                   onNeedVehicle={scrollToVehicle}
                   anchorId={stepId(i)}
                   helpOffer={step.helpOffer}
+                  skipped={!!skipped[step.category]}
+                  onSkip={(skip) => {
+                    setSkipped((prev) => ({ ...prev, [step.category]: skip }));
+                    // Пропустили — сразу ведём к следующему шагу
+                    if (skip && scenario.kit) {
+                      const rest = scenario.kit
+                        .slice(i + 1)
+                        .findIndex(
+                          (s) => !picks[s.category] && !skipped[s.category],
+                        );
+                      if (rest >= 0) scrollTo(stepId(i + 1 + rest));
+                    }
+                  }}
                 />
               </div>
             ))}
@@ -411,7 +426,10 @@ const ScenarioPage = () => {
               picks={picks}
               onPick={pickForKit}
               /* Советуем только когда основа собрана */
-              ready={scenario.kit.every((s) => picks[s.category])}
+              ready={scenario.kit.every(
+                (s) => picks[s.category] || s.optional,
+              )}
+              exclude={scenario.kit.map((s) => s.category)}
             />
           </>
         ) : hits.length === 0 ? (
