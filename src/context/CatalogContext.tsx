@@ -62,6 +62,47 @@ const bootData = (): PrerenderData | null => {
   return raw && typeof raw === 'object' ? raw : null;
 };
 
+/** Сколько минут считаем каталог свежим и не идём за ним в сеть */
+const FRESH_MINUTES = 10;
+const CACHE_KEY = 'catalog-cache';
+
+/** Когда собрали страницу — метку кладёт сборщик рядом с данными */
+const bootTime = (): number => {
+  if (typeof window === 'undefined') return 0;
+  const at = (window as unknown as { __CATALOG_AT__?: number }).__CATALOG_AT__;
+  return typeof at === 'number' ? at : 0;
+};
+
+/**
+ * Каталог, сохранённый браузером при прошлом визите.
+ * Он свежее вшитого в страницу, если сайт пересобирали давно.
+ */
+const cachedData = (): { data: PrerenderData; at: number } | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = sessionStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.data?.products?.length || typeof parsed.at !== 'number') {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const saveCache = (data: PrerenderData) => {
+  try {
+    sessionStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ data, at: Date.now() }),
+    );
+  } catch {
+    /* приватный режим или переполнение — просто не сохраняем */
+  }
+};
+
 export const CatalogProvider = ({
   children,
   initialData,
@@ -69,8 +110,19 @@ export const CatalogProvider = ({
   children: React.ReactNode;
   initialData?: PrerenderData;
 }) => {
-  const seed = initialData ?? bootData();
   const isPrerender = typeof window === 'undefined';
+
+  /**
+   * Стартовые данные: что свежее — вшитое в страницу при сборке или
+   * сохранённое браузером в прошлый заход.
+   */
+  const cached = initialData ? null : cachedData();
+  const built = initialData ?? bootData();
+  const builtAt = initialData ? Date.now() : bootTime();
+  const useCache = !!cached && cached.at > builtAt;
+
+  const seed = useCache ? cached!.data : built;
+  const seedAt = useCache ? cached!.at : builtAt;
 
   const [products, setProducts] = useState<Product[]>(
     seed?.products?.length ? seed.products : FALLBACK_PRODUCTS,
@@ -113,6 +165,19 @@ export const CatalogProvider = ({
 
   useEffect(() => {
     if (isPrerender) return;
+
+    /**
+     * Данные свежие — второй запрос не нужен.
+     * Каталог уже приехал вместе со страницей: качать те же 650 КБ
+     * повторно на каждом переходе бессмысленно и дорого по вызовам функции.
+     * Кнопка «обновить» (tick) обходит проверку принудительно.
+     */
+    const fresh = seedAt > 0 && Date.now() - seedAt < FRESH_MINUTES * 60_000;
+    if (fresh && tick === 0 && seed?.products?.length) {
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setLoading(true);
     fetch(CATALOG_URL)
@@ -158,6 +223,8 @@ export const CatalogProvider = ({
           setShortcuts(data.settings.shortcuts);
         }
         setShortcutsHidden(data.settings?.shortcuts_hidden === true);
+        // Запоминаем на время визита — переходы по сайту больше не дёргают функцию
+        saveCache(data);
       })
       .catch(() => {
         /* остаёмся на встроенных данных */
@@ -168,6 +235,7 @@ export const CatalogProvider = ({
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, isPrerender]);
 
   // Порядок категорий задаётся в админке; товары без категории тоже показываем

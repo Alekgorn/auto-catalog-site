@@ -4,9 +4,12 @@ import io
 
 from PIL import Image, ImageOps
 
-MAX_SIDE = 1600
-QUALITY = 82
-MIN_GAIN = 0.9
+# Товарные фото показываются в карточке размером с ладонь и на странице
+# товара — 1000 точек по большей стороне хватает даже на экранах с высокой
+# плотностью. Всё, что больше, посетитель качает впустую.
+MAX_SIDE = 1000
+QUALITY = 78
+MIN_GAIN = 0.95
 
 
 def optimize(raw: bytes, ext: str) -> tuple[bytes, str, str]:
@@ -36,7 +39,8 @@ def optimize(raw: bytes, ext: str) -> tuple[bytes, str, str]:
         img.thumbnail((MAX_SIDE, MAX_SIDE), Image.LANCZOS)
 
     buf = io.BytesIO()
-    img.save(buf, format='WEBP', quality=QUALITY, method=3)
+    # method=4 — чуть дольше сжимает, но файл заметно легче
+    img.save(buf, format='WEBP', quality=QUALITY, method=4)
     data = buf.getvalue()
 
     if len(data) >= len(raw) * MIN_GAIN and ext in ('jpg', 'jpeg', 'webp'):

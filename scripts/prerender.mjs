@@ -230,7 +230,13 @@ const main = async () => {
 
   await cleanOld();
 
-  const bootScript = `<script>window.__CATALOG__=${safeJson(data)}</script>`;
+  /**
+   * Время сборки: по нему браузер понимает, насколько свежие вшитые данные.
+   * Если они моложе нескольких минут — повторный запрос к функции не нужен.
+   */
+  const bootScript =
+    `<script>window.__CATALOG__=${safeJson(data)};` +
+    `window.__CATALOG_AT__=${Date.now()}</script>`;
 
   /**
    * Страховка от белого экрана.

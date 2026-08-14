@@ -35,6 +35,32 @@ export default defineConfig(({mode}) => ({
             "@": path.resolve(__dirname, "./src"),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                /**
+                 * Библиотеки — отдельным файлом от кода сайта.
+                 *
+                 * Они меняются редко, поэтому у постоянных посетителей
+                 * остаются в памяти браузера: после каждой нашей правки
+                 * заново качается только код сайта, а не всё сразу.
+                 */
+                manualChunks(id: string) {
+                    if (!id.includes('node_modules')) return;
+                    if (id.includes('lucide-react')) return 'icons';
+                    if (
+                        id.includes('react-dom') ||
+                        id.includes('/react/') ||
+                        id.includes('react-router') ||
+                        id.includes('scheduler')
+                    ) {
+                        return 'react';
+                    }
+                    return 'vendor';
+                },
+            },
+        },
+    },
     server: {
         host: '0.0.0.0',
         port: 5173,

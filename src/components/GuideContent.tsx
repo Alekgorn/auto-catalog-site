@@ -69,7 +69,13 @@ const GuideContent = ({ guide, compact = false }: Props) => {
           if (b.type === 'image') {
             return (
               <figure key={i}>
-                <img src={b.image} alt={b.caption ?? ''} className="w-full bg-card" />
+                <img
+                  src={b.image}
+                  alt={b.caption ?? ''}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full bg-card"
+                />
                 {b.caption && (
                   <figcaption className="mt-2 text-[0.82rem] text-muted-foreground">
                     {b.caption}

@@ -90,6 +90,10 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           src={productImages(product)[0]}
           alt={product.name}
           loading="lazy"
+          decoding="async"
+          /* Размеры заранее — страница не прыгает, пока фото грузится */
+          width={800}
+          height={600}
           className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
         />
 
