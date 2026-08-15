@@ -5,7 +5,12 @@ import Scenarios from '@/components/Scenarios';
 import HeroSearch from '@/components/HeroSearch';
 import { useCatalog } from '@/context/CatalogContext';
 
-const Hero = () => {
+interface Props {
+  /** Блок подбора по машине — встаёт сразу под заголовком, до поиска */
+  selection?: React.ReactNode;
+}
+
+const Hero = ({ selection }: Props) => {
   const navigate = useNavigate();
   const { shortcuts, shortcutsHidden } = useCatalog();
 
@@ -73,22 +78,20 @@ const Hero = () => {
       </div>
     </div>
 
+    {selection}
+
     <div className="rule" />
 
     <div className="py-6 md:py-10">
       <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
         <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
-          1
+          2
         </span>
         <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
           Опишите, что нужно
         </span>
         <span className="text-[0.85rem] text-muted-foreground">
           своими словами — «магнитола для Тойоты» или артикул с коробки
-        </span>
-        <span className="flex items-center gap-1.5 text-[0.85rem] text-primary">
-          <Icon name="Camera" size={15} className="flex-none" />
-          Не знаете, что подойдёт? Сфотографируйте торпедо или штатную магнитолу
         </span>
       </div>
 

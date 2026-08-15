@@ -27,7 +27,8 @@ const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
   { key: 'email', label: 'Почта', hint: 'zakaz@shtatno.ru' },
   { key: 'address', label: 'Адрес склада', hint: 'Москва, улица, дом' },
   { key: 'hours', label: 'Часы работы', hint: 'Пн–Сб, 09:00 — 20:00' },
-  { key: 'telegram', label: 'Telegram', hint: 'https://t.me/имя' },
+  { key: 'telegram', label: 'Telegram', hint: 'https://t.me/имя или @имя' },
+  { key: 'max', label: 'MAX', hint: 'номер телефона или ссылка на профиль' },
   { key: 'whatsapp', label: 'WhatsApp', hint: 'https://wa.me/79001234567' },
 ];
 

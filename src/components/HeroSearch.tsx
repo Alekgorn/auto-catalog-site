@@ -4,9 +4,6 @@ import Icon from '@/components/ui/icon';
 import { formatPrice, productImages, productSku } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { smartSearch } from '@/lib/smart-search';
-import PhotoRecognize from '@/components/PhotoRecognize';
-import { Vehicle } from '@/data/catalog';
-import { saveVehicle } from '@/lib/vehicle';
 
 const EXAMPLES = [
   'магнитола для Toyota',
@@ -35,12 +32,6 @@ const HeroSearch = () => {
     if (!value) return;
     setOpen(false);
     navigate(`/search?q=${encodeURIComponent(value)}`);
-  };
-
-  /** Машина распознана по фото — открываем подборку под неё */
-  const onPhoto = (v: Vehicle) => {
-    saveVehicle(v);
-    navigate('/scenario/vse-po-mashine');
   };
 
   return (
@@ -80,10 +71,6 @@ const HeroSearch = () => {
             <Icon name="X" size={18} />
           </button>
         )}
-
-        <div className="flex-none border-l border-border pl-3 md:pl-4">
-          <PhotoRecognize accent onApply={onPhoto} />
-        </div>
 
         <button
           type="submit"

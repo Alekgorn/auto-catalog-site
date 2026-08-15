@@ -5,6 +5,8 @@ export interface SiteContacts {
   hours: string;
   telegram: string;
   whatsapp: string;
+  /** Профиль в мессенджере MAX — туда же присылают фото торпедо */
+  max: string;
 }
 
 export interface FaqItem {
@@ -17,8 +19,39 @@ export const DEFAULT_CONTACTS: SiteContacts = {
   email: 'zakaz@shtatno.ru',
   address: 'Москва, Кировоградская, 24, стр. 3',
   hours: 'Пн–Сб, 09:00 — 20:00',
-  telegram: '',
+  telegram: 'https://t.me/Alekgorn',
   whatsapp: '',
+  max: '+79119639671',
+};
+
+/**
+ * Ссылка на мессенджер MAX. Открыть диалог по одному номеру телефона там
+ * нельзя — в отличие от WhatsApp такой ссылки в MAX не существует.
+ * Поэтому ссылку делаем только из готового адреса или никнейма,
+ * а голый номер отдаём как номер (его показываем для поиска в приложении).
+ */
+export const maxHref = (value: string) => {
+  const v = value.trim();
+  if (!v) return '';
+  if (/^https?:\/\//i.test(v)) return v;
+  if (/^max\.ru\//i.test(v)) return `https://${v}`;
+  // Только цифры — это телефон, рабочей ссылки из него не собрать
+  if (/^[\d\s+()-]+$/.test(v)) return '';
+  return `https://max.ru/${v.replace(/^@/, '')}`;
+};
+
+/** Номер для поиска в MAX, если вместо ссылки указан телефон. */
+export const maxPhone = (value: string) => {
+  const v = value.trim();
+  return !v || maxHref(v) ? '' : v;
+};
+
+/** Ссылка на Telegram: принимаем и «@имя», и полный адрес. */
+export const tgHref = (value: string) => {
+  const v = value.trim();
+  if (!v) return '';
+  if (/^https?:\/\//i.test(v)) return v;
+  return `https://t.me/${v.replace(/^@/, '')}`;
 };
 
 export const DEFAULT_FAQ: FaqItem[] = [

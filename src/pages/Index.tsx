@@ -108,8 +108,9 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <Hero />
-        <Selection {...selectorProps} />
+        {/* Подбор по машине — главное преимущество, поэтому идёт
+            сразу под заголовком, до поиска и сценариев */}
+        <Hero selection={<Selection {...selectorProps} />} />
         <NewArrivals vehicle={vehicle} />
         <Faq />
         <Contacts />

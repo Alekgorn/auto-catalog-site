@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
 import { Vehicle, YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
-import PhotoRecognize from '@/components/PhotoRecognize';
+import PhotoToMessenger from '@/components/PhotoToMessenger';
 
 interface Props {
   vehicle: Vehicle | null;
@@ -63,7 +63,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <PhotoRecognize compact onApply={onApply} onManual={() => setOpen(true)} />
+          <PhotoToMessenger inline />
           <button
             onClick={() => setOpen(true)}
             className="border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
@@ -101,7 +101,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
         </button>
 
         <div className="flex flex-none items-center gap-2">
-          <PhotoRecognize compact onApply={onApply} onManual={() => setOpen(true)} />
+          <PhotoToMessenger inline />
           <button
             onClick={() => setOpen(true)}
             className="flex items-center gap-2 bg-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
