@@ -22,7 +22,6 @@ const Selection = (selector: Props) => (
     id="select"
     className="anchor-offset -mx-6 bg-pick px-6 text-pick-foreground md:-mx-14 md:px-14"
   >
-
     <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-7 md:grid-cols-12 md:py-9">
       <div className="md:col-span-7">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -41,9 +40,9 @@ const Selection = (selector: Props) => (
       </div>
 
       <p className="max-w-[34em] self-end text-[0.9rem] leading-relaxed text-pick-muted md:col-span-5">
-        Мы не показываем «универсальное». Каждая позиция привязана к штатному
-        разъёму и рамке: если товара нет в списке — значит, без переходника он к
-        вашей машине не встанет.
+        Мы показываем только то, что подходит к твоей машине. Если позиции нет в
+        списке – значит, готового решения для неё нет, и мы говорим об этом
+        сразу.
       </p>
     </div>
 
@@ -59,7 +58,11 @@ const Selection = (selector: Props) => (
     <div className="grid grid-cols-1 items-center gap-x-6 gap-y-4 py-6 md:grid-cols-12">
       <div className="md:col-span-7">
         <div className="flex items-center gap-2 font-head text-[1rem] font-bold uppercase tracking-tight">
-          <Icon name="Camera" size={18} className="flex-none text-pick-accent" />
+          <Icon
+            name="Camera"
+            size={18}
+            className="flex-none text-pick-accent"
+          />
           Не знаете свою комплектацию?
         </div>
         <p className="mt-2 max-w-[36em] text-[0.88rem] leading-relaxed text-pick-muted">
