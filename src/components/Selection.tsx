@@ -34,8 +34,8 @@ const Selection = (selector: Props) => (
         </div>
         <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-[1.06] tracking-[-0.025em] sm:text-3xl lg:text-4xl">
           Выбери свою машину – <br />
-          мы покажем только то, что
-          <span className="text-primary">и лишнего нет</span>
+          мы покажем только то, что{" "}
+          <span className="text-primary">подходит</span>
         </h2>
       </div>
 
