@@ -56,6 +56,14 @@ export default {
 					DEFAULT: 'hsl(var(--surface))',
 					muted: 'hsl(var(--surface-muted))'
 				},
+				pick: {
+					DEFAULT: 'hsl(var(--pick))',
+					foreground: 'hsl(var(--pick-foreground))',
+					muted: 'hsl(var(--pick-muted))',
+					field: 'hsl(var(--pick-field))',
+					border: 'hsl(var(--pick-border))',
+					accent: 'hsl(var(--pick-accent))'
+				},
 				muted: {
 					DEFAULT: 'hsl(var(--muted))',
 					foreground: 'hsl(var(--muted-foreground))'

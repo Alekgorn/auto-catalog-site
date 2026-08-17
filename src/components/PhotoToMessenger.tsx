@@ -9,6 +9,8 @@ interface Props {
   hideHint?: boolean;
   /** Одна кнопка вместо двух — для тесных панелей */
   inline?: boolean;
+  /** Кнопки стоят на тёмной плашке подбора */
+  onDark?: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ interface Props {
  * комплектацию машины и подбирает оборудование вручную — точнее,
  * чем любой автоматический подбор по марке и году.
  */
-const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
+const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
   const { contacts } = useCatalog();
 
   const tg = tgHref(contacts.telegram);
@@ -44,6 +46,11 @@ const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
     );
   }
 
+  /* На графитовой плашке чёрная рамка не видна — берём светлую */
+  const btn = onDark
+    ? 'border-pick-border text-pick-foreground hover:border-white hover:bg-white hover:text-pick'
+    : 'border-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground';
+
   const links = (
     <div className={`flex flex-wrap gap-2 ${compact ? '' : 'sm:flex-nowrap'}`}>
       {tg && (
@@ -51,7 +58,7 @@ const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
           href={tg}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-2 border border-foreground px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+          className={`flex flex-1 items-center justify-center gap-2 border px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] transition-colors ${btn}`}
         >
           <Icon name="Send" size={16} className="flex-none" />
           Telegram
@@ -62,7 +69,7 @@ const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
           href={max}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex flex-1 items-center justify-center gap-2 border border-foreground px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+          className={`flex flex-1 items-center justify-center gap-2 border px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] transition-colors ${btn}`}
         >
           <Icon name="MessageCircle" size={16} className="flex-none" />
           MAX
@@ -71,7 +78,11 @@ const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
         maxNumber && (
           <span
             title="Найдите нас в MAX по этому номеру"
-            className="flex flex-1 items-center justify-center gap-2 border border-border px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] text-muted-foreground"
+            className={`flex flex-1 items-center justify-center gap-2 border px-4 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.04em] ${
+              onDark
+                ? 'border-pick-border text-pick-muted'
+                : 'border-border text-muted-foreground'
+            }`}
           >
             <Icon name="MessageCircle" size={16} className="flex-none" />
             MAX: {maxNumber}
@@ -85,7 +96,11 @@ const PhotoToMessenger = ({ compact, hideHint, inline }: Props) => {
     return (
       <div>
         {!hideHint && (
-          <div className="mb-2 flex items-center gap-2 text-[0.8rem] text-muted-foreground">
+          <div
+            className={`mb-2 flex items-center gap-2 text-[0.8rem] ${
+              onDark ? 'text-pick-muted' : 'text-muted-foreground'
+            }`}
+          >
             <Icon name="Camera" size={15} className="flex-none text-primary" />
             Не знаете, что подойдёт? Пришлите фото торпедо
           </div>

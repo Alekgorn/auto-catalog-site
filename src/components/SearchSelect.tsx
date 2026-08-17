@@ -21,6 +21,8 @@ interface Props {
    * марок и моделей, где иначе приходится долго листать.
    */
   alphabet?: boolean;
+  /** Поле стоит на тёмной плашке — светлый текст вместо чёрного */
+  onDark?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -39,6 +41,7 @@ const SearchSelect = ({
   emptyText = 'Ничего не найдено',
   disabled = false,
   alphabet = false,
+  onDark = false,
   onChange,
 }: Props) => {
   const [open, setOpen] = useState(false);
@@ -132,7 +135,7 @@ const SearchSelect = ({
   return (
     <div ref={boxRef} className="relative flex flex-col justify-center gap-1.5">
       {label && (
-        <label className="eyebrow" htmlFor={id}>
+        <label className={`eyebrow ${onDark ? '!text-pick-muted' : ''}`} htmlFor={id}>
           {label}
         </label>
       )}
@@ -145,15 +148,21 @@ const SearchSelect = ({
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={onKeyDown}
-        className="flex w-full items-center justify-between gap-2 border-0 bg-transparent text-left font-head text-lg font-medium tracking-tight text-foreground outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 disabled:opacity-50"
+        className={`flex w-full items-center justify-between gap-2 border-0 bg-transparent text-left font-head text-lg font-medium tracking-tight outline-none focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-4 disabled:opacity-50 ${
+          onDark ? 'text-pick-foreground' : 'text-foreground'
+        }`}
       >
-        <span className={`min-w-0 truncate ${value ? '' : 'text-muted-foreground'}`}>
+        <span
+          className={`min-w-0 truncate ${
+            value ? '' : onDark ? 'text-pick-muted' : 'text-muted-foreground'
+          }`}
+        >
           {value || placeholder}
         </span>
         <Icon
           name={open ? 'ChevronUp' : 'ChevronDown'}
           size={16}
-          className="flex-none text-muted-foreground"
+          className={`flex-none ${onDark ? 'text-pick-muted' : 'text-muted-foreground'}`}
         />
       </button>
 
