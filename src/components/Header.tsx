@@ -105,6 +105,15 @@ const Header = () => {
           >
             {contacts.phone}
           </a>
+          {/* На узком экране номер не помещается — оставляем кнопку звонка,
+              иначе позвонить можно только из меню */}
+          <a
+            href={telHref(contacts.phone)}
+            aria-label={`Позвонить ${contacts.phone}`}
+            className="transition-colors hover:text-primary xl:hidden"
+          >
+            <Icon name="Phone" size={21} />
+          </a>
           <button
             onClick={() => {
               setOpen(false);

@@ -99,7 +99,7 @@ export const SCENARIOS: Scenario[] = [
     kit: [
       {
         category: 'Android магнитолы',
-        title: 'Шаг 1. Магнитола',
+        title: 'Начни с магнитолы – остальное мы подстроим под неё и под твою машину',
         text: 'Бюджетный сегмент — до 20 000 ₽. Сначала самые доступные.',
         icon: 'MonitorSmartphone',
         maxPrice: 20000,
@@ -172,7 +172,7 @@ export const SCENARIOS: Scenario[] = [
     kit: [
       {
         category: 'Android магнитолы',
-        title: 'Шаг 1. Магнитола',
+        title: 'Начни с магнитолы – остальное мы подстроим под неё и под твою машину',
         text: 'Топовые модели — от 20 000 ₽. DSP, много памяти, CarPlay.',
         icon: 'MonitorSmartphone',
         minPrice: 20000,
