@@ -39,27 +39,45 @@ const Scenarios = () => {
           key={s.slug}
           type="button"
           onClick={() => open(s.slug)}
-          className="group flex h-full flex-col border border-border bg-surface p-5 text-left transition-colors hover:border-primary"
+          className="group flex h-full flex-col border border-border bg-surface text-left transition-colors hover:border-primary"
         >
-          <span className="flex h-16 w-16 flex-none items-center justify-center border border-border bg-background transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
-            <Icon name={s.icon} fallback="CircleAlert" size={32} />
+          {/* Картинка вместо иконки: понятнее с первого взгляда */}
+          <span className="relative block aspect-[4/3] overflow-hidden bg-background">
+            {s.image ? (
+              <img
+                src={s.image}
+                alt=""
+                loading="lazy"
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+              />
+            ) : (
+              <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <Icon name={s.icon} fallback="CircleAlert" size={40} />
+              </span>
+            )}
+
+            <span className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center bg-background/90 text-foreground transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <Icon name={s.icon} fallback="CircleAlert" size={18} />
+            </span>
           </span>
 
-          <span className="mt-4 block font-head text-[1.02rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">
-            «{s.title}»
-          </span>
+          <span className="flex flex-1 flex-col p-5">
+            <span className="block font-head text-[1.02rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">
+              {s.title}
+            </span>
 
-          <span className="mt-2 block flex-1 text-[0.85rem] leading-relaxed text-muted-foreground">
-            {s.text}
-          </span>
+            <span className="mt-2 block flex-1 text-[0.85rem] leading-relaxed text-muted-foreground">
+              {s.text}
+            </span>
 
-          <span className="mt-4 flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground transition-colors group-hover:text-primary">
-            Смотреть
-            <Icon
-              name="ArrowRight"
-              size={14}
-              className="transition-transform group-hover:translate-x-1"
-            />
+            <span className="mt-4 flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground transition-colors group-hover:text-primary">
+              Смотреть
+              <Icon
+                name="ArrowRight"
+                size={14}
+                className="transition-transform group-hover:translate-x-1"
+              />
+            </span>
           </span>
         </button>
       ))}

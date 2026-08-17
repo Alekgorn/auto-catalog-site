@@ -8,6 +8,8 @@ export interface Scenario {
   /** Адрес страницы: /search?s=slug */
   slug: string;
   icon: string;
+  /** Картинка плитки на главной — понятнее и заметнее одной иконки */
+  image?: string;
   /** Заголовок плитки — фраза покупателя */
   title: string;
   /** Короткая подпись на плитке */
@@ -89,9 +91,10 @@ export interface KitStep {
 export const SCENARIOS: Scenario[] = [
   {
     slug: 'ekran-nedorogo',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/37d3cc16-7009-413d-be6f-17b7f5f8cea3.jpg',
     icon: 'MonitorSmartphone',
-    title: 'Хочу магнитолу с экраном, но бюджет ограничен',
-    text: 'Подберём недорогую магнитолу с экраном, рамку и проводку для вашего авто.',
+    title: 'Магнитола с экраном – без разорения',
+    text: 'Подберём магнитолу с экраном, рамку и проводку под твой бюджет.',
     query: 'андроид магнитола бюджетная',
     kit: [
       {
@@ -161,9 +164,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'ekran-premium',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/5a89f982-7693-46f2-9444-627fc8e0eaa9.jpg',
     icon: 'Sparkles',
-    title: 'Нужна магнитола с экраном, но без компромиссов',
-    text: 'Магнитолы с максимальными характеристиками: DSP, от 4/64 ГБ, CarPlay, быстрый процессор.',
+    title: 'Магнитола с экраном – топ за свои деньги',
+    text: 'Модели с DSP, от 4/64 ГБ, CarPlay и быстрым процессором.',
     query: 'премиум магнитола большой экран DSP',
     kit: [
       {
@@ -249,9 +253,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'parkovka',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/1515ebb4-bf4e-40c0-af72-b64c415652a7.jpg',
     icon: 'ParkingCircle',
-    title: 'Боюсь не заметить столб',
-    text: 'Камеры заднего вида, парктроники и системы кругового обзора для уверенной парковки.',
+    title: 'Хочу видеть, что сзади',
+    text: 'Камеры, парктроники и круговой обзор – чтобы парковаться без страха.',
     query: 'камера заднего вида парктроник',
     onlyCategories: [
       'Камеры заднего вида',
@@ -302,9 +307,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'obzor-360',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/43aadc1f-490f-4ba5-84a9-25c6a66b6f0c.jpg',
     icon: 'Video',
-    title: 'Спокойствие за рулём — с записью каждого момента',
-    text: 'Видеорегистраторы, которые фиксируют дорожную обстановку и защищают вас в спорных ситуациях.',
+    title: 'Чтоб всё записывалось',
+    text: 'Видеорегистраторы, которые фиксируют дорогу и помогут в спорной ситуации.',
     query: 'видеорегистратор',
     onlyCategories: ['Видеорегистраторы'],
     filterBySubcategory: true,
@@ -352,9 +358,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'remont-provodki',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/6c106800-25da-43ae-ad12-7be7a1958b1b.jpg',
     icon: 'Wrench',
-    title: 'Верните магнитолу к жизни своими руками — всё для быстрого ремонта',
-    text: 'Экраны, тачскрины, кабели и другие запчасти для Android-магнитол.',
+    title: 'Сломалась? Починим сами',
+    text: 'Экраны, тачскрины, кабели и другие запчасти для ремонта.',
     query: 'запчасти для андроид магнитолы',
     onlyCategories: ['Проводка, запчасти, расходка Андроид магнитол'],
     filterBySpec: 'Тип оборудования:',
@@ -402,9 +409,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'registrator',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/8792afa8-5ace-44e4-b2c3-dc2840d4e999.jpg',
     icon: 'Cable',
-    title: 'Рамки и проводки для магнитол — точное соответствие вашему автомобилю',
-    text: 'Для установщиков и тех, кто разбирается: переходные рамки, штатные разъёмы, проводка и всё для профессионального монтажа.',
+    title: 'Рамки и проводка – без колхоза',
+    text: 'Для установщиков и тех, кто любит делать аккуратно – переходные рамки, штатные разъёмы, жгуты.',
     query: 'переходные рамки проводка штатные разъемы',
     onlyCategories: [
       'Переходные рамки для магнитол',
@@ -457,9 +465,10 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'shumoizolyaciya',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/4afe423e-6780-40ea-b463-0374decafc43.jpg',
     icon: 'VolumeX',
-    title: 'Пусть в салоне будет тихо',
-    text: 'Виброизоляция, шумопоглотители и всё для того, чтобы дорога не мешала наслаждаться поездкой.',
+    title: 'Тишина в салоне – это реально',
+    text: 'Виброизоляция, шумопоглотители – чтобы дорога не мешала музыке.',
     query: 'шумоизоляция дверей арок и пола',
     onlyCategories: ['Шумоизоляция'],
     filterBySpec: 'Тип товара:',
@@ -511,10 +520,11 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'vse-po-mashine',
+    image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/2cd4458d-1f67-46e3-8faa-dbdb33bf6aac.jpg',
     fullCatalog: true,
     icon: 'LayoutGrid',
-    title: 'Полный каталог товаров для вашего автомобиля',
-    text: 'Смотрите все категории, сравнивайте и выбирайте то, что нужно именно вам.',
+    title: 'Всё, что у нас есть',
+    text: 'Весь каталог – выбирай и сравнивай.',
     query: 'все оборудование',
     heading: 'Полный каталог для вашего авто',
     intro:

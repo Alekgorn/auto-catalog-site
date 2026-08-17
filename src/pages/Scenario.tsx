@@ -381,7 +381,7 @@ const ScenarioPage = () => {
               <span className="flex h-16 w-16 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
                 <Icon name={scenario.icon} fallback="CircleAlert" size={32} />
               </span>
-              <div className="eyebrow">«{scenario.title}»</div>
+              <div className="eyebrow">{scenario.title}</div>
             </div>
 
             <h1 className="mt-5 font-head text-3xl font-bold uppercase leading-[1.05] tracking-tight md:text-[46px]">
@@ -707,7 +707,7 @@ const ScenarioPage = () => {
                   className="text-primary"
                 />
                 <span className="mt-3 block font-head text-[0.95rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">
-                  «{s.title}»
+                  {s.title}
                 </span>
               </button>
             ))}
