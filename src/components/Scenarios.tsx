@@ -19,7 +19,7 @@ const Scenarios = () => {
       <div>
         <div className="flex items-center gap-3">
           <span className="flex h-6 w-6 flex-none items-center justify-center bg-foreground text-[0.72rem] font-bold text-background">
-            3
+            2
           </span>
           <span className="eyebrow">С чем пришли</span>
         </div>

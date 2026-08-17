@@ -87,25 +87,25 @@ const Hero = ({ selection }: Props) => {
 
       <div className="rule" />
 
+      <Scenarios />
+
+      <div className="rule-hair" />
+
       <div className="py-6 md:py-10">
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
-            2
+            3
           </span>
           <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
-            Опишите, что нужно
+            Знаете, что нужно
           </span>
           <span className="text-[0.85rem] text-muted-foreground">
-            своими словами — «магнитола для Тойоты» или артикул с коробки
+            найдите сразу — «магнитола для Тойоты» или артикул с коробки
           </span>
         </div>
 
         <HeroSearch />
       </div>
-
-      <div className="rule-hair" />
-
-      <Scenarios />
 
       <div className="rule-hair" />
 
