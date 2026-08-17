@@ -42,9 +42,9 @@ const Hero = ({ selection }: Props) => {
             className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
             style={{ animationDelay: ".25s" }}
           >
-            <b className="font-medium text-foreground">Умный каталог</b> сам
-            подберёт, что подойдёт: найдите поиском, выберите готовую задачу или
-            сразу укажите свою машину.
+            <b className="font-medium text-foreground">Начни с авто – </b> мы
+            отсеем всё, что не подойдёт. А если хочешь сразу к делу – выбери
+            сценарий (камера, магнитола, тишина) – мы сами подгоним.
           </p>
 
           {!shortcutsHidden && shortcuts.length > 0 && (
