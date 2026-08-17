@@ -34,11 +34,9 @@ const Hero = ({ selection }: Props) => {
             className="rise ml-0 mt-3 font-head text-[9.5vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 md:mt-4 lg:text-[58px]"
             style={{ animationDelay: ".15s" }}
           >
-            Всё для
+            Только то, что
             <br />
-            <span className="text-primary">вашего</span>
-            <br />
-            автомобиля
+            <span className="text-primary">подойдет</span>
           </h1>
           <p
             className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
