@@ -18,7 +18,7 @@ import {
   productSpecs,
   productsByCategory,
 } from "@/data/catalog";
-import { loadVehicle } from "@/lib/vehicle";
+import { VEHICLE_EVENT, loadVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
@@ -44,8 +44,12 @@ const Product = () => {
   const [dialogProduct, setDialogProduct] = useState<ProductType | null>(null);
   const [tab, setTab] = useState<ProductTab>("about");
 
+  /* Машину могли сменить плашкой в шапке — обновляем отметку совместимости */
   useEffect(() => {
-    setVehicle(loadVehicle());
+    const sync = () => setVehicle(loadVehicle());
+    sync();
+    window.addEventListener(VEHICLE_EVENT, sync);
+    return () => window.removeEventListener(VEHICLE_EVENT, sync);
   }, []);
 
   useEffect(() => {

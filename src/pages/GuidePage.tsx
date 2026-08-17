@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useVehicle } from "@/hooks/use-vehicle";
 import { Link, useParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
@@ -6,7 +7,6 @@ import Footer from "@/components/Footer";
 import GuideContent from "@/components/GuideContent";
 import ProductCard from "@/components/ProductCard";
 import { useCatalog } from "@/context/CatalogContext";
-import { loadVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
@@ -14,7 +14,7 @@ import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 const GuidePage = () => {
   const { slug } = useParams();
   const { guides, products, loading } = useCatalog();
-  const vehicle = loadVehicle();
+  const { vehicle } = useVehicle();
 
   const guide = useMemo(
     () => guides.find((g) => g.slug === slug) ?? null,

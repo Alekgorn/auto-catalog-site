@@ -7,7 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
 import { Vehicle, matchVehicle, splitByFit } from "@/data/catalog";
 import UniversalDivider from "@/components/UniversalDivider";
-import { loadVehicle, saveVehicle } from "@/lib/vehicle";
+import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
@@ -40,7 +40,13 @@ const SearchPage = () => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
 
   useEffect(() => setInput(query), [query]);
-  useEffect(() => setVehicle(loadVehicle()), []);
+  /* Машину могли сменить или сбросить плашкой в шапке — следим за этим */
+  useEffect(() => {
+    const sync = () => setVehicle(loadVehicle());
+    sync();
+    window.addEventListener(VEHICLE_EVENT, sync);
+    return () => window.removeEventListener(VEHICLE_EVENT, sync);
+  }, []);
   useEffect(() => {
     setShown(PAGE_SIZE);
     setCategory("");

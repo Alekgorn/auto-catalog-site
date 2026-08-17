@@ -31,6 +31,9 @@ export const loadVehicle = (): Vehicle | null => {
   }
 };
 
+/** Событие смены машины — по нему обновляется плашка в шапке на всех страницах */
+export const VEHICLE_EVENT = 'shtatno:vehicle';
+
 export const saveVehicle = (v: Vehicle | null) => {
   if (typeof window === 'undefined') return;
   try {
@@ -39,4 +42,6 @@ export const saveVehicle = (v: Vehicle | null) => {
   } catch {
     /* noop */
   }
+  // Сообщаем всем частям сайта: машина изменилась
+  window.dispatchEvent(new CustomEvent(VEHICLE_EVENT));
 };

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useVehicle } from "@/hooks/use-vehicle";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
@@ -14,7 +15,6 @@ import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
-import { loadVehicle } from "@/lib/vehicle";
 import { formatPrice } from "@/data/catalog";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
@@ -30,7 +30,7 @@ const CategoryPage = () => {
   const { slug = "" } = useParams();
   const navigate = useNavigate();
   const { products, categories, loading } = useCatalog();
-  const vehicle = loadVehicle();
+  const { vehicle } = useVehicle();
   const [sort, setSort] = useState<SortKey>("popular");
   const [mobileOpen, setMobileOpen] = useState(false);
 

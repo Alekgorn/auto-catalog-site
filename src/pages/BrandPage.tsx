@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import { useVehicle } from "@/hooks/use-vehicle";
 import { Link, useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -9,14 +10,13 @@ import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
-import { loadVehicle } from "@/lib/vehicle";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 /** Оборудование для одной марки авто по собственному адресу. */
 const BrandPage = () => {
   const { slug = "" } = useParams();
   const { products, brands, loading } = useCatalog();
-  const vehicle = loadVehicle();
+  const { vehicle } = useVehicle();
 
   const brand = useMemo(
     () => brands.find((b) => slugify(b.name) === slug) ?? null,

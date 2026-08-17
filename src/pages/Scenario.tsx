@@ -24,7 +24,7 @@ import {
 } from "@/data/catalog";
 import UniversalDivider from "@/components/UniversalDivider";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
-import { loadVehicle, saveVehicle } from "@/lib/vehicle";
+import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
@@ -152,7 +152,13 @@ const ScenarioPage = () => {
     return set.sort();
   }, [products]);
 
-  useEffect(() => setVehicle(loadVehicle()), []);
+  /* Машину могли сменить или сбросить плашкой в шапке — следим за этим */
+  useEffect(() => {
+    const sync = () => setVehicle(loadVehicle());
+    sync();
+    window.addEventListener(VEHICLE_EVENT, sync);
+    return () => window.removeEventListener(VEHICLE_EVENT, sync);
+  }, []);
   useEffect(() => {
     setShown(PAGE_SIZE);
     setCategory("");

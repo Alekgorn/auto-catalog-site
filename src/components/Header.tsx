@@ -6,6 +6,7 @@ import { useCatalog } from '@/context/CatalogContext';
 import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
 import DealerDialog from '@/components/DealerDialog';
+import VehicleBadge from '@/components/VehicleBadge';
 
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог', route: '/scenario/vse-po-mashine' },
@@ -138,6 +139,10 @@ const Header = () => {
           </button>
         </div>
       </div>
+
+      {/* Выбранная машина видна на любой странице — человек всегда знает,
+          отфильтрован каталог или нет */}
+      <VehicleBadge />
 
       {open && (
         <div className="fixed inset-x-0 bottom-0 top-[76px] z-40 animate-fade-in bg-background section-pad lg:hidden">
