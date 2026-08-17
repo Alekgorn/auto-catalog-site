@@ -32,6 +32,9 @@ const VehicleSelector = ({
     [brand, BRANDS],
   );
 
+  /** Пока машина не названа целиком, подбирать нечего */
+  const ready = Boolean(brand && model && year);
+
   return (
     <form
       onSubmit={(e) => {
@@ -51,7 +54,8 @@ const VehicleSelector = ({
           emptyText="Такой марки нет — напишите нам"
           onChange={(b) => {
             onBrand(b);
-            onModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
+            // Модель от прежней марки сбрасываем — пусть выберет свою
+            onModel('');
           }}
         />
       </div>
@@ -62,9 +66,9 @@ const VehicleSelector = ({
           label="Модель"
           value={model}
           options={models}
-          placeholder="Выберите модель"
+          placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
             alphabet
-          emptyText="Модель не найдена"
+          emptyText="Сначала выберите марку"
           onChange={onModel}
         />
       </div>
@@ -75,7 +79,7 @@ const VehicleSelector = ({
           label="Год"
           value={year}
           options={YEARS.map(String)}
-          placeholder="Год"
+          placeholder="Выберите год"
           emptyText="Нет такого года"
           onChange={onYear}
         />
@@ -83,9 +87,10 @@ const VehicleSelector = ({
 
       <button
         type="submit"
-        className="my-4 flex items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground focus-visible:outline-2 focus-visible:outline-foreground focus-visible:outline-offset-4 md:col-span-4"
+        disabled={!ready}
+        className="my-4 flex items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground focus-visible:outline-2 focus-visible:outline-foreground focus-visible:outline-offset-4 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground md:col-span-4"
       >
-        <span>{buttonLabel}</span>
+        <span>{ready ? buttonLabel : 'Выберите марку и модель'}</span>
         <span aria-hidden>→</span>
       </button>
 

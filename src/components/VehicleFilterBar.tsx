@@ -23,7 +23,8 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
 
   const [brand, setBrand] = useState(vehicle?.brand ?? '');
   const [model, setModel] = useState(vehicle?.model ?? '');
-  const [year, setYear] = useState(String(vehicle?.year ?? 2021));
+  // Год не подставляем заранее: чужой год так же вредит подбору, как чужая марка
+  const [year, setYear] = useState(vehicle?.year ? String(vehicle.year) : '');
 
   useEffect(() => {
     if (vehicle) {
@@ -39,7 +40,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
   );
 
   const apply = () => {
-    if (!brand || !model) return;
+    if (!brand || !model || !year) return;
     onApply({ brand, model, year: Number(year) });
     setOpen(false);
   };
@@ -135,7 +136,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => {
               setBrand(b);
-              setModel(BRANDS.find((x) => x.name === b)?.models[0] ?? '');
+              setModel('');
             }}
           />
         </div>
@@ -146,9 +147,9 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             label="Модель"
             value={model}
             options={models}
-            placeholder="Выберите модель"
+            placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
             alphabet
-            emptyText="Модель не найдена"
+            emptyText="Сначала выберите марку"
             onChange={setModel}
           />
         </div>
@@ -168,7 +169,8 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
         <div className="flex gap-2 md:col-span-2">
           <button
             type="submit"
-            className="flex-1 bg-primary px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-primary-foreground transition-colors hover:bg-foreground"
+            disabled={!brand || !model || !year}
+            className="flex-1 bg-primary px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-primary-foreground transition-colors hover:bg-foreground disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
           >
             Подобрать
           </button>

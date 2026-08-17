@@ -20,11 +20,14 @@ const Index = () => {
   const { brands: BRANDS } = useCatalog();
   const saved = loadVehicle();
 
-  const [brand, setBrand] = useState(saved?.brand ?? BRANDS[0]?.name ?? "");
-  const [model, setModel] = useState(
-    saved?.model ?? BRANDS[0]?.models[0] ?? "",
-  );
-  const [year, setYear] = useState(String(saved?.year ?? 2021));
+  /**
+   * Поля пустые, пока человек сам не выберет. Раньше здесь по умолчанию
+   * стояла первая марка из списка — покупатель на своей машине видел чужую
+   * и мог нажать «Подобрать» не глядя, получив не свой результат.
+   */
+  const [brand, setBrand] = useState(saved?.brand ?? "");
+  const [model, setModel] = useState(saved?.model ?? "");
+  const [year, setYear] = useState(saved?.year ? String(saved.year) : "");
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(saved);
 
@@ -56,14 +59,18 @@ const Index = () => {
     },
   });
 
+  /**
+   * Марку не подставляем — пустое поле заставляет выбрать свою машину.
+   * Следим только за тем, чтобы модель не осталась от прежней марки.
+   */
   useEffect(() => {
-    if (!BRANDS.length) return;
+    if (!BRANDS.length || !brand) return;
     const found = BRANDS.find((b) => b.name === brand);
     if (!found) {
-      setBrand(BRANDS[0].name);
-      setModel(BRANDS[0].models[0] ?? "");
-    } else if (!found.models.includes(model)) {
-      setModel(found.models[0] ?? "");
+      setBrand("");
+      setModel("");
+    } else if (model && !found.models.includes(model)) {
+      setModel("");
     }
   }, [BRANDS, brand, model]);
 
@@ -88,6 +95,8 @@ const Index = () => {
    * Каталог теперь живёт в сценарии, а не на главной.
    */
   const applyVehicle = () => {
+    // Без всех трёх полей подбор врёт — молча ничего не делаем
+    if (!brand || !model || !year) return;
     const next = { brand, model, year: Number(year) };
     setVehicle(next);
     saveVehicle(next);
