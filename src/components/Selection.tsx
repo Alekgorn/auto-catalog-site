@@ -1,6 +1,6 @@
-import Icon from '@/components/ui/icon';
-import VehicleSelector from '@/components/VehicleSelector';
-import PhotoToMessenger from '@/components/PhotoToMessenger';
+import Icon from "@/components/ui/icon";
+import VehicleSelector from "@/components/VehicleSelector";
+import PhotoToMessenger from "@/components/PhotoToMessenger";
 
 interface Props {
   brand: string;
@@ -33,15 +33,16 @@ const Selection = (selector: Props) => (
           <span className="eyebrow !ml-0">Подбор по вашему автомобилю</span>
         </div>
         <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-[1.06] tracking-[-0.025em] sm:text-3xl lg:text-4xl">
-          Марка, модель, год —<br />
+          Выбери свою машину – <br />
+          мы покажем только то, что
           <span className="text-primary">и лишнего нет</span>
         </h2>
       </div>
 
       <p className="max-w-[34em] self-end text-[0.9rem] leading-relaxed text-muted-foreground md:col-span-5">
         Мы не показываем «универсальное». Каждая позиция привязана к штатному
-        разъёму и рамке: если товара нет в списке — значит, без переходника он
-        к вашей машине не встанет.
+        разъёму и рамке: если товара нет в списке — значит, без переходника он к
+        вашей машине не встанет.
       </p>
     </div>
 
@@ -56,8 +57,8 @@ const Selection = (selector: Props) => (
           Не знаете свою комплектацию?
         </div>
         <p className="mt-2 max-w-[36em] text-[0.88rem] leading-relaxed text-muted-foreground">
-          Сфотографируйте торпедо и штатную магнитолу, пришлите нам —
-          определим комплектацию и подберём оборудование, которое точно встанет.
+          Сфотографируйте торпедо и штатную магнитолу, пришлите нам — определим
+          комплектацию и подберём оборудование, которое точно встанет.
         </p>
       </div>
       <div className="md:col-span-5">
