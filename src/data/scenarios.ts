@@ -97,6 +97,11 @@ export interface KitStep {
    * Нужна там, где покупателю сложно выбрать сам — например, разъёмы.
    */
   helpOffer?: boolean;
+  /**
+   * О чём говорить в окне помощи. По умолчанию про проводку,
+   * для рамок разговор другой — про панель и посадочное место.
+   */
+  helpTopic?: 'wiring' | 'frame';
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -125,6 +130,8 @@ export const SCENARIOS: Scenario[] = [
         needVehicle: true,
         strictFit: true,
         unit: 'рамку',
+        helpOffer: true,
+        helpTopic: 'frame',
       },
       {
         category: 'Переходники для подключения магнитол',
@@ -135,6 +142,7 @@ export const SCENARIOS: Scenario[] = [
         strictFit: true,
         unit: 'проводку',
         helpOffer: true,
+        optional: true,
       },
     ],
     heading: 'Соберите магнитолу под себя',
@@ -199,6 +207,8 @@ export const SCENARIOS: Scenario[] = [
         needVehicle: true,
         strictFit: true,
         unit: 'рамку',
+        helpOffer: true,
+        helpTopic: 'frame',
       },
       {
         category: 'Переходники для подключения магнитол',
@@ -209,6 +219,7 @@ export const SCENARIOS: Scenario[] = [
         strictFit: true,
         unit: 'проводку',
         helpOffer: true,
+        optional: true,
       },
       {
         category: 'Камеры кругового обзора',

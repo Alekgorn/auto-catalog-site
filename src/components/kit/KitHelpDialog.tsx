@@ -14,7 +14,23 @@ interface Props {
   fallback: Product | null;
   /** Положить вариант в сборку */
   onTake: (product: Product) => void;
+  /** О чём разговор: проводка или переходная рамка */
+  topic?: 'wiring' | 'frame';
 }
+
+/** Тексты окна под конкретный шаг — разговор о рамке и о разъёмах разный */
+const TOPICS = {
+  wiring: {
+    title: 'Поможем с проводкой',
+    text: 'Разъёмы отличаются даже внутри одной модели — зависит от комплектации и года. Напишите нам: попросим фото штатной фишки и назовём точный переходник. Это бесплатно и занимает пару минут.',
+    note: 'Проверенный вариант',
+  },
+  frame: {
+    title: 'Поможем с рамкой',
+    text: 'Панели различаются даже у одной модели — из-за рестайлинга и комплектации. Напишите нам: попросим фото штатного места и скажем, какая рамка встанет ровно, без щелей и подрезки.',
+    note: 'Проверенный вариант',
+  },
+} as const;
 
 const TELEGRAM = 'https://t.me/alekgorn';
 const PHONE = '+79119639671';
@@ -30,7 +46,9 @@ const KitHelpDialog = ({
   vehicle,
   fallback,
   onTake,
+  topic = 'wiring',
 }: Props) => {
+  const copy = TOPICS[topic];
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -62,7 +80,7 @@ const KitHelpDialog = ({
         <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4 sm:px-7">
           <div>
             <div className="font-head text-[1.15rem] font-bold uppercase tracking-tight">
-              Поможем с проводкой
+              {copy.title}
             </div>
             <p className="mt-1 text-[0.8rem] text-muted-foreground">
               {car ? `Ваш автомобиль: ${car}` : 'Подскажем, что подойдёт'}
@@ -79,9 +97,7 @@ const KitHelpDialog = ({
 
         <div className="px-5 py-5 sm:px-7">
           <p className="text-[0.88rem] leading-relaxed text-muted-foreground">
-            Разъёмы отличаются даже внутри одной модели — зависит от
-            комплектации и года. Напишите нам: попросим фото штатной фишки и
-            назовём точный переходник. Это бесплатно и занимает пару минут.
+            {copy.text}
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
