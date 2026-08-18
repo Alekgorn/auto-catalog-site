@@ -24,6 +24,7 @@ import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useKit } from "@/context/KitContext";
 import PriceBlock from "@/components/PriceBlock";
+import StockLine from "@/components/StockLine";
 import MarketButtons from "@/components/MarketButtons";
 import { useCatalog } from "@/context/CatalogContext";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
@@ -215,6 +216,7 @@ const Product = () => {
 
               <div className="mt-8">
                 <PriceBlock product={product} large />
+                <StockLine product={product} large />
               </div>
 
               <FitsCheck

@@ -1,0 +1,2 @@
+ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_qty INTEGER NOT NULL DEFAULT 0;
+UPDATE products SET stock_qty = CASE WHEN stock ~ '^[0-9]+$' THEN stock::INTEGER WHEN stock = 'на складе' THEN 1 ELSE 0 END;

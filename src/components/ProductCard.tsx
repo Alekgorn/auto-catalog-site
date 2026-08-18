@@ -15,6 +15,7 @@ import {
 import { useKit } from '@/context/KitContext';
 import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
+import StockLine from '@/components/StockLine';
 import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
@@ -206,6 +207,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
       <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-4 sm:pt-6">
         <div className="flex-none">
           <PriceBlock product={product} />
+          <StockLine product={product} />
         </div>
         <div className="flex w-full flex-none items-center gap-2 sm:w-auto">
           <Link
