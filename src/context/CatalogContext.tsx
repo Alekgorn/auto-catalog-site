@@ -171,9 +171,14 @@ export const CatalogProvider = ({
      * Каталог уже приехал вместе со страницей: качать те же 650 КБ
      * повторно на каждом переходе бессмысленно и дорого по вызовам функции.
      * Кнопка «обновить» (tick) обходит проверку принудительно.
+     *
+     * Метка ?fresh в адресе — переход из админки после сброса кеша:
+     * там копию не используем вовсе, правки должны быть видны сразу.
      */
+    const forced = window.location.search.includes('fresh=');
+
     const fresh = seedAt > 0 && Date.now() - seedAt < FRESH_MINUTES * 60_000;
-    if (fresh && tick === 0 && seed?.products?.length) {
+    if (fresh && !forced && tick === 0 && seed?.products?.length) {
       setLoading(false);
       return;
     }

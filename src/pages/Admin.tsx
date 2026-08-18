@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Icon from "@/components/ui/icon";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from "@/lib/api";
+import { clearSiteCache } from "@/lib/cache";
 import { formatPrice } from "@/data/catalog";
 import ProductEditor, {
   AdminProduct,
@@ -165,6 +166,21 @@ const Admin = () => {
     );
     setAdminToken(null);
     setAuthed(false);
+  };
+
+  /**
+   * Сброс сохранённой копии сайта. Каталог держится в браузере 10 минут,
+   * поэтому после правок посетитель какое-то время видит старую версию.
+   */
+  const resetCache = () => {
+    clearSiteCache();
+    toast({
+      title: "Кеш сайта очищен",
+      description: "Открываю сайт заново — изменения уже видны",
+    });
+    setTimeout(() => {
+      window.open("/?fresh=" + Date.now(), "_blank", "noopener");
+    }, 600);
   };
 
   const save = async (product: AdminProduct) => {
@@ -343,6 +359,14 @@ const Admin = () => {
             Админка
           </div>
           <div className="flex items-center gap-6">
+            <button
+              onClick={resetCache}
+              title="Убрать сохранённую копию каталога и открыть сайт заново"
+              className="flex items-center gap-2 border border-foreground px-4 py-2 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+            >
+              <Icon name="RefreshCw" size={15} />
+              Обновить сайт
+            </button>
             <a
               href="/"
               className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
