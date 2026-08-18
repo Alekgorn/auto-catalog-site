@@ -120,6 +120,20 @@ const ScenarioPage = () => {
     if (target) scrollTo(target);
   };
 
+  /**
+   * Режем вступление по выделяемой фразе. Разбиение даёт чередование
+   * «обычный текст — выделенный — обычный», поэтому в вёрстке достаточно
+   * подсветить куски с нечётным номером.
+   */
+  const introParts = useMemo(() => {
+    const text = scenario?.intro ?? '';
+    const mark = scenario?.introHighlight;
+    if (!mark) return [text];
+    const at = text.indexOf(mark);
+    if (at === -1) return [text];
+    return [text.slice(0, at), mark, text.slice(at + mark.length)];
+  }, [scenario?.intro, scenario?.introHighlight]);
+
   const bounds = useMemo(() => {
     const prices = products.map((p) => p.price);
     return {
@@ -391,7 +405,20 @@ const ScenarioPage = () => {
 
           <div className="md:col-span-5">
             <p className="text-[0.98rem] leading-relaxed text-muted-foreground">
-              {scenario.intro}
+              {introParts.map((part, i) =>
+                // Нечётные куски — то, что попало между вырезанной фразой,
+                // то есть сама выделяемая часть
+                i % 2 === 1 ? (
+                  <strong
+                    key={i}
+                    className="font-semibold text-primary"
+                  >
+                    {part}
+                  </strong>
+                ) : (
+                  part
+                ),
+              )}
             </p>
           </div>
         </div>
