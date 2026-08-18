@@ -187,8 +187,9 @@ export const SCENARIOS: Scenario[] = [
     slug: 'ekran-premium',
     image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/5a89f982-7693-46f2-9444-627fc8e0eaa9.jpg',
     icon: 'Sparkles',
-    title: 'Магнитола с экраном – топ за свои деньги',
-    text: 'Модели с DSP, от 4/64 ГБ, CarPlay и быстрым процессором.',
+    title: 'Магнитола без компромиссов',
+    text: 'Соберите комплект сами: магнитола + рамка + проводка. Топ-модели с DSP и CarPlay. Цена считается сразу.',
+    cta: 'Собрать комплект',
     query: 'премиум магнитола большой экран DSP',
     kit: [
       {
