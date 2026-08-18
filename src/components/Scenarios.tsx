@@ -70,11 +70,15 @@ const Scenarios = () => {
               {s.text}
             </span>
 
-            <span className="mt-4 flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground transition-colors group-hover:text-primary">
-              Смотреть
+            {/* Подпись-переход: жирная и цветная, иначе её принимали
+                за обычный текст и плитку не нажимали */}
+            <span className="mt-4 flex items-center gap-2 text-[0.74rem] font-bold uppercase tracking-[0.12em] text-primary">
+              <span className="border-b-2 border-primary/40 pb-0.5 transition-colors group-hover:border-primary">
+                {s.cta ?? 'Смотреть'}
+              </span>
               <Icon
                 name="ArrowRight"
-                size={14}
+                size={15}
                 className="transition-transform group-hover:translate-x-1"
               />
             </span>
