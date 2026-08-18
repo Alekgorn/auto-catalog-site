@@ -424,19 +424,24 @@ const ScenarioPage = () => {
         {/* Заголовок и живой текст */}
         <div className="grid grid-cols-1 gap-x-6 gap-y-6 py-9 md:grid-cols-12 md:py-12">
           <div className="md:col-span-7">
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-4">
               <span className="flex h-16 w-16 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
                 <Icon name={scenario.icon} fallback="CircleAlert" size={32} />
               </span>
-              {/* Подпись у иконки прячем, когда она повторяет заголовок ниже */}
-              {!scenario.hideEyebrow && (
-                <div className="eyebrow">{scenario.title}</div>
-              )}
+              <div className="min-w-0 flex-1">
+                {/* Подпись прячем, когда она повторяет заголовок */}
+                {!scenario.hideEyebrow && (
+                  <div className="eyebrow">{scenario.title}</div>
+                )}
+                <h1
+                  className={`font-head text-3xl font-bold uppercase leading-[1.05] tracking-tight md:text-[40px] ${
+                    scenario.hideEyebrow ? '' : 'mt-2'
+                  }`}
+                >
+                  {scenario.heading}
+                </h1>
+              </div>
             </div>
-
-            <h1 className="mt-5 font-head text-3xl font-bold uppercase leading-[1.05] tracking-tight md:text-[46px]">
-              {scenario.heading}
-            </h1>
           </div>
 
           <div className="md:col-span-5">
