@@ -125,7 +125,10 @@ const KitSection = ({
   return (
     /* Страница длинная — шаги нужно отделять друг от друга воздухом,
        иначе они читаются как один сплошной список */
-    <section id={anchorId} className="scroll-mt-24 py-11 md:py-14">
+    <section
+      id={anchorId}
+      className={`scroll-mt-24 ${locked ? 'py-7 md:py-8' : 'py-11 md:py-14'}`}
+    >
       <div className="flex items-start gap-4">
         <span
           className={`flex h-12 w-12 flex-none items-center justify-center border transition-colors ${
@@ -232,10 +235,11 @@ const KitSection = ({
         /* Пока магнитола не выбрана, подбирать не от чего: размер рамки и
            разъём зависят от неё. Товары показываем, но обесцвеченными —
            видно, что раздел не пустой, но выбрать пока нельзя */
-        <div className="relative mt-5">
+        <div className="relative mt-4 h-[136px] overflow-hidden md:h-[124px]">
+          {/* Карточки видны только верхушками — намёк, что раздел не пустой */}
           <div
             aria-hidden
-            className="pointer-events-none select-none grid grid-cols-2 gap-3 opacity-40 grayscale md:gap-4 lg:grid-cols-4"
+            className="pointer-events-none absolute inset-x-0 top-0 select-none grid grid-cols-2 gap-3 opacity-30 grayscale md:gap-4 lg:grid-cols-4"
           >
             {preview.map((p) => (
               <ProductCard
@@ -247,29 +251,31 @@ const KitSection = ({
             ))}
           </div>
 
-          <div className="absolute inset-0 flex items-center justify-center bg-background/70 px-4 backdrop-blur-[2px]">
-            <div className="max-w-[30em] border-2 border-foreground bg-background px-6 py-6 text-center shadow-lg">
+          <div className="absolute inset-0 flex items-center bg-background/75 backdrop-blur-[2px]">
+            <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-3 border border-foreground bg-background px-4 py-3.5 md:px-5">
               <Icon
                 name="Lock"
-                size={22}
-                className="mx-auto text-muted-foreground"
+                size={20}
+                className="flex-none text-muted-foreground"
               />
-              <div className="mt-3 font-head text-[1.05rem] font-bold uppercase tracking-tight">
-                {step.matchScreen
-                  ? 'Сначала выберите магнитолу — тогда появятся подходящие рамки'
-                  : 'Сначала выберите магнитолу и рамку'}
+              <div className="min-w-[14em] flex-1">
+                <div className="font-head text-[0.95rem] font-bold uppercase leading-tight tracking-tight">
+                  {step.matchScreen
+                    ? 'Сначала выберите магнитолу — тогда появятся подходящие рамки'
+                    : 'Сначала выберите магнитолу и рамку'}
+                </div>
+                <p className="mt-1 text-[0.8rem] leading-snug text-muted-foreground">
+                  {step.matchScreen
+                    ? 'Рамка зависит от диагонали экрана: под 9 и под 10 дюймов нужны разные.'
+                    : 'Разъёмы и питание зависят от магнитолы и от того, как она встаёт в панель.'}
+                </p>
               </div>
-              <p className="mt-2 text-[0.85rem] leading-relaxed text-muted-foreground">
-                {step.matchScreen
-                  ? 'Рамка подбирается под диагональ экрана: под 9 дюймов и под 10 нужны разные. Выберите магнитолу — оставим только то, что встанет ровно.'
-                  : 'Разъёмы и питание зависят от самой магнитолы и от того, как она встаёт в панель. Закройте два первых шага — и мы откроем этот.'}
-              </p>
               <button
                 onClick={onNeedLead}
-                className="mt-4 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                className="flex flex-none items-center gap-2 border border-foreground bg-foreground px-4 py-2.5 font-head text-[0.74rem] font-bold uppercase tracking-[0.08em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
-                <Icon name="ArrowUp" size={15} />
-                {step.matchScreen ? 'К выбору магнитолы' : 'Вернуться к сборке'}
+                <Icon name="ArrowUp" size={14} />
+                {step.matchScreen ? 'К магнитоле' : 'К сборке'}
               </button>
             </div>
           </div>
