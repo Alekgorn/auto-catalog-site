@@ -165,6 +165,12 @@ const cleanOld = async () => {
   for (const dir of ['product', 'guides', 'catalog', 'brand']) {
     await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
   }
+  // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
+  for (const name of await fs.readdir(PUBLIC)) {
+    if (/^catalog-data-\d+\.js$/.test(name)) {
+      await fs.rm(path.join(PUBLIC, name), { force: true });
+    }
+  }
 };
 
 const EMPTY_ROOT = '<div id="root"><!--prerender--><!--/prerender--></div>';
@@ -182,6 +188,8 @@ const resetShell = (html) =>
       '<!--prerender--><!--/prerender-->',
     )
     .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/g, '')
+    // Ссылка на файл каталога от прошлой сборки — имя меняется каждый раз
+    .replace(/\s*<script src="\/catalog-data-\d+\.js"><\/script>/g, '')
     .replace(/\s*<script>\(function\(\)\{var d=document;function heal[\s\S]*?<\/script>/g, '')
     .replace(
       /\s*<script type="application\/ld\+json" id="seo-json-ld">[\s\S]*?<\/script>/g,
@@ -234,9 +242,25 @@ const main = async () => {
    * Время сборки: по нему браузер понимает, насколько свежие вшитые данные.
    * Если они моложе нескольких минут — повторный запрос к функции не нужен.
    */
-  const bootScript =
-    `<script>window.__CATALOG__=${safeJson(data)};` +
-    `window.__CATALOG_AT__=${Date.now()}</script>`;
+  const builtAt = Date.now();
+
+  /**
+   * Каталог кладём отдельным файлом и подключаем ссылкой.
+   *
+   * Раньше он вшивался в каждую страницу целиком: 450 товаров — почти
+   * мегабайт на файл, а страниц больше пятисот. Итого папка разрасталась
+   * до сотен мегабайт и сборка переставала проходить. Теперь файл один,
+   * браузер берёт его из кеша, а страницы весят десятки килобайт.
+   */
+  const catalogFile = `/catalog-data-${builtAt}.js`;
+  await fs.writeFile(
+    path.join(PUBLIC, catalogFile.slice(1)),
+    `window.__CATALOG__=${safeJson(data)};window.__CATALOG_AT__=${builtAt};` +
+      `window.dispatchEvent(new Event('catalog-ready'))`,
+    'utf-8',
+  );
+
+  const bootScript = `<script src="${catalogFile}"></script>`;
 
   /**
    * Страховка от белого экрана.
