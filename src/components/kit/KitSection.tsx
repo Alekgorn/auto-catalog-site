@@ -1,13 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import {
-  Product,
-  Vehicle,
-  formatPrice,
-  isCompatible,
-  matchVehicle,
-  splitByFit,
-} from '@/data/catalog';
+import { Product, Vehicle, formatPrice, splitByFit } from '@/data/catalog';
+import { kitStepList } from '@/lib/kit-filter';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
@@ -31,6 +25,15 @@ interface Props {
   skipped?: boolean;
   /** Пропустить/вернуть необязательный шаг */
   onSkip?: (skip: boolean) => void;
+  /**
+   * Шаг ещё не открыт: магнитола не выбрана, подбирать не от чего.
+   * Показываем товары обесцвеченными, чтобы был виден масштаб раздела.
+   */
+  locked?: boolean;
+  /** Диагональ выбранной магнитолы — под неё подбираем рамку */
+  size?: number | null;
+  /** Прокрутить к первому шагу — выбору магнитолы */
+  onNeedLead?: () => void;
 }
 
 const STEP_SIZE = 6;
@@ -52,6 +55,9 @@ const KitSection = ({
   helpOffer,
   skipped,
   onSkip,
+  locked,
+  size,
+  onNeedLead,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
   /** Ограничение по цене снято — «бюджетно» у каждого своё */
@@ -60,32 +66,11 @@ const KitSection = ({
   const [replacing, setReplacing] = useState(false);
   const [help, setHelp] = useState(false);
 
-  /** Все товары раздела, подходящие машине */
-  const full = useMemo(() => {
-    let out = products.filter((p) => p.category === step.category);
-    if (vehicle) {
-      // Рамки и проводка — только точное совпадение по машине.
-      // «Универсальные» переходники сюда не пускаем: они подходят формально,
-      // а на деле покупатель возьмёт не тот разъём
-      out = step.strictFit
-        ? out.filter((p) => isCompatible(p, vehicle))
-        : out.filter((p) => matchVehicle(p, vehicle, brandsCount) !== null);
-    }
-    // В премиум-подборке сначала топовые, в остальных — доступные
-    const sorted = [...out].sort((a, b) =>
-      step.minPrice ? b.price - a.price : a.price - b.price,
-    );
-    // Точно подходящие вперёд, универсальные — в конец списка
-    const split = splitByFit(sorted, (p) => p, vehicle);
-    return [...split.exact, ...split.universal];
-  }, [
-    products,
-    step.category,
-    step.strictFit,
-    step.minPrice,
-    vehicle,
-    brandsCount,
-  ]);
+  /** Все товары раздела, подходящие машине и экрану магнитолы */
+  const full = useMemo(
+    () => kitStepList({ step, products, vehicle, brandsCount, size }),
+    [step, products, vehicle, brandsCount, size],
+  );
 
   /** Сколько позиций скрывает ценовой порог */
   const overLimit = useMemo(() => {
@@ -117,6 +102,18 @@ const KitSection = ({
     [list, vehicle],
   );
 
+  /**
+   * Витрина для закрытого шага: раздел ещё не фильтруется под магнитолу,
+   * поэтому просто берём начало каталога — показать, что здесь будет.
+   */
+  const preview = useMemo(
+    () =>
+      products
+        .filter((p) => p.category === step.category)
+        .slice(0, 4),
+    [products, step.category],
+  );
+
   const needCar = step.needVehicle && !vehicle;
   const chosen = full.find((p) => p.id === pickedId);
   /** Позиция выбрана или шаг пропущен — прячем остальные */
@@ -127,12 +124,22 @@ const KitSection = ({
        иначе они читаются как один сплошной список */
     <section id={anchorId} className="scroll-mt-24 py-11 md:py-14">
       <div className="flex items-start gap-4">
-        <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
-          <Icon name={step.icon} fallback="Package" size={24} />
+        <span
+          className={`flex h-12 w-12 flex-none items-center justify-center border transition-colors ${
+            locked
+              ? 'border-border bg-muted text-muted-foreground'
+              : 'border-foreground bg-primary text-primary-foreground'
+          }`}
+        >
+          <Icon name={locked ? 'Lock' : step.icon} fallback="Package" size={24} />
         </span>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-head text-[1.45rem] font-bold uppercase leading-[1.15] tracking-tight text-foreground md:text-[1.7rem]">
+            <h2
+              className={`font-head text-[1.45rem] font-bold uppercase leading-[1.15] tracking-tight md:text-[1.7rem] ${
+                locked ? 'text-muted-foreground' : 'text-foreground'
+              }`}
+            >
               {step.title}
             </h2>
             {pickedId && (
@@ -144,7 +151,7 @@ const KitSection = ({
 
             {/* Разъёмы — самое непонятное место. Кнопка стоит у заголовка,
                 чтобы сомневающийся увидел её сразу, не пролистывая список */}
-            {helpOffer && !collapsed && (
+            {helpOffer && !collapsed && !locked && (
               <button
                 onClick={() => setHelp(true)}
                 className="flex items-center gap-2 border-2 border-dashed border-foreground px-4 py-2 font-head text-[0.75rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
@@ -154,7 +161,7 @@ const KitSection = ({
               </button>
             )}
             {/* Камера и регистратор — дело вкуса: даём спокойно пройти мимо */}
-            {step.optional && !chosen && (
+            {step.optional && !chosen && !locked && (
               <button
                 onClick={() => onSkip?.(!skipped)}
                 className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -169,10 +176,17 @@ const KitSection = ({
               {allPrices && (step.maxPrice || step.minPrice)
                 ? 'Показаны все модели раздела — вместе с теми, что вне подборки.'
                 : step.text}
+              {/* Покупатель должен видеть, почему список короткий */}
+              {step.matchScreen && !locked && size ? (
+                <span className="font-medium text-foreground">
+                  {' '}
+                  Показываем только рамки под экран {size}″.
+                </span>
+              ) : null}
             </p>
 
             {/* Порог цены условен: что «бюджетно» — решает покупатель */}
-            {!needCar && !collapsed && overLimit > 0 && (
+            {!needCar && !collapsed && !locked && overLimit > 0 && (
               <button
                 onClick={() => {
                   setAllPrices((v) => !v);
@@ -192,7 +206,7 @@ const KitSection = ({
             )}
 
             {/* Выбор сделан — даём заменить, не листая весь список */}
-            {collapsed && (
+            {collapsed && !locked && (
               <button
                 onClick={() => setReplacing(true)}
                 className="flex flex-none items-center gap-1.5 border border-foreground px-3.5 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
@@ -205,7 +219,51 @@ const KitSection = ({
         </div>
       </div>
 
-      {needCar ? (
+      {locked ? (
+        /* Пока магнитола не выбрана, подбирать не от чего: размер рамки и
+           разъём зависят от неё. Товары показываем, но обесцвеченными —
+           видно, что раздел не пустой, но выбрать пока нельзя */
+        <div className="relative mt-5">
+          <div
+            aria-hidden
+            className="pointer-events-none select-none grid grid-cols-2 gap-3 opacity-40 grayscale md:gap-4 lg:grid-cols-4"
+          >
+            {preview.map((p) => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                vehicle={vehicle}
+                onPick={() => {}}
+              />
+            ))}
+          </div>
+
+          <div className="absolute inset-0 flex items-center justify-center bg-background/70 px-4 backdrop-blur-[2px]">
+            <div className="max-w-[30em] border-2 border-foreground bg-background px-6 py-6 text-center shadow-lg">
+              <Icon
+                name="Lock"
+                size={22}
+                className="mx-auto text-muted-foreground"
+              />
+              <div className="mt-3 font-head text-[1.05rem] font-bold uppercase tracking-tight">
+                Начните с выбора магнитолы
+              </div>
+              <p className="mt-2 text-[0.85rem] leading-relaxed text-muted-foreground">
+                {step.matchScreen
+                  ? 'Рамка подбирается под диагональ экрана: под 9 дюймов и под 10 нужны разные. Выберите магнитолу — оставим только то, что встанет ровно.'
+                  : 'Остальное подбирается под выбранную магнитолу. Сделайте первый шаг — и мы откроем следующие.'}
+              </p>
+              <button
+                onClick={onNeedLead}
+                className="mt-4 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="ArrowUp" size={15} />
+                К выбору магнитолы
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : needCar ? (
         <div className="mt-5 border border-primary bg-surface px-5 py-6">
           <div className="flex items-start gap-3">
             <Icon
@@ -246,8 +304,9 @@ const KitSection = ({
               <span className="font-medium text-foreground">
                 {vehicle?.brand} {vehicle?.model} {vehicle?.year} г.
               </span>{' '}
-              сейчас нет подходящих позиций. Мы фильтруем только то, что
-              гарантированно встанет, поэтому список пуст.{' '}
+              {step.matchScreen && size ? ` под экран ${size}″` : ''} сейчас нет
+              подходящих позиций. Мы фильтруем только то, что гарантированно
+              встанет, поэтому список пуст.{' '}
               {/* Отправляем к кнопке помощи выше — это единственный
                   осмысленный выход с пустого шага */}
               <button

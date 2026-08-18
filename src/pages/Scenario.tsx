@@ -22,6 +22,7 @@ import {
   matchVehicle,
   splitByFit,
 } from "@/data/catalog";
+import { screenSize } from "@/lib/kit-filter";
 import UniversalDivider from "@/components/UniversalDivider";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
@@ -107,6 +108,28 @@ const ScenarioPage = () => {
       (step) => !nextPicks[step.category] && !skipped[step.category],
     );
     return i >= 0 ? stepId(i) : "";
+  };
+
+  /**
+   * Ведущий шаг — магнитола. Пока она не выбрана, остальные шаги закрыты:
+   * рамка зависит от диагонали её экрана, а проводка — от её разъёмов.
+   */
+  const leadStep = scenario?.kit?.find((s) => s.leading);
+  const leadPickId = leadStep ? picks[leadStep.category] : undefined;
+  const leadProduct = useMemo(
+    () => (leadPickId ? products.find((p) => p.id === leadPickId) : undefined),
+    [products, leadPickId],
+  );
+  /** Диагональ выбранной магнитолы — по ней фильтруем рамки */
+  const leadSize = useMemo(
+    () => (leadProduct ? screenSize(leadProduct) : null),
+    [leadProduct],
+  );
+  const locked = !!leadStep && !leadPickId;
+
+  const scrollToLead = () => {
+    const i = scenario?.kit?.findIndex((s) => s.leading) ?? -1;
+    if (i >= 0) scrollTo(stepId(i));
   };
 
   /** Выбор позиции — сразу подводим к следующему незакрытому шагу */
@@ -498,6 +521,9 @@ const ScenarioPage = () => {
                   onNeedVehicle={scrollToVehicle}
                   anchorId={stepId(i)}
                   helpOffer={step.helpOffer}
+                  locked={locked && !step.leading}
+                  size={step.matchScreen ? leadSize : null}
+                  onNeedLead={scrollToLead}
                   skipped={!!skipped[step.category]}
                   onSkip={(skip) => {
                     setSkipped((prev) => ({ ...prev, [step.category]: skip }));
