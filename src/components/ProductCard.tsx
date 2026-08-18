@@ -111,10 +111,20 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           Быстрый просмотр
         </span>
 
-        {vehicle && fits && (
+        {vehicle && fits && !anyCar && (
           <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-success-foreground sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
             <Icon name="Check" size={12} strokeWidth={3} />
             Подходит
+          </span>
+        )}
+
+        {/* Без ограничений по авто — метка прямо на фото, чтобы не
+            раздувать карточку отдельной плашкой внизу. Тон спокойнее
+            зелёного: это не подбор под конкретную машину */}
+        {anyCar && (
+          <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-foreground/85 px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-background sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
+            <Icon name="Car" size={12} />
+            Для всех авто
           </span>
         )}
       </button>
@@ -168,15 +178,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             Подходит не всем машинам — укажите свою, проверим совместимость
           </span>
         </div>
-      ) : anyCar ? (
-        /* Марки в товаре не заданы вовсе — ограничений по авто нет.
-           Плашка зелёная, но без галки: это не подбор под конкретную машину */
-        <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
-          <span className="text-[0.78rem] font-medium leading-snug text-success sm:text-[0.85rem]">
-            Подходит ко всем автомобилям
-          </span>
-        </div>
-      ) : !vehicle || fits ? (
+      ) : anyCar ? null : !vehicle || fits ? (
         <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
           <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
             <Icon name="Check" size={13} strokeWidth={3} />
