@@ -102,6 +102,16 @@ export interface KitStep {
    * для рамок разговор другой — про панель и посадочное место.
    */
   helpTopic?: 'wiring' | 'frame';
+  /**
+   * Подбирать по диагонали выбранной магнитолы.
+   * Рамка под 9 дюймов не встанет к 10-дюймовому экрану.
+   */
+  matchScreen?: boolean;
+  /**
+   * Шаг задаёт диагональ для остальных: пока магнитола не выбрана,
+   * следующие шаги заблокированы — подбирать не от чего.
+   */
+  leading?: boolean;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -121,6 +131,7 @@ export const SCENARIOS: Scenario[] = [
         icon: 'MonitorSmartphone',
         maxPrice: 20000,
         unit: 'магнитолу',
+        leading: true,
       },
       {
         category: 'Переходные рамки для магнитол',
@@ -132,6 +143,7 @@ export const SCENARIOS: Scenario[] = [
         unit: 'рамку',
         helpOffer: true,
         helpTopic: 'frame',
+        matchScreen: true,
       },
       {
         category: 'Переходники для подключения магнитол',
@@ -199,6 +211,7 @@ export const SCENARIOS: Scenario[] = [
         icon: 'MonitorSmartphone',
         minPrice: 20000,
         unit: 'магнитолу',
+        leading: true,
       },
       {
         category: 'Переходные рамки для магнитол',
@@ -210,6 +223,7 @@ export const SCENARIOS: Scenario[] = [
         unit: 'рамку',
         helpOffer: true,
         helpTopic: 'frame',
+        matchScreen: true,
       },
       {
         category: 'Переходники для подключения магнитол',
