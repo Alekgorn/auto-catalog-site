@@ -46,6 +46,8 @@ export interface Scenario {
    * фильтровать нечего.
    */
   noVehicle?: boolean;
+  /** Не показывать подпись у иконки: она дублирует заголовок страницы */
+  hideEyebrow?: boolean;
   /** Фильтровать не по разделам, а по подразделу — например, типу */
   filterBySubcategory?: boolean;
   /**
@@ -117,6 +119,7 @@ export interface KitStep {
 export const SCENARIOS: Scenario[] = [
   {
     slug: 'ekran-nedorogo',
+    hideEyebrow: true,
     image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/37d3cc16-7009-413d-be6f-17b7f5f8cea3.jpg',
     icon: 'MonitorSmartphone',
     title: 'Большой экран без переплаты',
@@ -197,6 +200,7 @@ export const SCENARIOS: Scenario[] = [
   },
   {
     slug: 'ekran-premium',
+    hideEyebrow: true,
     image: 'https://cdn.poehali.dev/projects/e02f6838-189a-4b34-9b79-263263819d03/files/5a89f982-7693-46f2-9444-627fc8e0eaa9.jpg',
     icon: 'Sparkles',
     title: 'Магнитола без компромиссов',
