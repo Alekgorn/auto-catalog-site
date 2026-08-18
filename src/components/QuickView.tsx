@@ -6,6 +6,7 @@ import {
   Vehicle,
   formatPrice,
   isCompatible,
+  fitsAll,
   isUniversal,
   productImages,
   productKit,
@@ -65,6 +66,8 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   const fits = isCompatible(product, vehicle);
   /** Подходит любой машине по данным товара, а не «машина не выбрана» */
   const universal = isUniversal(product, brands.length);
+  /** Марки не заданы — ограничений по авто нет */
+  const anyCar = fitsAll(product);
   const inCart = inKit(product.id);
   const kit = productKit(product);
 
@@ -129,29 +132,37 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
             {/* Машина не выбрана — товар доступен всем */}
             <div
               className={`mb-4 flex items-center gap-2.5 border px-3 py-2.5 text-[0.85rem] ${
-                (!vehicle && universal) || (vehicle && fits)
+                anyCar || (!vehicle && universal) || (vehicle && fits)
                   ? 'border-success bg-success-soft text-success'
                   : 'border-border text-muted-foreground'
               }`}
             >
-              <Icon
-                name={
-                  (!vehicle && universal) || (vehicle && fits)
-                    ? 'Check'
-                    : !vehicle
-                      ? 'Car'
-                      : 'CircleSlash'
-                }
-                size={16}
-                strokeWidth={(!vehicle && universal) || (vehicle && fits) ? 3 : 2}
-              />
-              {!vehicle
-                ? universal
-                  ? 'Подходит ко всем автомобилям'
-                  : 'Подходит не всем машинам — укажите свою'
-                : fits
-                  ? `Подходит к ${vehicle.brand} ${vehicle.model}`
-                  : `Не подходит к ${vehicle.brand} ${vehicle.model}`}
+              {/* У товара без заданных марок галку не ставим:
+                  это не подбор под машину, а отсутствие ограничений */}
+              {!anyCar && (
+                <Icon
+                  name={
+                    (!vehicle && universal) || (vehicle && fits)
+                      ? 'Check'
+                      : !vehicle
+                        ? 'Car'
+                        : 'CircleSlash'
+                  }
+                  size={16}
+                  strokeWidth={
+                    (!vehicle && universal) || (vehicle && fits) ? 3 : 2
+                  }
+                />
+              )}
+              {anyCar
+                ? 'Подходит ко всем автомобилям'
+                : !vehicle
+                  ? universal
+                    ? 'Подходит ко всем автомобилям'
+                    : 'Подходит не всем машинам — укажите свою'
+                  : fits
+                    ? `Подходит к ${vehicle.brand} ${vehicle.model}`
+                    : `Не подходит к ${vehicle.brand} ${vehicle.model}`}
             </div>
 
             <div className="flex items-end gap-3">

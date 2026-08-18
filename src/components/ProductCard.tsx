@@ -6,6 +6,7 @@ import {
   CARD_FIELDS,
   Product,
   Vehicle,
+  fitsAll,
   isCompatible,
   isUniversal,
   productImages,
@@ -34,6 +35,8 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const { cardFields, categorySpecs, brands } = useCatalog();
   /** Товар и правда подходит любой машине, а не «просто машина не выбрана» */
   const universal = isUniversal(product, brands.length);
+  /** Марки не заданы — товар без ограничений по авто */
+  const anyCar = fitsAll(product);
   /**
    * Идёт сборка комплекта — товар уходит в плавающую панель внизу,
    * а не в корзину. Так покупатель сначала собирает комплект целиком.
@@ -163,6 +166,14 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           />
           <span className="text-[0.78rem] leading-snug text-muted-foreground sm:text-[0.85rem]">
             Подходит не всем машинам — укажите свою, проверим совместимость
+          </span>
+        </div>
+      ) : anyCar ? (
+        /* Марки в товаре не заданы вовсе — ограничений по авто нет.
+           Плашка зелёная, но без галки: это не подбор под конкретную машину */
+        <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
+          <span className="text-[0.78rem] font-medium leading-snug text-success sm:text-[0.85rem]">
+            Подходит ко всем автомобилям
           </span>
         </div>
       ) : !vehicle || fits ? (

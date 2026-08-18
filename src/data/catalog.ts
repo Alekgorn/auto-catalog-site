@@ -394,6 +394,14 @@ export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
  * шумоизоляция). Такие не отсеиваем при подборе по авто: даже если конкретной
  * модели нет в списке, товар всё равно подойдёт.
  */
+/**
+ * В товаре не отмечена ни одна марка — значит ограничений по авто нет.
+ * Такую позицию честно показываем как подходящую всем машинам, даже
+ * когда покупатель уже выбрал свою.
+ */
+export const fitsAll = (product: Product): boolean =>
+  Object.keys(product.fits ?? {}).length === 0;
+
 export const isUniversal = (product: Product, totalBrands: number): boolean => {
   const brands = Object.keys(product.fits ?? {}).length;
   if (!brands) return true;

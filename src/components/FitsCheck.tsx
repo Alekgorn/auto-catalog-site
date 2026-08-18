@@ -7,6 +7,7 @@ import {
   Vehicle,
   YEARS,
   isCompatible,
+  fitsAll,
   isUniversal,
 } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
@@ -35,6 +36,8 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
   const fits = isCompatible(product, vehicle);
   /** Товар действительно подходит любой машине по своим данным */
   const universal = isUniversal(product, BRANDS.length);
+  /** Марки не заданы — ограничений по авто нет */
+  const anyCar = fitsAll(product);
 
   const models = useMemo(
     () => BRANDS.find((b) => b.name === brand)?.models ?? [],
@@ -58,7 +61,15 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
 
   return (
     <div className="mt-6 border border-border">
-      {vehicle ? (
+      {anyCar ? (
+        /* Марки в товаре не заданы — ограничений по авто нет.
+           Зелёная плашка без галки: это не подбор под конкретную машину */
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-success-soft px-5 py-4">
+          <span className="min-w-0 flex-1 font-head text-[0.95rem] font-bold uppercase tracking-tight text-success">
+            Подходит ко всем автомобилям
+          </span>
+        </div>
+      ) : vehicle ? (
         <div
           className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4 ${
             fits ? 'bg-success-soft' : ''
@@ -177,8 +188,10 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
         </div>
       )}
 
+      {/* Список марок пуст — раскрывать нечего */}
       <button
         onClick={() => setOpen((v) => !v)}
+        hidden={modelCount === 0}
         className="flex w-full items-center justify-between gap-3 border-t border-border px-5 py-3.5 text-left transition-colors hover:text-primary"
       >
         <span className="flex items-center gap-2.5 text-[0.85rem]">
@@ -188,7 +201,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
         <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={16} />
       </button>
 
-      {open && (
+      {open && modelCount > 0 && (
         <div className="border-t border-border px-5 pb-5 pt-1">
           <FitsList brands={entries} vehicle={vehicle} />
           <p className="mt-5 text-[0.85rem] text-muted-foreground">
