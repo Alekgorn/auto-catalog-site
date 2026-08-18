@@ -123,14 +123,16 @@ const KitSection = ({
   const collapsed = (!!chosen || !!skipped) && !replacing;
 
   return (
-    <section id={anchorId} className="scroll-mt-24 py-7">
+    /* Страница длинная — шаги нужно отделять друг от друга воздухом,
+       иначе они читаются как один сплошной список */
+    <section id={anchorId} className="scroll-mt-24 py-11 md:py-14">
       <div className="flex items-start gap-4">
         <span className="flex h-12 w-12 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
           <Icon name={step.icon} fallback="Package" size={24} />
         </span>
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 className="font-head text-[1.25rem] font-bold uppercase tracking-tight">
+            <h2 className="font-head text-[1.45rem] font-bold uppercase leading-[1.15] tracking-tight text-foreground md:text-[1.7rem]">
               {step.title}
             </h2>
             {pickedId && (
@@ -240,13 +242,21 @@ const KitSection = ({
               className="mt-0.5 flex-none text-primary"
             />
             <div className="text-[0.88rem] leading-relaxed text-muted-foreground">
+              Для{' '}
               <span className="font-medium text-foreground">
-                Под {vehicle?.brand} {vehicle?.model} {vehicle?.year} г. в этом
-                разделе подходящего нет.
+                {vehicle?.brand} {vehicle?.model} {vehicle?.year} г.
               </span>{' '}
-              Показываем только то, что точно встанет на вашу машину, — поэтому
-              список пуст, а не забит «универсальным». Позвоните: подберём по
-              вашему штатному разъёму и привезём под заказ.
+              сейчас нет подходящих позиций. Мы фильтруем только то, что
+              гарантированно встанет, поэтому список пуст.{' '}
+              {/* Отправляем к кнопке помощи выше — это единственный
+                  осмысленный выход с пустого шага */}
+              <button
+                onClick={() => setHelp(true)}
+                className="font-bold text-primary underline underline-offset-2 transition-opacity hover:opacity-80"
+              >
+                Свяжитесь с нами по кнопке выше
+              </button>{' '}
+              – мы посмотрим, что можно привезти под заказ.
             </div>
           </div>
         </div>
@@ -300,6 +310,7 @@ const KitSection = ({
         vehicle={vehicle}
         fallback={fallback}
         onTake={onPick}
+        topic={step.helpTopic}
       />
     </section>
   );

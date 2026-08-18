@@ -209,7 +209,15 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
                 : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'
             }`}
           >
-            {chosen ? 'В заказе' : 'В заказ'}
+            {/* В сборке комплекта товар не уходит в корзину, а отмечается
+                на своём шаге — «Выбрать» честнее, чем «В заказ» */}
+            {onPick
+              ? chosen
+                ? 'Выбрано'
+                : 'Выбрать'
+              : chosen
+                ? 'В заказе'
+                : 'В заказ'}
             <Icon name={chosen ? 'Check' : 'Plus'} size={15} />
           </button>
         </div>
