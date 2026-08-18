@@ -32,6 +32,8 @@ interface Props {
   locked?: boolean;
   /** Диагональ выбранной магнитолы — под неё подбираем рамку */
   size?: number | null;
+  /** Машина покупателя строкой — для пояснения, почему список такой */
+  vehicleLabel?: string;
   /** Прокрутить к первому шагу — выбору магнитолы */
   onNeedLead?: () => void;
 }
@@ -57,6 +59,7 @@ const KitSection = ({
   onSkip,
   locked,
   size,
+  vehicleLabel,
   onNeedLead,
 }: Props) => {
   const [shown, setShown] = useState(STEP_SIZE);
@@ -176,14 +179,20 @@ const KitSection = ({
               {allPrices && (step.maxPrice || step.minPrice)
                 ? 'Показаны все модели раздела — вместе с теми, что вне подборки.'
                 : step.text}
-              {/* Покупатель должен видеть, почему список короткий */}
-              {step.matchScreen && !locked && size ? (
-                <span className="font-medium text-foreground">
-                  {' '}
-                  Показываем только рамки под экран {size}″.
-                </span>
-              ) : null}
             </p>
+
+            {/* Покупатель должен видеть, почему список именно такой */}
+            {step.matchScreen && !locked && size ? (
+              <span className="flex w-full items-center gap-2 border border-success/60 bg-success/5 px-3 py-2 text-[0.82rem] leading-snug text-foreground">
+                <Icon
+                  name="Filter"
+                  size={14}
+                  className="flex-none text-success"
+                />
+                Показаны рамки под {String(size).replace('.', ',')} дюймов
+                {vehicleLabel ? ` для ${vehicleLabel}` : ''}
+              </span>
+            ) : null}
 
             {/* Порог цены условен: что «бюджетно» — решает покупатель */}
             {!needCar && !collapsed && !locked && overLimit > 0 && (
@@ -246,19 +255,21 @@ const KitSection = ({
                 className="mx-auto text-muted-foreground"
               />
               <div className="mt-3 font-head text-[1.05rem] font-bold uppercase tracking-tight">
-                Начните с выбора магнитолы
+                {step.matchScreen
+                  ? 'Сначала выберите магнитолу — тогда появятся подходящие рамки'
+                  : 'Сначала выберите магнитолу и рамку'}
               </div>
               <p className="mt-2 text-[0.85rem] leading-relaxed text-muted-foreground">
                 {step.matchScreen
                   ? 'Рамка подбирается под диагональ экрана: под 9 дюймов и под 10 нужны разные. Выберите магнитолу — оставим только то, что встанет ровно.'
-                  : 'Остальное подбирается под выбранную магнитолу. Сделайте первый шаг — и мы откроем следующие.'}
+                  : 'Разъёмы и питание зависят от самой магнитолы и от того, как она встаёт в панель. Закройте два первых шага — и мы откроем этот.'}
               </p>
               <button
                 onClick={onNeedLead}
                 className="mt-4 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
                 <Icon name="ArrowUp" size={15} />
-                К выбору магнитолы
+                {step.matchScreen ? 'К выбору магнитолы' : 'Вернуться к сборке'}
               </button>
             </div>
           </div>

@@ -116,6 +116,15 @@ const ScenarioPage = () => {
    */
   const leadStep = scenario?.kit?.find((s) => s.leading);
   const leadPickId = leadStep ? picks[leadStep.category] : undefined;
+  /**
+   * Шаг закрыт, пока не заполнены все обязательные шаги до него:
+   * рамку подбираем под магнитолу, проводку — под магнитолу и рамку.
+   */
+  const stepLocked = (i: number): boolean =>
+    !!leadStep &&
+    (scenario?.kit ?? [])
+      .slice(0, i)
+      .some((s) => !s.optional && !picks[s.category]);
   const leadProduct = useMemo(
     () => (leadPickId ? products.find((p) => p.id === leadPickId) : undefined),
     [products, leadPickId],
@@ -125,10 +134,11 @@ const ScenarioPage = () => {
     () => (leadProduct ? screenSize(leadProduct) : null),
     [leadProduct],
   );
-  const locked = !!leadStep && !leadPickId;
-
+  /** Первый незаполненный обязательный шаг — туда и возвращаем покупателя */
   const scrollToLead = () => {
-    const i = scenario?.kit?.findIndex((s) => s.leading) ?? -1;
+    const i = (scenario?.kit ?? []).findIndex(
+      (s) => !s.optional && !picks[s.category],
+    );
     if (i >= 0) scrollTo(stepId(i));
   };
 
@@ -418,7 +428,10 @@ const ScenarioPage = () => {
               <span className="flex h-16 w-16 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
                 <Icon name={scenario.icon} fallback="CircleAlert" size={32} />
               </span>
-              <div className="eyebrow">{scenario.title}</div>
+              {/* Подпись у иконки прячем, когда она повторяет заголовок ниже */}
+              {!scenario.hideEyebrow && (
+                <div className="eyebrow">{scenario.title}</div>
+              )}
             </div>
 
             <h1 className="mt-5 font-head text-3xl font-bold uppercase leading-[1.05] tracking-tight md:text-[46px]">
@@ -492,7 +505,6 @@ const ScenarioPage = () => {
               vehicle={vehicle}
               onApply={applyVehicle}
               onReset={resetVehicle}
-              count={hits.length}
             />
             {vehicle && found.length > hits.length && (
               <p className="mt-2 text-[0.78rem] text-muted-foreground">
@@ -521,8 +533,13 @@ const ScenarioPage = () => {
                   onNeedVehicle={scrollToVehicle}
                   anchorId={stepId(i)}
                   helpOffer={step.helpOffer}
-                  locked={locked && !step.leading}
+                  locked={stepLocked(i)}
                   size={step.matchScreen ? leadSize : null}
+                  vehicleLabel={
+                    vehicle
+                      ? `${vehicle.brand} ${vehicle.model} ${vehicle.year} г.`
+                      : ''
+                  }
                   onNeedLead={scrollToLead}
                   skipped={!!skipped[step.category]}
                   onSkip={(skip) => {
