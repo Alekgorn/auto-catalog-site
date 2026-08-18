@@ -473,8 +473,7 @@ const ScenarioPage = () => {
             />
             {vehicle && found.length > hits.length && (
               <p className="mt-2 text-[0.78rem] text-muted-foreground">
-                Скрыто несовместимых: {found.length - hits.length}.
-                Универсальные товары остаются в списке.
+                Показаны только совместимые с вашим авто товары.
               </p>
             )}
           </div>
