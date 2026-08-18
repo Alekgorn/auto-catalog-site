@@ -249,6 +249,9 @@ def fetch_external_url(url: str, timeout: float = 0) -> tuple:
     return own, None
 
 
+DEFAULT_STOCK_NOTE = 'Под заказ - Отправка 1–3 дня'
+
+
 def row_to_product(r: dict) -> dict:
     return {
         'id': r['id'],
@@ -274,6 +277,8 @@ def row_to_product(r: dict) -> dict:
         'fits': r['fits'],
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
+        'stock': r.get('stock_qty') or 0,
+        'stockNote': r.get('stock_note') or DEFAULT_STOCK_NOTE,
         'isActive': r['is_active'],
     }
 
@@ -378,6 +383,8 @@ XLS_COLUMNS = [
     ('yearFrom', 'Год с', 8),
     ('yearTo', 'Год по', 8),
     ('badge', 'Метка', 12),
+    ('stock', 'Наличие (шт)', 13),
+    ('stockNote', 'Если нет в наличии', 30),
     ('popularity', 'Популярность', 14),
     ('sortOrder', 'Порядок', 10),
     ('isActive', 'На сайте (да/нет)', 17),
@@ -472,6 +479,8 @@ def build_xlsx(products: list, brands: list, categories: list = None) -> bytes:
             'yearFrom': p.get('yearFrom', ''),
             'yearTo': p.get('yearTo', ''),
             'badge': p.get('badge') or '',
+            'stock': p.get('stock', 0),
+            'stockNote': p.get('stockNote') or DEFAULT_STOCK_NOTE,
             'popularity': p.get('popularity', 0),
             'sortOrder': p.get('sortOrder', 100),
             'isActive': 'да' if p.get('isActive', True) else 'нет',
@@ -613,6 +622,8 @@ def parse_xlsx(data: bytes) -> tuple:
             'yearFrom': as_int('yearFrom', 2010),
             'yearTo': as_int('yearTo', 2026),
             'badge': str(get('badge')).strip() or None,
+            'stock': as_int('stock', 0) or 0,
+            'stockNote': str(get('stockNote')).strip() or DEFAULT_STOCK_NOTE,
             'popularity': as_int('popularity', 0) or 0,
             'sortOrder': as_int('sortOrder', 100) or 100,
             'isActive': active_raw not in ('нет', 'no', 'false', '0', 'скрыт'),
@@ -869,6 +880,8 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'fits': qjson(p.get('fits') or {}),
             'sort_order': qint(p.get('sortOrder'), (i + 1) * 10),
             'popularity': qint(p.get('popularity'), 0),
+            'stock_qty': qint(p.get('stock'), 0),
+            'stock_note': q(str(p.get('stockNote') or DEFAULT_STOCK_NOTE)[:255]),
             'is_active': 'TRUE' if p.get('isActive', True) else 'FALSE',
         }
 
@@ -884,6 +897,7 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
                 'badge': 'badge', 'images': 'images', 'description': 'description',
                 'specs': 'specs', 'kit': 'kit', 'fits': 'fits',
                 'sortOrder': 'sort_order', 'popularity': 'popularity',
+                'stock': 'stock_qty', 'stockNote': 'stock_note',
                 'isActive': 'is_active',
             }
             allowed = {keep[k] for k in present if k in keep}
@@ -1706,6 +1720,8 @@ def handler(event: dict, context) -> dict:
                 'fits': qjson(body.get('fits') or {}),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
+        'stock_qty': qint(body.get('stock'), 0),
+        'stock_note': q(str(body.get('stockNote') or DEFAULT_STOCK_NOTE).strip() or DEFAULT_STOCK_NOTE),
                 'is_active': 'TRUE' if body.get('isActive', True) else 'FALSE',
             }
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

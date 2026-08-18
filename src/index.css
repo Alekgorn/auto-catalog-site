@@ -45,6 +45,9 @@
     --success: 148 62% 32%;
     --success-foreground: 0 0% 100%;
     --success-soft: 148 45% 95%;
+    --info: 212 78% 42%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 212 70% 96%;
 
     --border: 240 6% 87%;
     --input: 240 6% 87%;
@@ -113,6 +116,9 @@
     --success: 148 52% 42%;
     --success-foreground: 0 0% 100%;
     --success-soft: 148 30% 14%;
+    --info: 212 70% 58%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 212 34% 16%;
 
     --border: 0 0% 18%;
     --input: 0 0% 18%;

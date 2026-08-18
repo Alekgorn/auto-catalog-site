@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import StockLine from '@/components/StockLine';
 import {
   Product,
   Vehicle,
@@ -175,6 +176,8 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
                 {formatPrice(product.price)}
               </span>
             </div>
+
+            <StockLine product={product} large />
 
             <div className="eyebrow mt-6">Технические данные</div>
             <dl className="mt-2 max-h-[280px] overflow-y-auto text-[0.88rem]">

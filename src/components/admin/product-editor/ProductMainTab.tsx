@@ -1,4 +1,5 @@
 import { AdminProduct, SetField, label, field } from './product-types';
+import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
 
 interface Props {
   form: AdminProduct;
@@ -59,6 +60,28 @@ const ProductMainTab = ({ form, set, categories }: Props) => (
         value={form.popularity ?? 0}
         onChange={(e) => set('popularity', Number(e.target.value))}
         className={field}
+      />
+    </div>
+    <div>
+      <span className={label}>Наличие, шт</span>
+      <input
+        type="number"
+        min={0}
+        value={form.stock ?? 0}
+        onChange={(e) => set('stock', Number(e.target.value))}
+        className={field}
+      />
+      <p className="mt-1 text-[0.72rem] text-muted-foreground">
+        Больше нуля — на сайте «На складе – отправка сегодня»
+      </p>
+    </div>
+    <div>
+      <span className={label}>Если нет в наличии</span>
+      <input
+        value={form.stockNote ?? ''}
+        onChange={(e) => set('stockNote', e.target.value)}
+        className={field}
+        placeholder={DEFAULT_STOCK_NOTE}
       />
     </div>
     <div>

@@ -1,4 +1,5 @@
 import { GuideBlock } from '@/data/catalog';
+import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
 
 export interface AdminProduct {
   id?: number;
@@ -25,6 +26,10 @@ export interface AdminProduct {
   /** Особенности и нюансы монтажа — блоки текста и фото */
   notes: GuideBlock[];
   fits: Record<string, string[]>;
+  /** Сколько штук на складе. 0 — только под заказ */
+  stock?: number;
+  /** Что писать покупателю, когда склад пуст */
+  stockNote?: string;
   sortOrder: number;
   isActive: boolean;
 }
@@ -44,6 +49,8 @@ export const emptyProduct = (): AdminProduct => ({
   yearFrom: 2015,
   yearTo: new Date().getFullYear(),
   badge: null,
+  stock: 0,
+  stockNote: DEFAULT_STOCK_NOTE,
   images: [],
   description: [''],
   specs: [],

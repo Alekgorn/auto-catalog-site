@@ -18,6 +18,10 @@ export interface Product {
   ozonUrl?: string;
   /** Ссылка на товар в Wildberries */
   wbUrl?: string;
+  /** Сколько штук на складе. 0 — только под заказ */
+  stock?: number;
+  /** Что писать, когда товара нет на складе */
+  stockNote?: string;
   install: string;
   warranty: string;
   fits: Record<string, string[]>; // марка -> модели
