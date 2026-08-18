@@ -17,37 +17,42 @@ const VehicleBadge = () => {
   const change = () => navigate('/#select');
 
   return (
-    <div className="-mx-6 bg-pick px-6 text-pick-foreground md:-mx-14 md:px-14">
-      <div className="flex h-11 items-center gap-3">
-        <Icon name="Car" size={17} className="flex-none text-pick-accent" />
+    <div className="-mx-6 border-b-2 border-pick-accent bg-pick px-6 text-pick-foreground md:-mx-14 md:px-14">
+      <div className="flex min-h-[3.5rem] flex-wrap items-center gap-x-3 gap-y-2 py-2.5">
+        {/* Красный бейдж с машиной — якорь для глаза: сразу видно,
+            что выдача сейчас сужена, а не показана целиком */}
+        <span className="flex flex-none items-center gap-1.5 bg-pick-accent px-2.5 py-1 text-[0.68rem] font-bold uppercase tracking-[0.08em] text-white">
+          <Icon name="Car" size={15} className="flex-none" />
+          Ваше авто
+        </span>
 
-        <span className="min-w-0 flex-1 truncate text-[0.82rem]">
+        <span className="min-w-0 flex-1 truncate text-[0.9rem]">
           <span className="hidden text-pick-muted sm:inline">
-            Показываем для{' '}
+            Показываем только для{' '}
           </span>
-          <span className="font-head font-bold tracking-tight">
+          <span className="font-head text-[1.02rem] font-bold uppercase tracking-tight text-white">
             {vehicle.brand} {vehicle.model}, {vehicle.year}
           </span>
         </span>
 
-        <button
-          onClick={change}
-          className="flex-none border border-pick-border px-3 py-1 text-[0.7rem] uppercase tracking-[0.08em] text-pick-muted transition-colors hover:border-pick-foreground hover:text-pick-foreground"
-        >
-          Сменить
-        </button>
+        <div className="flex flex-none items-center gap-2">
+          <button
+            onClick={change}
+            className="border border-pick-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-white transition-colors hover:border-pick-accent hover:bg-pick-accent"
+          >
+            Сменить авто
+          </button>
 
-        <button
-          onClick={() => setVehicle(null)}
-          aria-label="Сбросить машину"
-          title="Показывать все товары"
-          className="flex-none text-pick-muted transition-colors hover:text-pick-foreground"
-        >
-          <span className="hidden text-[0.7rem] uppercase tracking-[0.08em] sm:inline">
-            Сбросить
-          </span>
-          <Icon name="X" size={16} className="sm:hidden" />
-        </button>
+          <button
+            onClick={() => setVehicle(null)}
+            aria-label="Сбросить фильтр"
+            title="Показывать все товары"
+            className="flex items-center gap-1.5 border border-pick-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-pick-muted transition-colors hover:border-pick-foreground hover:text-pick-foreground"
+          >
+            <Icon name="X" size={14} className="flex-none" />
+            <span className="hidden sm:inline">Сбросить фильтр</span>
+          </button>
+        </div>
       </div>
     </div>
   );

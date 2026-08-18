@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Selection from "@/components/Selection";
@@ -16,7 +16,6 @@ import { useCatalog } from "@/context/CatalogContext";
 
 const Index = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { brands: BRANDS } = useCatalog();
   const saved = loadVehicle();
 
@@ -91,8 +90,9 @@ const Index = () => {
   const [activeProduct] = useState<Product | null>(null);
 
   /**
-   * Подобрали машину — открываем каталог со всем оборудованием.
-   * Каталог теперь живёт в сценарии, а не на главной.
+   * Подобрали машину — плавно ведём к сценариям.
+   * Уводить сразу на страницу каталога рано: человек ещё не сказал,
+   * какую задачу решает, поэтому сначала показываем выбор задачи.
    */
   const applyVehicle = () => {
     // Без всех трёх полей подбор врёт — молча ничего не делаем
@@ -100,7 +100,13 @@ const Index = () => {
     const next = { brand, model, year: Number(year) };
     setVehicle(next);
     saveVehicle(next);
-    navigate("/scenario/vse-po-mashine");
+    // Ждём кадр: блок сценариев перерисуется под новую машину,
+    // и только после этого его позиция на странице окончательная
+    requestAnimationFrame(() =>
+      document
+        .getElementById("scenarios")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
   };
 
   const selectorProps = {
