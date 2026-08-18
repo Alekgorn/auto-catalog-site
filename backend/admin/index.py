@@ -1040,13 +1040,18 @@ def handler(event: dict, context) -> dict:
             failed_rows = cur.fetchall()
             skip = {r['url'] for r in failed_rows}
 
-            # Для подсчёта нужен весь список, для переноса — только начало:
-            # на 450 товарах выборка целиком съедает время, отведённое на
-            # само скачивание.
-            tail = '' if method == 'GET' else ' LIMIT 60'
+            # Берём только товары, где реально есть чужие ссылки.
+            # Отбор делает база: искать «http» по всему полю нельзя —
+            # наши собственные адреса тоже начинаются с http, и в выборку
+            # попадали уже перенесённые товары, вытесняя те, что ждут очереди.
+            has_external = (
+                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(images) AS u "
+                f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')})"
+            )
+            tail = '' if method == 'GET' else ' LIMIT 40'
             cur.execute(
                 f"SELECT id, slug, images FROM {schema()}.products "
-                f"WHERE images::text LIKE '%http%' ORDER BY id{tail}"
+                f"WHERE {has_external} ORDER BY id{tail}"
             )
             rows = cur.fetchall()
 
@@ -1066,7 +1071,7 @@ def handler(event: dict, context) -> dict:
                     f"SELECT COUNT(*) FROM jsonb_array_elements_text(images) AS u "
                     f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')}"
                     f")), 0) AS n FROM {schema()}.products "
-                    f"WHERE images::text LIKE '%http%'"
+                    f"WHERE {has_external}"
                 )
                 left = int(cur.fetchone()['n'] or 0) - len(skip)
                 left = max(left, 0)
