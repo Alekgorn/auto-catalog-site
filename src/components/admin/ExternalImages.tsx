@@ -53,41 +53,63 @@ const ExternalImages = ({ onDone }: { onDone?: () => void }) => {
     let remaining = start;
     let done = 0;
     let stuck = 0;
+    let fails = 0;
 
-    // Пока есть что переносить: одна картинка — один вызов
-    while (remaining > 0 && !stop.current && stuck < 3) {
-      const res = await adminFetch('?action=external-images', {
-        method: 'POST',
-      });
-      if (!res.ok) {
-        toast({
-          title: 'Не получилось перенести фото',
-          description: 'Попробуйте запустить ещё раз',
-          variant: 'destructive',
+    /**
+     * Идём, пока есть что переносить. Обрыв одного вызова — не повод
+     * останавливать всю работу: фото качаются с чужих сайтов, и часть
+     * из них отвечает медленно. Сдаёмся только после пяти подряд.
+     */
+    while (remaining > 0 && !stop.current && stuck < 3 && fails < 5) {
+      let data: { left?: number; saved?: number; handled?: number; problem?: unknown } | null =
+        null;
+
+      try {
+        const res = await adminFetch('?action=external-images', {
+          method: 'POST',
         });
-        break;
+        if (res.ok) data = await res.json();
+      } catch {
+        /* сеть моргнула — попробуем ещё раз */
       }
-      const data = await res.json();
+
+      if (!data) {
+        fails += 1;
+        // Небольшая пауза, чтобы дать медленному сайту прийти в себя
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+
+      fails = 0;
       remaining = data.left ?? 0;
-      if (data.saved) done += 1;
+      done += data.saved ?? 0;
       setLeft(remaining);
       setMoved(done);
-      // Ни успеха, ни отказа — значит переносить больше нечего
-      stuck = data.saved || data.problem ? 0 : stuck + 1;
+      // Ни одной картинки не разобрали — значит переносить больше нечего
+      stuck = data.handled ? 0 : stuck + 1;
     }
 
     setRunning(false);
     await check();
     onDone?.();
 
-    if (!stop.current) {
+    if (stop.current) return;
+
+    if (fails >= 5) {
       toast({
-        title: done ? 'Фотографии перенесены' : 'Переносить нечего',
-        description: done
-          ? `Скачано к нам: ${done} шт.`
-          : 'Все фото уже хранятся у нас',
+        title: 'Перенос остановлен',
+        description: `Успели перенести ${done} шт. Нажмите «Перенести фото к нам» ещё раз — продолжим с этого места.`,
+        variant: 'destructive',
       });
+      return;
     }
+
+    toast({
+      title: done ? 'Фотографии перенесены' : 'Переносить нечего',
+      description: done
+        ? `Скачано к нам: ${done} шт.`
+        : 'Все фото уже хранятся у нас',
+    });
   };
 
   const retryFailed = async () => {
@@ -144,8 +166,10 @@ const ExternalImages = ({ onDone }: { onDone?: () => void }) => {
                 />
               </div>
               <div className="mt-2 text-[0.82rem] text-muted-foreground">
-                Перенесено: {moved}. Не закрывайте страницу — фото скачиваются по
-                одному.
+                Перенесено: {moved} из {total}. Осталось: {pending}. Не
+                закрывайте страницу — фото скачиваются с чужих сайтов, это
+                небыстро. Работу можно прервать и продолжить позже с того же
+                места.
               </div>
             </div>
           )}

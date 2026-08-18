@@ -5,6 +5,7 @@ import json
 import re
 import os
 import secrets
+import time
 import uuid
 from datetime import datetime, timedelta
 
@@ -113,6 +114,13 @@ CDN_PREFIX = 'https://cdn.poehali.dev/projects/'
 # Больше 15 МБ на одно фото — почти наверняка не товарный снимок
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
+# Сколько всего живёт функция. Платформа обрывает её на этом сроке,
+# поэтому работу планируем так, чтобы успеть ответить самим.
+FUNCTION_BUDGET = float(os.environ.get('FUNCTION_TIMEOUT', '2'))
+
+# Запас на ответ и запись в базу — его не занимаем скачиванием
+RESERVE = 0.6
+
 
 def _is_own_cdn(url: str) -> bool:
     key = os.environ.get('AWS_ACCESS_KEY_ID', '')
@@ -162,12 +170,15 @@ def _is_external_image(url: str) -> bool:
     return not u.startswith(CDN_PREFIX)
 
 
-def fetch_external_url(url: str) -> tuple:
+def fetch_external_url(url: str, timeout: float = 0) -> tuple:
     """Скачивает чужую картинку, сжимает и кладёт к нам.
 
     Возвращает (наш_адрес, причина_отказа). Если не получилось — адрес None,
     а причину показываем в админке: пусть владелец каталога видит,
     какие именно ссылки не сработали и почему.
+
+    timeout — сколько секунд готовы ждать чужой сайт. Ноль означает
+    «сколько осталось от жизни функции».
     """
     import urllib.error
     import urllib.request
@@ -180,14 +191,23 @@ def fetch_external_url(url: str) -> tuple:
             'Accept': 'image/*,*/*',
         },
     )
+    # Ждём чужой сайт ровно столько, сколько остаётся до лимита функции.
+    # Ждать дольше бессмысленно: платформа оборвёт нас на середине
+    # скачивания, картинка не сохранится, а попытка сгорит впустую.
+    wait = timeout if timeout > 0 else FUNCTION_BUDGET - RESERVE
+    if wait <= 0:
+        return None, 'не хватило времени'
+
     try:
-        with urllib.request.urlopen(req, timeout=12) as r:
+        with urllib.request.urlopen(req, timeout=wait) as r:
             ctype = str(r.headers.get('Content-Type', '')).lower()
             raw = r.read(MAX_IMAGE_BYTES + 1)
     except urllib.error.HTTPError as e:
         return None, f'сайт ответил отказом ({e.code})'
     except Exception:
-        return None, 'не удалось скачать'
+        # Чаще всего сюда попадает медленный сайт, не уложившийся в срок.
+        # Такую ссылку в чёрный список не заносим — попробуем ещё раз.
+        return None, 'сайт отвечает слишком долго'
 
     if len(raw) > MAX_IMAGE_BYTES:
         return None, 'файл слишком большой'
@@ -1004,8 +1024,9 @@ def handler(event: dict, context) -> dict:
 
         if action == 'external-images':
             """Переносит к нам картинки, которые в каталоге указаны ссылками
-            на чужие сайты. За один вызов — одна картинка: скачивание идёт
-            через интернет и легко упирается в таймаут функции."""
+            на чужие сайты. За один вызов — сколько успеем до конца отведённого
+            функции времени: скачивание идёт через интернет и непредсказуемо."""
+            started = time.time()
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
             if method == 'DELETE':
@@ -1019,9 +1040,13 @@ def handler(event: dict, context) -> dict:
             failed_rows = cur.fetchall()
             skip = {r['url'] for r in failed_rows}
 
+            # Для подсчёта нужен весь список, для переноса — только начало:
+            # на 450 товарах выборка целиком съедает время, отведённое на
+            # само скачивание.
+            tail = '' if method == 'GET' else ' LIMIT 60'
             cur.execute(
                 f"SELECT id, slug, images FROM {schema()}.products "
-                f"WHERE images::text LIKE '%http%' ORDER BY id"
+                f"WHERE images::text LIKE '%http%' ORDER BY id{tail}"
             )
             rows = cur.fetchall()
 
@@ -1031,7 +1056,21 @@ def handler(event: dict, context) -> dict:
                     if _is_external_image(u) and u not in skip
                 ]
 
-            left = sum(len(pending_of(r)) for r in rows)
+            if method == 'GET':
+                left = sum(len(pending_of(r)) for r in rows)
+            else:
+                # При переносе в выборке только часть товаров, поэтому
+                # общий остаток берём отдельным быстрым запросом
+                cur.execute(
+                    f"SELECT COALESCE(SUM(("
+                    f"SELECT COUNT(*) FROM jsonb_array_elements_text(images) AS u "
+                    f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')}"
+                    f")), 0) AS n FROM {schema()}.products "
+                    f"WHERE images::text LIKE '%http%'"
+                )
+                left = int(cur.fetchone()['n'] or 0) - len(skip)
+                left = max(left, 0)
+
             failed = [
                 {
                     'url': r['url'],
@@ -1045,46 +1084,73 @@ def handler(event: dict, context) -> dict:
                 cur.close()
                 return resp(200, {'left': left, 'failed': failed})
 
-            # POST — переносим одну картинку
+            # POST — переносим столько картинок, сколько успеем.
+            # Раньше за вызов бралась ровно одна, и почти всё время уходило
+            # на разогрев функции; теперь работаем до конца отведённого срока.
             saved = 0
             problem = None
+            done_urls = set()
+
             for r in rows:
+                # Осталось меньше, чем нужно на одно скачивание — выходим
+                # сами, с готовым ответом. Иначе платформа оборвёт вызов,
+                # и админка посчитает это ошибкой.
+                spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
+                if spare < 0.5:
+                    break
+
                 urls = list(r['images'] or [])
-                idx = next(
-                    (i for i, u in enumerate(urls)
-                     if _is_external_image(u) and u not in skip),
-                    None,
-                )
-                if idx is None:
-                    continue
+                changed = False
 
-                src = urls[idx]
-                own, reason = fetch_external_url(src)
+                for idx, u in enumerate(urls):
+                    if not _is_external_image(u) or u in skip or u in done_urls:
+                        continue
 
-                if own:
-                    urls[idx] = own
+                    spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
+                    if spare < 0.5:
+                        break
+
+                    own, reason = fetch_external_url(u, timeout=spare)
+                    done_urls.add(u)
+
+                    if own:
+                        urls[idx] = own
+                        changed = True
+                        saved += 1
+                    elif reason == 'сайт отвечает слишком долго':
+                        # Не вина ссылки — сайт не успел ответить.
+                        # В список отказов не заносим: попробуем позже.
+                        problem = {
+                            'url': u, 'reason': reason, 'product': r['slug'],
+                        }
+                    else:
+                        # Запоминаем отказ, чтобы не биться в эту ссылку снова
+                        cur.execute(
+                            f"INSERT INTO {schema()}.failed_images "
+                            f"(url, reason, product_slug) VALUES "
+                            f"({q(u)}, {q(reason or 'неизвестная ошибка')}, {q(r['slug'])}) "
+                            f"ON CONFLICT (url) DO UPDATE SET tries = failed_images.tries + 1, "
+                            f"reason = EXCLUDED.reason"
+                        )
+                        skip.add(u)
+                        problem = {
+                            'url': u, 'reason': reason, 'product': r['slug'],
+                        }
+
+                if changed:
                     cur.execute(
                         f"UPDATE {schema()}.products SET images = {qjson(urls)}, "
                         f"updated_at = NOW() WHERE id = {r['id']}"
                     )
-                    saved = 1
-                else:
-                    # Запоминаем отказ, чтобы не биться в эту ссылку снова
-                    cur.execute(
-                        f"INSERT INTO {schema()}.failed_images "
-                        f"(url, reason, product_slug) VALUES "
-                        f"({q(src)}, {q(reason or 'неизвестная ошибка')}, {q(r['slug'])}) "
-                        f"ON CONFLICT (url) DO UPDATE SET tries = failed_images.tries + 1, "
-                        f"reason = EXCLUDED.reason"
-                    )
-                    problem = {'url': src, 'reason': reason, 'product': r['slug']}
                 conn.commit()
-                break
 
             cur.close()
+            # Сколько ещё осталось — считаем от того, что реально разобрали
+            handled = len(done_urls)
             return resp(200, {
                 'saved': saved,
-                'left': max(left - 1, 0) if (saved or problem) else 0,
+                'left': max(left - handled, 0),
+                'handled': handled,
                 'problem': problem,
             })
 
