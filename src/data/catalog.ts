@@ -386,6 +386,35 @@ export interface Vehicle {
   year: number;
 }
 
+/**
+ * Незаконченный выбор авто: марка есть, модель и год — не обязательно.
+ * Нужен для каталога, который сужается на каждом шаге, а не только
+ * после полностью заполненной формы.
+ */
+export interface PartialVehicle {
+  brand: string;
+  model?: string;
+  year?: number;
+}
+
+/**
+ * Подходит ли товар под то, что уже выбрано. Незаполненные шаги не
+ * ограничивают: указана только марка — проверяем марку, добавили модель —
+ * проверяем марку с моделью, и так далее.
+ */
+export const matchesPartial = (
+  product: Product,
+  v: PartialVehicle | null,
+): boolean => {
+  if (!v?.brand) return true;
+  const models = product.fits?.[v.brand];
+  if (!models) return false;
+  if (v.model && !models.includes(v.model)) return false;
+  if (v.year && (v.year < product.years[0] || v.year > product.years[1]))
+    return false;
+  return true;
+};
+
 export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
   if (!v) return true;
   const models = product.fits[v.brand];
