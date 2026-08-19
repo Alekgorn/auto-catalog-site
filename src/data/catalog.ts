@@ -341,7 +341,7 @@ export const searchProducts = (products: Product[], query: string): Product[] =>
   const words = q.split(/\s+/).filter(Boolean);
 
   const scored = products.map((p) => {
-    const models = Object.entries(p.fits)
+    const models = Object.entries(p.fits ?? {})
       .map(([b, m]) => `${b} ${m.join(' ')}`)
       .join(' ');
     const haystack = `${p.name} ${p.category} ${productSku(p)} ${models}`.toLowerCase();
@@ -428,7 +428,7 @@ export const matchesPartial = (
 
 export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
   if (!v) return true;
-  const models = product.fits[v.brand];
+  const models = product.fits?.[v.brand];
   if (!models || !models.includes(v.model)) return false;
   return v.year >= product.years[0] && v.year <= product.years[1];
 };

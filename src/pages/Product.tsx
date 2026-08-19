@@ -159,7 +159,7 @@ const Product = () => {
     );
   }
 
-  const brands = Object.entries(product.fits);
+  const brands = Object.entries(product.fits ?? {});
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
 
   // Гарантия и артикул показываются только здесь — дублировать их у кнопок не нужно

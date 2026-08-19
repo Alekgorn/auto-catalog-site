@@ -71,16 +71,25 @@ const expandImages = (data: PrerenderData): PrerenderData => {
   if (!data?.products?.length) return data;
   return {
     ...data,
-    products: data.products.map((p) =>
-      p.images?.some((u) => u.startsWith('~'))
-        ? {
-            ...p,
-            images: p.images.map((u) =>
-              u.startsWith('~') ? IMG_PREFIX + u.slice(1) : u,
-            ),
-          }
-        : p,
-    ),
+    products: data.products.map((p) => ({
+      // Пустые поля в слепок не попадают ради его размера — возвращаем их
+      // на место, чтобы товар выглядел ровно так же, как пришёл бы с сервера
+      subcategory: '',
+      badge: '',
+      ozonUrl: '',
+      wbUrl: '',
+      stockNote: '',
+      notes: [],
+      guides: [],
+      kit: [],
+      ...p,
+      // Список совместимости есть не у всех товаров (универсальные позиции),
+      // но код местами перебирает его напрямую — держим объект всегда
+      fits: p.fits ?? {},
+      images: p.images?.some((u) => u.startsWith('~'))
+        ? p.images.map((u) => (u.startsWith('~') ? IMG_PREFIX + u.slice(1) : u))
+        : p.images,
+    })),
   };
 };
 
