@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
 import { Vehicle, matchVehicle, splitByFit } from "@/data/catalog";
 import UniversalDivider from "@/components/UniversalDivider";
+import FloatingFilters from "@/components/FloatingFilters";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
@@ -305,32 +306,48 @@ const SearchPage = () => {
               </label>
             </div>
 
+            {/* Разделы найденного — в плавающей панели, как в каталоге:
+                над выдачей они занимали несколько строк и отжимали товары */}
             {categories.length > 1 && (
-              <div className="flex flex-wrap gap-2 pb-6">
-                <button
-                  onClick={() => setCategory("")}
-                  className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-                    category
-                      ? "border-border bg-surface hover:border-primary hover:text-primary"
-                      : "border-foreground bg-foreground text-background"
-                  }`}
-                >
-                  Все ({hits.length})
-                </button>
-                {categories.map(([c, n]) => (
+              <FloatingFilters
+                activeCount={category ? 1 : 0}
+                resultCount={list.length}
+                hideOn={category}
+                storageKey={`search:${query}`}
+                scrollTargetId="catalog-top"
+              >
+                <div className="flex flex-col gap-2">
                   <button
-                    key={c}
-                    onClick={() => setCategory(c)}
-                    className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-                      category === c
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-surface hover:border-primary hover:text-primary"
+                    onClick={() => setCategory("")}
+                    className={`flex items-center justify-between border px-3.5 py-2.5 text-left text-[0.82rem] transition-colors ${
+                      category
+                        ? "border-border bg-surface hover:border-primary hover:text-primary"
+                        : "border-foreground bg-foreground text-background"
                     }`}
                   >
-                    {c} ({n})
+                    Все
+                    <span className="text-[0.75rem] opacity-70">
+                      {hits.length}
+                    </span>
                   </button>
-                ))}
-              </div>
+                  {categories.map(([c, n]) => (
+                    <button
+                      key={c}
+                      onClick={() => setCategory(c)}
+                      className={`flex items-center justify-between gap-3 border px-3.5 py-2.5 text-left text-[0.82rem] transition-colors ${
+                        category === c
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-surface hover:border-primary hover:text-primary"
+                      }`}
+                    >
+                      <span className="min-w-0 flex-1">{c}</span>
+                      <span className="flex-none text-[0.75rem] opacity-70">
+                        {n}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </FloatingFilters>
             )}
 
             {parsed.brands.length > 0 && (
@@ -350,7 +367,10 @@ const SearchPage = () => {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 pb-10 md:gap-4 lg:grid-cols-3">
+            <div
+              id="catalog-top"
+              className="grid grid-cols-2 gap-3 pb-10 md:gap-4 lg:grid-cols-3"
+            >
               {visible.map((h, i) => (
                 <Fragment key={h.product.id}>
                   {i === fit.exact.length && fit.universal.length > 0 && (

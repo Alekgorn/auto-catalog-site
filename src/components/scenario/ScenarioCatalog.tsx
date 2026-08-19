@@ -102,7 +102,13 @@ const ScenarioCatalog = ({
     {/* Разделы сценария уехали в плавающую панель справа: раньше они
         занимали несколько строк над каталогом и отодвигали товары вниз */}
     {categories.length > 1 && !scenario.fullCatalog && (
-      <FloatingFilters activeCount={category ? 1 : 0} hideOn={category}>
+      <FloatingFilters
+        activeCount={category ? 1 : 0}
+        resultCount={list.length}
+        hideOn={category}
+        storageKey={`scenario:${scenario.slug}`}
+        scrollTargetId="catalog-top"
+      >
         <div className="flex flex-col gap-2">
           <button
             onClick={() => onCategory("")}
@@ -139,6 +145,8 @@ const ScenarioCatalog = ({
           activeCount={filters.categories.length + filters.warranties.length}
           resultCount={list.length}
           hideOn={filters.categories.join("|")}
+          storageKey={`scenario:${scenario.slug}`}
+          scrollTargetId="catalog-top"
         >
           <CatalogFilters
             state={filters}
@@ -153,7 +161,10 @@ const ScenarioCatalog = ({
       )}
 
       <div>
-        <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-4">
+        <div
+          id="catalog-top"
+          className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-4"
+        >
           {visible.map((h, i) => (
             <Fragment key={h.product.id}>
               {/* Граница между «точно встанет» и «подойдёт почти всем» */}

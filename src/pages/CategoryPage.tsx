@@ -256,7 +256,10 @@ const CategoryPage = () => {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-3 py-8 sm:gap-6 xl:grid-cols-3">
+              <div
+                id="catalog-top"
+                className="grid grid-cols-2 gap-3 py-8 sm:gap-6 xl:grid-cols-3"
+              >
                 {list.map((p) => (
                   <ProductCard key={p.id} product={p} vehicle={vehicle} />
                 ))}
@@ -289,6 +292,8 @@ const CategoryPage = () => {
         activeCount={activeCount}
         resultCount={list.length}
         hideOn={filters.categories.join('|')}
+        storageKey={`category:${category}`}
+        scrollTargetId="catalog-top"
       >
         {filtersNode}
       </FloatingFilters>

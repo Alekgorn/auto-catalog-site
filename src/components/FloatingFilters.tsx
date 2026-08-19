@@ -6,7 +6,7 @@ interface Props {
   children: React.ReactNode;
   /** Сколько условий выбрано — цифра на вкладке у края экрана */
   activeCount?: number;
-  /** Сколько товаров осталось — подпись на кнопке «Показать» */
+  /** Сколько товаров доступно сейчас — видно и на вкладке, и на кнопке */
   resultCount?: number;
   /**
    * Растёт при выборе категории — панель уезжает, открывая результат.
@@ -14,29 +14,71 @@ interface Props {
    * и панель убегала бы из-под пальца.
    */
   hideOn?: string;
+  /**
+   * Своё имя страницы. По нему запоминаем, что панель здесь уже
+   * показывали — второй раз она сама не выедет.
+   */
+  storageKey?: string;
+  /** Куда прокрутить после выбора — начало списка товаров */
+  scrollTargetId?: string;
 }
 
 /** Сколько панель висит открытой при заходе на страницу */
 const SHOW_MS = 3000;
 /** Длительность отъезда за край — столько же держим панель в разметке */
 const SLIDE_MS = 400;
+/**
+ * Сколько помним, что панель уже показывали. Полчаса: за это время
+ * человек успевает походить по каталогу и не устать от подсказки,
+ * а вернувшись позже — снова увидит, где лежат фильтры.
+ */
+const SEEN_MS = 30 * 60 * 1000;
+const SEEN_KEY = 'shtatno.filters-seen';
+
+/** Показывали ли панель на этой странице недавно */
+const wasSeen = (key: string): boolean => {
+  if (typeof window === 'undefined' || !key) return false;
+  try {
+    const raw = sessionStorage.getItem(SEEN_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    const at = map?.[key];
+    return typeof at === 'number' && Date.now() - at < SEEN_MS;
+  } catch {
+    return false;
+  }
+};
+
+const markSeen = (key: string) => {
+  if (typeof window === 'undefined' || !key) return;
+  try {
+    const raw = sessionStorage.getItem(SEEN_KEY);
+    const map = raw ? JSON.parse(raw) : {};
+    map[key] = Date.now();
+    sessionStorage.setItem(SEEN_KEY, JSON.stringify(map));
+  } catch {
+    /* приватный режим — просто не запоминаем */
+  }
+};
 
 /**
  * Фильтры плавающей панелью поверх каталога.
  *
  * Раньше фильтры занимали четверть ширины постоянной колонкой — на товары
  * оставалось меньше места, а на телефоне они и вовсе раздвигали список.
- * Теперь панель показывается при заходе на пару секунд, уезжает за правый
- * край в узкую вкладку «Фильтр» и возвращается по нажатию. Каталог при
- * этом занимает всю ширину.
+ * Теперь панель показывается при первом заходе на пару секунд, уезжает за
+ * правый край в узкую вкладку «Фильтр» и возвращается по нажатию. Каталог
+ * при этом занимает всю ширину.
  */
 const FloatingFilters = ({
   children,
   activeCount = 0,
   resultCount,
   hideOn,
+  storageKey = '',
+  scrollTargetId,
 }: Props) => {
-  const [open, setOpen] = useState(true);
+  /* Заходили сюда недавно — панель не выкатываем, сразу прячем во вкладку */
+  const [open, setOpen] = useState(() => !wasSeen(storageKey));
   /** Панель ещё в разметке, пока доигрывает анимация отъезда */
   const [mounted, setMounted] = useState(true);
   /** Первый показ — тот, что сам прячется; дальше закрывает только человек */
@@ -44,12 +86,18 @@ const FloatingFilters = ({
 
   /* Показали при заходе и убрали — дальше панель ждёт нажатия на вкладку */
   useEffect(() => {
-    if (!auto.current) return;
+    if (!open) {
+      auto.current = false;
+      return;
+    }
+    markSeen(storageKey);
     const t = setTimeout(() => {
       auto.current = false;
       setOpen(false);
     }, SHOW_MS);
     return () => clearTimeout(t);
+    // Только на первом заходе: дальше панелью управляет человек
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /* Уехавшую панель убираем из разметки — она не должна ловить нажатия */
@@ -80,7 +128,11 @@ const FloatingFilters = ({
     setOpen(false);
   };
 
-  /* Категорию выбрали — прячем панель, чтобы стал виден новый список */
+  /**
+   * Выбрали категорию — прячем панель и поднимаем к началу списка.
+   * Иначе человек остаётся в середине прежней выдачи и не понимает,
+   * что список под ним уже другой.
+   */
   const firstHide = useRef(true);
   useEffect(() => {
     if (firstHide.current) {
@@ -89,6 +141,16 @@ const FloatingFilters = ({
     }
     auto.current = false;
     setOpen(false);
+
+    if (!scrollTargetId) return;
+    const el = document.getElementById(scrollTargetId);
+    if (!el) return;
+    // Ждём, пока список перерисуется под новый фильтр
+    requestAnimationFrame(() => {
+      const top = el.getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hideOn]);
 
   return (
@@ -100,7 +162,7 @@ const FloatingFilters = ({
           setOpen(true);
         }}
         aria-label="Открыть фильтры"
-        className={`fixed right-0 top-1/2 z-[55] flex -translate-y-1/2 items-center gap-2 border-2 border-r-0 border-primary bg-primary px-2 py-4 text-primary-foreground shadow-lg transition-all duration-300 ${
+        className={`fixed right-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 border-2 border-r-0 border-primary bg-primary px-2 py-4 text-primary-foreground shadow-lg transition-all duration-300 ${
           open
             ? 'pointer-events-none translate-x-full opacity-0'
             : 'translate-x-0 opacity-100'
@@ -112,6 +174,14 @@ const FloatingFilters = ({
         >
           Фильтр
         </span>
+
+        {/* Сколько товаров сейчас доступно — видно, не открывая панель */}
+        {typeof resultCount === 'number' && (
+          <span className="flex min-w-[1.6rem] items-center justify-center border border-primary-foreground/40 bg-primary-foreground px-1 py-0.5 font-head text-[0.68rem] font-bold text-primary">
+            {resultCount}
+          </span>
+        )}
+
         {activeCount > 0 && (
           <span className="absolute -left-2 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[0.62rem] font-bold text-background">
             {activeCount}
@@ -140,6 +210,11 @@ const FloatingFilters = ({
               <span className="flex items-center gap-2 font-head text-[0.85rem] font-bold uppercase tracking-[0.08em]">
                 <Icon name="SlidersHorizontal" size={16} />
                 Фильтры
+                {typeof resultCount === 'number' && (
+                  <span className="bg-primary-foreground px-1.5 py-0.5 text-[0.68rem] text-primary">
+                    {resultCount}
+                  </span>
+                )}
               </span>
               <button
                 onClick={close}
