@@ -1,4 +1,5 @@
 import base64
+import gzip
 import hashlib
 import io
 import json
@@ -23,12 +24,30 @@ SESSION_DAYS = 7
 XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 
+"""
+Каталог перерос лимит ответа функции (4 МБ), поэтому большие ответы
+отдаём сжатыми. Флаг ставит handler по заголовкам запроса.
+"""
+_GZIP = {'on': False}
+
+
 def resp(status: int, payload: dict) -> dict:
+    body = json.dumps(payload, ensure_ascii=False)
+
+    if _GZIP['on'] and len(body) > 512_000:
+        packed = gzip.compress(body.encode('utf-8'), 6)
+        return {
+            'statusCode': status,
+            'headers': {**CORS, 'Content-Encoding': 'gzip'},
+            'isBase64Encoded': True,
+            'body': base64.b64encode(packed).decode('ascii'),
+        }
+
     return {
         'statusCode': status,
         'headers': CORS,
         'isBase64Encoded': False,
-        'body': json.dumps(payload, ensure_ascii=False),
+        'body': body,
     }
 
 
@@ -991,6 +1010,10 @@ def handler(event: dict, context) -> dict:
     action = params.get('action', '')
     headers = event.get('headers') or {}
     token = headers.get('X-Auth-Token') or headers.get('x-auth-token') or ''
+    # Большой список товаров помещается в ответ только сжатым
+    _GZIP['on'] = 'gzip' in str(
+        headers.get('Accept-Encoding') or headers.get('accept-encoding') or ''
+    ).lower()
     raw_body = event.get('body') or '{}'
     try:
         body = json.loads(raw_body) if raw_body else {}

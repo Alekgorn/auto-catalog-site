@@ -23,12 +23,12 @@ const Hero = ({ selection }: Props) => {
       <div className="rule" />
 
       <div className="grid grid-cols-1 items-center gap-x-6 md:grid-cols-12">
-        <div className="flex min-h-0 flex-col pb-5 pt-6 md:col-span-6 md:pb-8 md:pr-8 md:pt-8">
+        <div className="flex min-h-0 min-w-0 flex-col pb-5 pt-6 md:col-span-6 md:pb-8 md:pr-8 md:pt-8">
           <div
             className="eyebrow rise ml-0 md:ml-4"
             style={{ animationDelay: ".05s" }}
           >
-            Подберём под твою машину
+            Автоэлектроника и мультимедиа для авто
           </div>
           <h1
             className="rise ml-0 mt-3 font-head text-[9.5vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 md:mt-4 lg:text-[58px]"
@@ -42,9 +42,9 @@ const Hero = ({ selection }: Props) => {
             className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
             style={{ animationDelay: ".25s" }}
           >
-            <b className="font-medium text-foreground">Начни с авто – </b> мы
-            отсеем всё, что не подойдёт. А если хочешь сразу к делу – выбери
-            сценарий (камера, магнитола, тишина) – мы сами подгоним.
+            <b className="font-medium text-foreground">Начни с авто – </b>
+            покажем оборудование, которое встаёт на твою модель по штатным
+            местам и разъёмам. Не знаешь, что искать – выбери задачу ниже.
           </p>
 
           {/*
@@ -55,7 +55,7 @@ const Hero = ({ selection }: Props) => {
           */}
           {!shortcutsHidden && shortcuts.length > 0 && (
             <div
-              className="rise no-scrollbar -mx-6 mt-7 hidden gap-2 overflow-x-auto px-6 md:ml-4 md:mr-0 md:flex md:px-0"
+              className="rise no-scrollbar mt-7 hidden w-full max-w-full gap-2 overflow-x-auto md:ml-4 md:flex"
               style={{ animationDelay: ".35s" }}
             >
               {shortcuts.map((s, i) => (
