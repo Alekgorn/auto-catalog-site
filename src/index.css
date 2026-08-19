@@ -212,6 +212,16 @@
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-105;
   }
+
+  /* Строка, которая листается вбок, но без видимой полосы прокрутки */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @keyframes rise {
