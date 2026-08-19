@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useVehicle } from "@/hooks/use-vehicle";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SectionHead from "@/components/SectionHead";
@@ -10,6 +9,7 @@ import CatalogFilters, {
   FilterState,
   SortKey,
 } from "@/components/CatalogFilters";
+import FloatingFilters from "@/components/FloatingFilters";
 import NotFound from "@/pages/NotFound";
 import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
@@ -32,7 +32,6 @@ const CategoryPage = () => {
   const { products, categories, loading } = useCatalog();
   const { vehicle } = useVehicle();
   const [sort, setSort] = useState<SortKey>("popular");
-  const [mobileOpen, setMobileOpen] = useState(false);
 
   const category = useMemo(
     () => categories.find((c) => slugify(c) === slug) ?? null,
@@ -214,28 +213,12 @@ const CategoryPage = () => {
 
         <div className="rule-hair" />
 
-        <div className="grid grid-cols-1 gap-x-6 lg:grid-cols-12">
-          <aside className="hidden self-start lg:col-span-3 lg:block">
-            <div className="sticky top-[150px] my-6 bg-surface p-5 shadow-panel">
-              {filtersNode}
-            </div>
-          </aside>
-
-          <div className="lg:col-span-9">
+        {/* Фильтры больше не занимают колонку — они всплывают поверх
+            каталога, поэтому товарам достаётся вся ширина страницы */}
+        <div>
+          <div>
             <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-4">
-                <button
-                  onClick={() => setMobileOpen(true)}
-                  className="flex items-center gap-2 border border-foreground px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary lg:hidden"
-                >
-                  <Icon name="SlidersHorizontal" size={15} />
-                  Фильтры
-                  {activeCount > 0 && (
-                    <span className="bg-primary px-1.5 text-[0.65rem] text-primary-foreground">
-                      {activeCount}
-                    </span>
-                  )}
-                </button>
                 <span className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground">
                   Найдено: {list.length}
                 </span>
@@ -302,32 +285,13 @@ const CategoryPage = () => {
         </div>
       </main>
 
-      {mobileOpen && (
-        <div className="fixed inset-0 z-[60] flex lg:hidden">
-          <button
-            aria-label="Закрыть"
-            onClick={() => setMobileOpen(false)}
-            className="flex-1 bg-foreground/40"
-          />
-          <div className="w-[85%] max-w-sm overflow-y-auto border-l border-border bg-surface px-6 py-5">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="mb-2 flex w-full items-center justify-between font-head text-lg font-bold uppercase"
-            >
-              Фильтры
-              <Icon name="X" size={20} />
-            </button>
-            {filtersNode}
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="mt-6 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.85rem] font-bold uppercase text-background"
-            >
-              Показать {list.length}
-              <Icon name="ArrowRight" size={17} />
-            </button>
-          </div>
-        </div>
-      )}
+      <FloatingFilters
+        activeCount={activeCount}
+        resultCount={list.length}
+        hideOn={filters.categories.join('|')}
+      >
+        {filtersNode}
+      </FloatingFilters>
 
       <Footer />
     </div>
