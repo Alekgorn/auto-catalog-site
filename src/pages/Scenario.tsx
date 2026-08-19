@@ -16,10 +16,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
+import StepVehicleFilter from "@/components/StepVehicleFilter";
 import {
+  PartialVehicle,
   Product,
   Vehicle,
   matchVehicle,
+  matchesPartial,
   splitByFit,
 } from "@/data/catalog";
 import { screenSize } from "@/lib/kit-filter";
@@ -58,6 +61,12 @@ const ScenarioPage = () => {
   const scenario = findScenario(slug);
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  /**
+   * Пошаговый подбор — только для полного каталога: там список сужается
+   * сразу после выбора марки, не дожидаясь модели и года.
+   */
+  const stepMode = !!scenario?.fullCatalog;
+  const [partial, setPartial] = useState<PartialVehicle | null>(null);
   const [sort, setSort] = useState<SortKey>("relevance");
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
@@ -201,7 +210,14 @@ const ScenarioPage = () => {
 
   /* Машину могли сменить или сбросить плашкой в шапке — следим за этим */
   useEffect(() => {
-    const sync = () => setVehicle(loadVehicle());
+    const sync = () => {
+      const car = loadVehicle();
+      setVehicle(car);
+      // Пошаговый фильтр показывает ту же машину, что и шапка
+      setPartial(
+        car ? { brand: car.brand, model: car.model, year: car.year } : null,
+      );
+    };
     sync();
     window.addEventListener(VEHICLE_EVENT, sync);
     return () => window.removeEventListener(VEHICLE_EVENT, sync);
@@ -254,11 +270,17 @@ const ScenarioPage = () => {
       out = out.filter((h) => (h.product.fits?.[brandFilter] ?? []).length > 0);
     }
 
+    // Полный каталог сужается на каждом шаге выбора авто
+    if (stepMode) {
+      if (!partial?.brand) return out;
+      return out.filter((h) => matchesPartial(h.product, partial));
+    }
+
     if (!vehicle) return out;
     return out.filter(
       (h) => matchVehicle(h.product, vehicle, brands.length) !== null,
     );
-  }, [found, vehicle, brands.length, brandFilter]);
+  }, [found, vehicle, brands.length, brandFilter, stepMode, partial]);
 
   /** По чему группируем кнопки над каталогом: раздел, подраздел или тип */
   const groupOf = (p: Product) => {
@@ -377,6 +399,23 @@ const ScenarioPage = () => {
     if (scenario?.kit) {
       const target = nextStop(scenario.kit, picks, v);
       if (target) scrollTo(target);
+    }
+  };
+
+  /**
+   * Шаг подбора в полном каталоге. Полностью заполненную машину
+   * запоминаем как обычно — она нужна другим страницам и шапке.
+   */
+  const applyPartial = (v: PartialVehicle | null) => {
+    setPartial(v);
+    setShown(PAGE_SIZE);
+    if (v?.brand && v.model && v.year) {
+      const full = { brand: v.brand, model: v.model, year: v.year };
+      setVehicle(full);
+      saveVehicle(full);
+    } else if (vehicle) {
+      setVehicle(null);
+      saveVehicle(null);
     }
   };
 
@@ -506,15 +545,25 @@ const ScenarioPage = () => {
           </div>
         ) : (
           <div id="kit-vehicle" className="scroll-mt-28 py-6">
-            <VehicleFilterBar
-              vehicle={vehicle}
-              onApply={applyVehicle}
-              onReset={resetVehicle}
-            />
-            {vehicle && found.length > hits.length && (
-              <p className="mt-2 text-[0.78rem] text-muted-foreground">
-                Показаны только совместимые с вашим авто товары.
-              </p>
+            {stepMode ? (
+              <StepVehicleFilter
+                value={partial}
+                onChange={applyPartial}
+                count={hits.length}
+              />
+            ) : (
+              <>
+                <VehicleFilterBar
+                  vehicle={vehicle}
+                  onApply={applyVehicle}
+                  onReset={resetVehicle}
+                />
+                {vehicle && found.length > hits.length && (
+                  <p className="mt-2 text-[0.78rem] text-muted-foreground">
+                    Показаны только совместимые с вашим авто товары.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}
