@@ -9,7 +9,6 @@ import ProductEditor, {
 import BrandsEditor, { AdminBrand } from "@/components/admin/BrandsEditor";
 import OrdersPanel from "@/components/admin/OrdersPanel";
 import DealersPanel from "@/components/admin/DealersPanel";
-import QueriesPanel from "@/components/admin/QueriesPanel";
 import GuideEditor, {
   AdminGuide,
   emptyGuide,
@@ -325,7 +324,6 @@ const Admin = () => {
 
         {tab === "orders" && <OrdersPanel />}
 
-        {tab === "queries" && <QueriesPanel />}
 
         {tab === "dealers" && <DealersPanel />}
 

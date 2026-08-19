@@ -691,6 +691,24 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
 
   if (score <= 0) return null;
 
+  /*
+   * --- 5в. Слова нашлись только в описании ---
+   *
+   * Запрос вроде «тормозные колодки» цепляется за слова из описаний
+   * («тормозной путь», «колодки» в тексте про парковку) и выдаёт
+   * случайный набор. Если смысл запроса нам непонятен и ни одно слово
+   * не попало в название товара — это не находка, а совпадение букв.
+   */
+  if (
+    !q.concepts.length &&
+    !q.narrowConcepts.length &&
+    !q.brands.length &&
+    !q.categories.length &&
+    !nameHits
+  ) {
+    return null;
+  }
+
   /* --- 6. Популярность как мягкий довесок --- */
   score += (item.product.popularity ?? 0) / 200;
   if (item.product.badge === 'Хит') score += 5;
