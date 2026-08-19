@@ -47,16 +47,22 @@ const Hero = ({ selection }: Props) => {
             сценарий (камера, магнитола, тишина) – мы сами подгоним.
           </p>
 
+          {/*
+            Направления ассортимента. Одна строка, которая листается вбок:
+            так блок не растёт в высоту от длинных подписей и не разъезжается
+            рядами. На телефоне скрыт — там сразу под текстом должен идти
+            подбор по машине, а не ряд кнопок.
+          */}
           {!shortcutsHidden && shortcuts.length > 0 && (
             <div
-              className="rise ml-0 mt-7 flex flex-wrap gap-2 md:ml-4"
+              className="rise no-scrollbar -mx-6 mt-7 hidden gap-2 overflow-x-auto px-6 md:ml-4 md:mr-0 md:flex md:px-0"
               style={{ animationDelay: ".35s" }}
             >
               {shortcuts.map((s, i) => (
                 <button
                   key={`${s.label}-${i}`}
                   onClick={() => goToCategory(s.category, s.label)}
-                  className={`flex items-center gap-2 border px-3.5 py-2.5 text-[0.78rem] transition-colors ${
+                  className={`flex flex-none items-center gap-2 whitespace-nowrap border px-3.5 py-2.5 text-[0.78rem] transition-colors ${
                     s.category
                       ? "border-border bg-surface hover:border-primary hover:text-primary"
                       : "border-foreground bg-foreground text-background hover:border-primary hover:bg-primary hover:text-primary-foreground"

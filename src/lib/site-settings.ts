@@ -112,11 +112,25 @@ export interface HeroShortcut {
   icon: string;
 }
 
+/**
+ * Направления ассортимента под слоганом. Это не полный список категорий,
+ * а укрупнённые группы: посетитель должен за секунду понять, что здесь
+ * автоэлектроника, а не запчасти и механика.
+ */
 export const DEFAULT_SHORTCUTS: HeroShortcut[] = [
-  { label: 'Магнитолы', category: 'Android-магнитолы', icon: 'Radio' },
-  { label: 'Проводка', category: 'Жгуты и адаптеры', icon: 'Cable' },
-  { label: 'Камеры', category: 'Камеры и парктроники', icon: 'Camera' },
-  { label: 'Регистраторы', category: 'Видеорегистраторы', icon: 'Video' },
+  { label: 'Магнитолы', category: 'Android магнитолы', icon: 'Radio' },
+  {
+    label: 'Рамки и переходники',
+    category: 'Переходные рамки для магнитол',
+    icon: 'Frame',
+  },
+  {
+    label: 'Проводка и разъёмы',
+    category: 'Переходники для подключения магнитол',
+    icon: 'Cable',
+  },
+  { label: 'Камеры и парковка', category: 'Камеры заднего вида', icon: 'Camera' },
+  { label: 'Шумоизоляция', category: 'Шумоизоляция', icon: 'Volume2' },
   { label: 'Весь каталог', category: '', icon: 'LayoutGrid' },
 ];
 
