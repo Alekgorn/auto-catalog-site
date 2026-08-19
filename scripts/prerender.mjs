@@ -96,26 +96,40 @@ const safeJson = (value) =>
  */
 const IMG_PREFIX = 'https://cdn.poehali.dev/projects/';
 
-const isBlank = (v) =>
-  v === '' ||
-  v === null ||
-  v === undefined ||
-  (Array.isArray(v) && v.length === 0) ||
-  (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+/**
+ * Поля, которые можно не записывать, если они пустые: при чтении каталога
+ * они восстанавливаются обратно (см. expandImages в CatalogContext).
+ *
+ * Список закрытый и это важно: убрать «любое пустое поле» нельзя — код
+ * местами читает их напрямую (p.fits[brand], p.years[0]), и пропажа
+ * оборачивается белым экраном.
+ */
+const OPTIONAL_TEXT = [
+  'subcategory',
+  'badge',
+  'ozonUrl',
+  'wbUrl',
+  'stockNote',
+];
+const OPTIONAL_NUM = ['oldPrice', 'proPrice'];
+const OPTIONAL_LIST = ['notes', 'guides', 'kit'];
 
 const slimCatalog = (data) => {
   const products = (data.products ?? []).map((p) => {
-    const out = {};
-    for (const [k, v] of Object.entries(p)) {
-      if (isBlank(v)) continue;
-      out[k] =
-        k === 'images' && Array.isArray(v)
-          ? v.map((u) =>
-              typeof u === 'string' && u.startsWith(IMG_PREFIX)
-                ? '~' + u.slice(IMG_PREFIX.length)
-                : u,
-            )
-          : v;
+    const out = { ...p };
+
+    for (const k of OPTIONAL_TEXT) if (!out[k]) delete out[k];
+    for (const k of OPTIONAL_NUM) if (!out[k]) delete out[k];
+    for (const k of OPTIONAL_LIST) {
+      if (Array.isArray(out[k]) && out[k].length === 0) delete out[k];
+    }
+
+    if (Array.isArray(out.images)) {
+      out.images = out.images.map((u) =>
+        typeof u === 'string' && u.startsWith(IMG_PREFIX)
+          ? '~' + u.slice(IMG_PREFIX.length)
+          : u,
+      );
     }
     return out;
   });

@@ -31,7 +31,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
 
-  const entries = Object.entries(product.fits) as [string, string[]][];
+  const entries = Object.entries(product.fits ?? {}) as [string, string[]][];
   const modelCount = entries.reduce((n, [, m]) => n + m.length, 0);
   const fits = isCompatible(product, vehicle);
   /** Товар действительно подходит любой машине по своим данным */
