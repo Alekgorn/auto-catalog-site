@@ -7,17 +7,40 @@ interface Props {
   uploading: boolean;
   upload: (files: FileList | null) => void;
   missingFields: string[];
+  /** Перенести уже загруженное фото во вкладку «Особенности» */
+  moveToNotes: (src: string) => void;
 }
 
 /** Вкладка «Описание и фото»: снимки, абзацы, характеристики, комплектация. */
-const ProductContentTab = ({ form, set, uploading, upload, missingFields }: Props) => (
+const ProductContentTab = ({
+  form,
+  set,
+  uploading,
+  upload,
+  missingFields,
+  moveToNotes,
+}: Props) => (
   <div className="space-y-7">
     <div>
       <span className={label}>Фотографии</span>
+      {form.images.length > 0 && (
+        <p className="mt-1 text-[0.78rem] text-muted-foreground">
+          Стрелка на снимке переносит его в «Особенности» — заново загружать не
+          нужно.
+        </p>
+      )}
       <div className="mt-2 flex flex-wrap gap-3">
         {form.images.map((src, i) => (
-          <div key={src + i} className="relative">
+          <div key={src + i} className="group relative">
             <img src={src} alt="" className="h-24 w-24 bg-card object-contain p-1" />
+            <button
+              onClick={() => moveToNotes(src)}
+              title="Перенести в «Особенности»"
+              aria-label="Перенести в «Особенности»"
+              className="absolute -left-2 -top-2 border border-foreground bg-background p-1 text-foreground transition-colors hover:bg-foreground hover:text-background"
+            >
+              <Icon name="ArrowRightLeft" size={12} />
+            </button>
             <button
               onClick={() =>
                 set(
