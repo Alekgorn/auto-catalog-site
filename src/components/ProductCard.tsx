@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
-import { slugify } from '@/lib/slug';
 import {
   CARD_FIELDS,
   Product,
@@ -111,7 +110,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const fitConfirmed = !!vehicle && fits && !anyCar;
 
   return (
-    <article className="group flex flex-col bg-surface shadow-card transition-shadow duration-300 hover:shadow-card-hover">
+    <article className="group flex flex-col border border-border bg-surface transition-colors duration-200 hover:border-foreground/40">
       <button
         type="button"
         onClick={() =>
@@ -130,7 +129,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           /* Размеры заранее — страница не прыгает, пока фото грузится */
           width={800}
           height={800}
-          className="aspect-square w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03] sm:p-4"
+          className="aspect-square w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03] sm:p-3"
         />
 
         {product.badge && (
@@ -205,25 +204,20 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
       {/* Порядок как в приложениях магазинов: сразу под фото название и
           характеристики — по ним выбирают, а цена с наличием стоят внизу,
           вплотную к кнопке заказа */}
-      <div className="flex flex-1 flex-col p-3 sm:p-4">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3">
+        {/* Название в две строки: третья почти всегда оставалась пустой
+            и растягивала все карточки ряда по самой длинной */}
         <h3 className="font-bold leading-snug tracking-tight text-foreground">
           <Link
             to={`/product/${product.id}`}
-            className="line-clamp-3 text-[0.95rem] transition-colors hover:text-primary sm:text-[1rem]"
+            className="line-clamp-2 text-[0.88rem] transition-colors hover:text-primary"
           >
             {product.name}
           </Link>
         </h3>
 
-        <Link
-          to={`/catalog/${slugify(product.category)}`}
-          className="mt-1 truncate text-[0.7rem] text-muted-foreground transition-colors hover:text-primary sm:text-[0.75rem]"
-        >
-          {product.category}
-        </Link>
-
         {specRows.length > 0 && (
-          <dl className="mt-2 space-y-1 text-[0.74rem] leading-snug sm:text-[0.78rem]">
+          <dl className="mt-1.5 space-y-0.5 text-[0.72rem] leading-snug">
             {specRows.map((r) => (
               <div key={r.label} className="flex justify-between gap-2">
                 <dt className="truncate text-muted-foreground">{r.label}</dt>
@@ -237,23 +231,28 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
 
         {/* Машина не выбрана и товар подходит не всем — зовём проверить */}
         {!vehicle && !universal && !anyCar && (
-          <div className="mt-2 flex items-start gap-1.5 text-[0.7rem] leading-snug text-muted-foreground sm:text-[0.75rem]">
-            <Icon name="Car" size={13} className="mt-0.5 flex-none" />
+          <div className="mt-1.5 flex items-start gap-1.5 text-[0.68rem] leading-snug text-muted-foreground">
+            <Icon name="Car" size={12} className="mt-0.5 flex-none" />
             Укажите машину — проверим совместимость
           </div>
         )}
 
-        <div className="mt-auto pt-3">
+        <div className="mt-auto pt-2">
           <PriceBlock product={product} />
           <StockLine product={product} />
         </div>
 
-        <div className="flex items-center gap-2 pt-3">
+        <div className="flex items-center gap-2 pt-2">
+          {/* «Подробнее» — иконкой: в узкой карточке отдельная кнопка
+              съедала половину строки, а на страницу товара ведут ещё
+              и фото, и название */}
           <Link
             to={`/product/${product.id}`}
-            className="hidden flex-none border border-border px-3 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-foreground sm:block"
+            aria-label={`Подробнее: ${product.name}`}
+            title="Открыть страницу товара"
+            className="hidden h-[38px] w-[38px] flex-none items-center justify-center border border-border text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:flex"
           >
-            Подробнее
+            <Icon name="ArrowRight" size={16} />
           </Link>
           <button
             onClick={() =>

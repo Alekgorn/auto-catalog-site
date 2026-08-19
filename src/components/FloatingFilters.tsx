@@ -162,9 +162,9 @@ const FloatingFilters = ({
           setOpen(true);
         }}
         aria-label="Открыть фильтры"
-        className={`fixed right-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-2xl border-2 border-r-0 border-primary-foreground/30 bg-primary px-2.5 py-5 text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300 hover:px-3.5 ${
+        className={`fixed left-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 rounded-r-2xl border-2 border-l-0 border-primary-foreground/30 bg-primary px-2.5 py-5 text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300 hover:px-3.5 ${
           open
-            ? 'pointer-events-none translate-x-full opacity-0'
+            ? 'pointer-events-none -translate-x-full opacity-0'
             : 'translate-x-0 opacity-100'
         }`}
       >
@@ -183,7 +183,7 @@ const FloatingFilters = ({
         )}
 
         {activeCount > 0 && (
-          <span className="absolute -left-2 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[0.62rem] font-bold text-background">
+          <span className="absolute -right-2 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-[0.62rem] font-bold text-background">
             {activeCount}
           </span>
         )}
@@ -202,8 +202,8 @@ const FloatingFilters = ({
           />
 
           <aside
-            className={`fixed right-0 top-[92px] z-[56] flex max-h-[calc(100vh-120px)] w-[86%] max-w-[22rem] flex-col overflow-hidden rounded-l-2xl border-2 border-primary bg-surface shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out sm:right-4 sm:w-[20rem] sm:rounded-2xl ${
-              open ? 'translate-x-0' : 'translate-x-[110%]'
+            className={`fixed left-0 top-[92px] z-[56] flex max-h-[calc(100vh-120px)] w-[86%] max-w-[22rem] flex-col overflow-hidden rounded-r-2xl border-2 border-primary bg-surface shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out sm:left-4 sm:w-[20rem] sm:rounded-2xl ${
+              open ? 'translate-x-0' : '-translate-x-[110%]'
             }`}
           >
             <div className="flex flex-none items-center justify-between border-b-2 border-primary bg-primary px-4 py-3 text-primary-foreground">
@@ -222,7 +222,7 @@ const FloatingFilters = ({
                 className="flex items-center gap-1 text-[0.7rem] uppercase tracking-[0.08em] transition-opacity hover:opacity-70"
               >
                 Свернуть
-                <Icon name="ChevronRight" size={16} />
+                <Icon name="ChevronLeft" size={16} />
               </button>
             </div>
 

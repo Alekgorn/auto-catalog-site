@@ -33,7 +33,7 @@ const PriceBlock = ({ product, large = false }: Props) => {
         <span
           className={`whitespace-nowrap font-head font-bold tracking-tight ${
             discount ? 'text-primary' : 'text-foreground'
-          } ${large ? 'text-4xl' : 'text-xl sm:text-2xl'}`}
+          } ${large ? 'text-4xl' : 'text-lg sm:text-xl'}`}
         >
           {formatPrice(price)}
         </span>
