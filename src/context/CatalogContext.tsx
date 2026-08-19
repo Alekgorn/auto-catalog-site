@@ -60,14 +60,45 @@ const CatalogContext = createContext<CatalogValue | null>(null);
 const DEFAULT_CARD_FIELDS = ['warranty'];
 
 /** Данные, вшитые в HTML на этапе сборки, чтобы первый экран не ждал сеть. */
+/**
+ * Общий адрес картинок в слепке каталога заменён на «~» — так файл,
+ * который скачивает каждый посетитель, весит на пару сотен килобайт
+ * меньше. Здесь возвращаем адресам полный вид.
+ */
+const IMG_PREFIX = 'https://cdn.poehali.dev/projects/';
+
+const expandImages = (data: PrerenderData): PrerenderData => {
+  if (!data?.products?.length) return data;
+  return {
+    ...data,
+    products: data.products.map((p) =>
+      p.images?.some((u) => u.startsWith('~'))
+        ? {
+            ...p,
+            images: p.images.map((u) =>
+              u.startsWith('~') ? IMG_PREFIX + u.slice(1) : u,
+            ),
+          }
+        : p,
+    ),
+  };
+};
+
 const bootData = (): PrerenderData | null => {
   if (typeof window === 'undefined') return null;
   const raw = (window as unknown as { __CATALOG__?: PrerenderData }).__CATALOG__;
-  return raw && typeof raw === 'object' ? raw : null;
+  return raw && typeof raw === 'object' ? expandImages(raw) : null;
 };
 
-/** Сколько минут считаем каталог свежим и не идём за ним в сеть */
-const FRESH_MINUTES = 10;
+/**
+ * Сколько минут считаем каталог свежим и не идём за ним в сеть.
+ *
+ * Каталог весит больше двух мегабайт, и каждый поход за ним — это и
+ * вызов платной функции, и заметная пауза у посетителя. Правки из
+ * админки всё равно прилетают сразу: она открывает сайт с меткой
+ * ?fresh, которая обходит эту проверку.
+ */
+const FRESH_MINUTES = 60;
 const CACHE_KEY = 'catalog-cache';
 
 /** Когда собрали страницу — метку кладёт сборщик рядом с данными */
@@ -191,7 +222,12 @@ export const CatalogProvider = ({
     }
 
     let cancelled = false;
-    setLoading(true);
+    /*
+     * Показываем «загружаем» только когда показывать больше нечего.
+     * Если товары уже есть (пришли со страницей или из копии), обновляем
+     * их молча в фоне — иначе готовый каталог подменялся бы заглушкой.
+     */
+    if (!seed?.products?.length) setLoading(true);
     fetch(CATALOG_URL)
       .then((r) => r.json())
       .then((data) => {

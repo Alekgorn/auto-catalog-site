@@ -2,7 +2,6 @@ export type AdminTab =
   | "products"
   | "guides"
   | "orders"
-  | "queries"
   | "dealers"
   | "brands"
   | "categories"
@@ -37,7 +36,6 @@ const AdminTabs = ({
         ["guides", `Инструкции (${guidesCount})`],
         ["brands", `Марки (${brandsCount})`],
         ["categories", `Категории (${categoriesCount})`],
-        ["queries", "Запросы"],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],
         ["settings", "Настройки"],

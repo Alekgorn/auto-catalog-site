@@ -85,6 +85,43 @@ const safeJson = (value) =>
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
 
+/**
+ * Готовит каталог к отправке в браузер: выкидывает пустые поля и
+ * заменяет общий адрес картинок на короткую метку.
+ *
+ * Файл каталога скачивает каждый посетитель, а хостинг отдаёт его без
+ * сжатия — поэтому лишние килобайты здесь напрямую бьют по скорости
+ * открытия сайта. Пустые поля кода всё равно не меняют: отсутствующее
+ * значение читается так же, как пустая строка.
+ */
+const IMG_PREFIX = 'https://cdn.poehali.dev/projects/';
+
+const isBlank = (v) =>
+  v === '' ||
+  v === null ||
+  v === undefined ||
+  (Array.isArray(v) && v.length === 0) ||
+  (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+
+const slimCatalog = (data) => {
+  const products = (data.products ?? []).map((p) => {
+    const out = {};
+    for (const [k, v] of Object.entries(p)) {
+      if (isBlank(v)) continue;
+      out[k] =
+        k === 'images' && Array.isArray(v)
+          ? v.map((u) =>
+              typeof u === 'string' && u.startsWith(IMG_PREFIX)
+                ? '~' + u.slice(IMG_PREFIX.length)
+                : u,
+            )
+          : v;
+    }
+    return out;
+  });
+  return { ...data, products };
+};
+
 const upsertMeta = (head, matcher, tag) =>
   matcher.test(head)
     ? head.replace(matcher, tag)
@@ -200,7 +237,7 @@ const main = async () => {
   const template = resetShell(
     await fs.readFile(path.join(DIST, 'index.html'), 'utf-8'),
   );
-  const { render, takeSeo, clearSeo } = await import(
+  const { render, takeSeo, clearSeo, scenarioSlugs } = await import(
     path.join(ROOT, 'dist-prerender', 'entry.mjs')
   );
 
@@ -230,6 +267,9 @@ const main = async () => {
   const routes = [
     '/',
     '/guides',
+    // Страницы «подбор по задаче»: на них ведут ссылки с главной и из меню,
+    // но раньше они не готовились заранее — поисковик видел пустую страницу
+    ...(scenarioSlugs ?? []).map((slug) => `/scenario/${slug}`),
     ...categoryNames.map((c) => `/catalog/${slugify(c)}`),
     ...brandNames.map((b) => `/brand/${slugify(b)}`),
     ...(data.products ?? []).map((p) => `/product/${p.id}`),
@@ -255,7 +295,8 @@ const main = async () => {
   const catalogFile = `/catalog-data-${builtAt}.js`;
   await fs.writeFile(
     path.join(PUBLIC, catalogFile.slice(1)),
-    `window.__CATALOG__=${safeJson(data)};window.__CATALOG_AT__=${builtAt};` +
+    `window.__CATALOG__=${safeJson(slimCatalog(data))};` +
+      `window.__CATALOG_AT__=${builtAt};` +
       `window.dispatchEvent(new Event('catalog-ready'))`,
     'utf-8',
   );

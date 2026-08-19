@@ -1270,30 +1270,6 @@ def handler(event: dict, context) -> dict:
             cur.close()
             return resp(200, {'ok': True, 'affected': len(ids)})
 
-        if action == 'queries':
-            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-            if method == 'DELETE':
-                cur.execute(f"DELETE FROM {schema()}.ai_search_cache")
-                conn.commit()
-                cur.close()
-                return resp(200, {'ok': True})
-            # Что люди искали по смыслу: сам запрос, сколько раз и что нашлось
-            cur.execute(
-                f"SELECT query_raw, slugs, hits, created_at FROM {schema()}.ai_search_cache "
-                f"ORDER BY hits DESC, created_at DESC LIMIT 300"
-            )
-            items = [
-                {
-                    'query': r['query_raw'],
-                    'hits': r['hits'],
-                    'found': len(r['slugs'] or []),
-                    'createdAt': r['created_at'].isoformat() if r['created_at'] else '',
-                }
-                for r in cur.fetchall()
-            ]
-            cur.close()
-            return resp(200, {'queries': items})
-
         if action == 'categories':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if method == 'GET':
