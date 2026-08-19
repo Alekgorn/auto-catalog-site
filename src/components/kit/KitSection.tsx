@@ -94,10 +94,12 @@ const KitSection = ({
    * но не дешевле 500 ₽ — совсем дешёвые позиции это отдельные
    * мелочи (антенна, USB), а не полноценный жгут для магнитолы.
    */
-  const fallback = useMemo(
-    () => full.find((p) => p.price >= 500) ?? null,
-    [full],
-  );
+  const fallback = useMemo(() => {
+    // Без машины список ничем не сужен — «проверенным вариантом» оказалась
+    // бы случайная позиция от чужого авто. Тогда советовать нечего.
+    if (!vehicle) return null;
+    return full.find((p) => p.price >= 500) ?? null;
+  }, [full, vehicle]);
 
   /** Сколько в списке позиций, точно подходящих машине */
   const exactCount = useMemo(

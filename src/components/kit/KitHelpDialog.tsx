@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, Vehicle, formatPrice } from '@/data/catalog';
+import { useCatalog } from '@/context/CatalogContext';
+import { maxHref, maxPhone, tgHref } from '@/lib/site-settings';
 
 interface Props {
   open: boolean;
@@ -32,10 +34,6 @@ const TOPICS = {
   },
 } as const;
 
-const TELEGRAM = 'https://t.me/alekgorn';
-const PHONE = '+79119639671';
-const PHONE_TEXT = '+7 911 963-96-71';
-
 /**
  * Помощь на шаге проводки: покупатель не разбирается в разъёмах.
  * Даём два выхода — живая консультация или готовый универсальный вариант.
@@ -49,6 +47,11 @@ const KitHelpDialog = ({
   topic = 'wiring',
 }: Props) => {
   const copy = TOPICS[topic];
+  /* Контакты берём из админки — там же, где их меняет владелец сайта */
+  const { contacts } = useCatalog();
+  const tg = tgHref(contacts.telegram);
+  const max = maxHref(contacts.max);
+  const maxNumber = maxPhone(contacts.max);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -101,26 +104,34 @@ const KitHelpDialog = ({
           </p>
 
           <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-            <a
-              href={TELEGRAM}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-2 bg-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
-            >
-              <Icon name="Send" size={17} />
-              Telegram
-            </a>
-            <a
-              href={`tel:${PHONE}`}
-              className="flex flex-1 items-center justify-center gap-2 border border-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
-            >
-              <Icon name="MessageCircle" size={17} />
-              МАКС
-            </a>
+            {tg && (
+              <a
+                href={tg}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2 bg-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="Send" size={17} />
+                Telegram
+              </a>
+            )}
+            {max && (
+              <a
+                href={max}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex flex-1 items-center justify-center gap-2 border border-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name="MessageCircle" size={17} />
+                MAX
+              </a>
+            )}
           </div>
-          <p className="mt-2 text-center text-[0.75rem] text-muted-foreground">
-            Telegram: @alekgorn · МАКС по номеру {PHONE_TEXT}
-          </p>
+          {maxNumber && (
+            <p className="mt-2 text-center text-[0.75rem] text-muted-foreground">
+              MAX: найдите нас по номеру {maxNumber}
+            </p>
+          )}
 
           {fallback && (
             <>

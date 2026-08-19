@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { useCatalog } from '@/context/CatalogContext';
 import { maxHref, maxPhone, tgHref } from '@/lib/site-settings';
@@ -20,6 +21,15 @@ interface Props {
  */
 const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
   const { contacts } = useCatalog();
+  /* Окно выбора мессенджера — для тесной кнопки «Фото нам» */
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open]);
 
   const tg = tgHref(contacts.telegram);
   const max = maxHref(contacts.max);
@@ -29,20 +39,95 @@ const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
 
   if (!tg && !max && !maxNumber) return null;
 
-  /* Тесная панель: ведём в первый доступный мессенджер одной кнопкой */
+  /*
+   * Тесная панель: кнопка открывает окно выбора мессенджера.
+   * Раньше она молча уводила в Telegram — тем, у кого его нет,
+   * деваться было некуда.
+   */
   if (inline) {
-    if (!tg && !max) return null;
+    if (!tg && !max && !maxNumber) return null;
     return (
-      <a
-        href={tg || max}
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Пришлите фото торпедо — подберём по комплектации"
-        className="flex flex-none items-center gap-2 border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
-      >
-        <Icon name="Camera" size={16} className="flex-none" />
-        Фото нам
-      </a>
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          title="Пришлите фото торпедо — подберём по комплектации"
+          className="flex flex-none items-center gap-2 border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+        >
+          <Icon name="Camera" size={16} className="flex-none" />
+          Фото нам
+        </button>
+
+        {open && (
+          <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+            <button
+              aria-label="Закрыть"
+              onClick={() => setOpen(false)}
+              className="fixed inset-0 bg-foreground/60"
+            />
+
+            <div className="relative w-full max-w-[30em] border-2 border-foreground bg-background">
+              <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+                <div className="flex items-center gap-2 font-head text-[1.05rem] font-bold uppercase tracking-tight">
+                  <Icon
+                    name="Camera"
+                    size={18}
+                    className="flex-none text-primary"
+                  />
+                  Пришлите фото
+                </div>
+                <button
+                  onClick={() => setOpen(false)}
+                  aria-label="Закрыть"
+                  className="flex-none p-1 text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <Icon name="X" size={20} />
+                </button>
+              </div>
+
+              <div className="px-5 py-5">
+                <p className="text-[0.88rem] leading-relaxed text-muted-foreground">
+                  Сфотографируйте торпедо и штатную магнитолу и пришлите нам в
+                  удобный мессенджер — определим комплектацию и подберём
+                  оборудование, которое точно встанет.
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                  {tg && (
+                    <a
+                      href={tg}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setOpen(false)}
+                      className="flex flex-1 items-center justify-center gap-2 bg-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <Icon name="Send" size={17} />
+                      Telegram
+                    </a>
+                  )}
+                  {max && (
+                    <a
+                      href={max}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setOpen(false)}
+                      className="flex flex-1 items-center justify-center gap-2 border border-foreground px-5 py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
+                    >
+                      <Icon name="MessageCircle" size={17} />
+                      MAX
+                    </a>
+                  )}
+                </div>
+
+                {maxNumber && (
+                  <p className="mt-2 text-center text-[0.75rem] text-muted-foreground">
+                    MAX: найдите нас по номеру {maxNumber}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
