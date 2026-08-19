@@ -13,7 +13,9 @@ import {
   DEFAULT_FAQ,
   DEFAULT_FILTER_BLOCKS,
   DEFAULT_SHORTCUTS,
+  DEFAULT_HOTSPOTS,
   HeroShortcut,
+  HeroHotspot,
   FaqItem,
   FilterBlockKey,
   SiteContacts,
@@ -32,6 +34,7 @@ export interface PrerenderData {
     filter_blocks?: FilterBlockKey[];
     shortcuts?: HeroShortcut[];
     shortcuts_hidden?: boolean;
+    hotspots?: HeroHotspot[];
   };
 }
 
@@ -47,6 +50,7 @@ interface CatalogValue {
   filterBlocks: FilterBlockKey[];
   shortcuts: HeroShortcut[];
   shortcutsHidden: boolean;
+  hotspots: HeroHotspot[];
   loading: boolean;
   reload: () => void;
 }
@@ -154,6 +158,9 @@ export const CatalogProvider = ({
   const [shortcutsHidden, setShortcutsHidden] = useState<boolean>(
     seed?.settings?.shortcuts_hidden === true,
   );
+  const [hotspots, setHotspots] = useState<HeroHotspot[]>(
+    seed?.settings?.hotspots?.length ? seed.settings.hotspots : DEFAULT_HOTSPOTS,
+  );
   const [catalogCategories, setCatalogCategories] = useState<string[]>(
     seed?.categories ?? [],
   );
@@ -228,6 +235,9 @@ export const CatalogProvider = ({
           setShortcuts(data.settings.shortcuts);
         }
         setShortcutsHidden(data.settings?.shortcuts_hidden === true);
+        if (Array.isArray(data.settings?.hotspots) && data.settings.hotspots.length) {
+          setHotspots(data.settings.hotspots);
+        }
         // Запоминаем на время визита — переходы по сайту больше не дёргают функцию
         saveCache(data);
       })
@@ -264,6 +274,7 @@ export const CatalogProvider = ({
     filterBlocks,
     shortcuts,
     shortcutsHidden,
+    hotspots,
     loading,
     reload: () => setTick((t) => t + 1),
   };

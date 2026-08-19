@@ -242,6 +242,50 @@
   animation: pt 0.5s ease forwards;
 }
 
+/* Схема автомобиля: точки и кузов — интерактивные ссылки */
+.mount-plan .mp-spot,
+.mount-plan .mp-car {
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.7, 0.3, 1),
+    opacity 0.25s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mount-plan .mp-spot .mp-label,
+.mount-plan .mp-spot .mp-dot,
+.mount-plan .mp-spot .mp-line {
+  transition:
+    fill 0.2s ease,
+    stroke 0.2s ease,
+    r 0.2s ease;
+}
+
+.mount-plan .mp-spot:hover .mp-label,
+.mount-plan .mp-spot:focus-visible .mp-label {
+  fill: var(--hero-accent);
+}
+
+.mount-plan .mp-spot:hover .mp-dot,
+.mount-plan .mp-spot:focus-visible .mp-dot {
+  r: 7;
+}
+
+.mount-plan .mp-spot:hover,
+.mount-plan .mp-spot:focus-visible {
+  transform: scale(1.06);
+}
+
+.mount-plan .mp-car:hover,
+.mount-plan .mp-car:focus-visible {
+  transform: scale(1.04);
+}
+
+.mount-plan .mp-spot:focus-visible,
+.mount-plan .mp-car:focus-visible {
+  outline: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rise,
   .pt {

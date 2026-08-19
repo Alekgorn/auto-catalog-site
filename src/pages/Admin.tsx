@@ -344,7 +344,7 @@ const Admin = () => {
 
         {tab === "categories" && <CategoriesEditor onSaved={load} />}
 
-        {tab === "site" && <SitePanel onSaved={load} categories={categories} />}
+        {tab === "site" && <SitePanel onSaved={load} />}
 
         {tab === "settings" && <SettingsPanel onImported={load} />}
 

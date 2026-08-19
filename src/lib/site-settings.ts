@@ -134,5 +134,50 @@ export const DEFAULT_SHORTCUTS: HeroShortcut[] = [
   { label: 'Весь каталог', category: '', icon: 'LayoutGrid' },
 ];
 
+/** Активная точка на схеме автомобиля в первом экране. */
+export interface HeroHotspot {
+  /** Постоянный код точки — задаёт её место на схеме */
+  key: string;
+  /** Подпись рядом с точкой */
+  label: string;
+  /** Куда ведёт: путь сайта (/search?q=…) или внешний адрес */
+  href: string;
+}
+
+/** Места на схеме, которые можно подписать и связать со ссылкой. */
+export const HOTSPOT_SLOTS: { key: string; title: string }[] = [
+  { key: 'headunit', title: 'Магнитола (центр панели)' },
+  { key: 'dvr', title: 'Видеорегистратор (лобовое стекло)' },
+  { key: 'camera', title: 'Камера (задняя часть)' },
+  { key: 'parking', title: 'Парктроники (передний бампер)' },
+  { key: 'frame', title: 'Рамка и жгут (низ панели)' },
+  { key: 'car', title: 'Вся машина (клик по кузову)' },
+];
+
+export const DEFAULT_HOTSPOTS: HeroHotspot[] = [
+  {
+    key: 'headunit',
+    label: 'Android-магнитола',
+    href: '/search?q=Android%20магнитолы',
+  },
+  {
+    key: 'dvr',
+    label: 'Видеорегистратор',
+    href: '/search?q=Видеорегистраторы',
+  },
+  {
+    key: 'camera',
+    label: 'Камера заднего вида',
+    href: '/search?q=Камеры заднего вида',
+  },
+  { key: 'parking', label: 'Парктроники', href: '/search?q=Парктроники' },
+  {
+    key: 'frame',
+    label: 'Рамка и жгут',
+    href: '/search?q=Переходные рамки для магнитол',
+  },
+  { key: 'car', label: 'Подобрать по машине', href: '/#select' },
+];
+
 /** Ссылка для звонка из человекочитаемого номера. */
 export const telHref = (phone: string) => `tel:+${phone.replace(/\D/g, '')}`;

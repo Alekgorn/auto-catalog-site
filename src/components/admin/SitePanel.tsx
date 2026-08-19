@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import ShortcutsEditor from '@/components/admin/ShortcutsEditor';
+import HotspotsEditor from '@/components/admin/HotspotsEditor';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import ExternalImages from '@/components/admin/ExternalImages';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
   DEFAULT_FILTER_BLOCKS,
-  DEFAULT_SHORTCUTS,
-  HeroShortcut,
+  DEFAULT_HOTSPOTS,
+  HeroHotspot,
   FILTER_BLOCKS,
   FaqItem,
   FilterBlockKey,
@@ -19,7 +19,6 @@ import {
 
 interface Props {
   onSaved: () => void;
-  categories: string[];
 }
 
 const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
@@ -35,13 +34,12 @@ const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
 const input =
   'w-full border-b border-border bg-transparent py-2.5 text-[0.95rem] outline-none transition-colors focus:border-primary';
 
-const SitePanel = ({ onSaved, categories }: Props) => {
+const SitePanel = ({ onSaved }: Props) => {
   const { toast } = useToast();
   const [contacts, setContacts] = useState<SiteContacts>(DEFAULT_CONTACTS);
   const [faq, setFaq] = useState<FaqItem[]>(DEFAULT_FAQ);
   const [blocks, setBlocks] = useState<FilterBlockKey[]>(DEFAULT_FILTER_BLOCKS);
-  const [shortcuts, setShortcuts] = useState<HeroShortcut[]>(DEFAULT_SHORTCUTS);
-  const [shortcutsHidden, setShortcutsHidden] = useState(false);
+  const [hotspots, setHotspots] = useState<HeroHotspot[]>(DEFAULT_HOTSPOTS);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -52,8 +50,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
         if (s.contacts) setContacts({ ...DEFAULT_CONTACTS, ...s.contacts });
         if (Array.isArray(s.faq) && s.faq.length) setFaq(s.faq);
         if (Array.isArray(s.filter_blocks)) setBlocks(s.filter_blocks);
-        if (Array.isArray(s.shortcuts) && s.shortcuts.length) setShortcuts(s.shortcuts);
-        setShortcutsHidden(s.shortcuts_hidden === true);
+        if (Array.isArray(s.hotspots) && s.hotspots.length) setHotspots(s.hotspots);
       })
       .catch(() => undefined);
   }, []);
@@ -68,8 +65,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
           contacts,
           faq: clean,
           filter_blocks: blocks,
-          shortcuts: shortcuts.filter((x) => x.label.trim()),
-          shortcuts_hidden: shortcutsHidden,
+          hotspots: hotspots.filter((x) => x.label.trim()),
         },
       }),
     });
@@ -231,13 +227,7 @@ const SitePanel = ({ onSaved, categories }: Props) => {
       </div>
 
       <div className="mt-14 border-t border-foreground pt-10">
-        <ShortcutsEditor
-          value={shortcuts}
-          categories={categories}
-          hidden={shortcutsHidden}
-          onHidden={setShortcutsHidden}
-          onChange={setShortcuts}
-        />
+        <HotspotsEditor value={hotspots} onChange={setHotspots} />
       </div>
 
       <div className="sticky bottom-0 mt-10 border-t border-foreground bg-background py-5">
