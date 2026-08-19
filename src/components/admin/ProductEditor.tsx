@@ -68,6 +68,20 @@ const ProductEditor = ({
     setUploading(false);
   };
 
+  /**
+   * Перенос уже загруженного снимка из «Описания и фото» в «Особенности».
+   * Файл не перезагружаем — используем ту же ссылку, поэтому перенос
+   * мгновенный. Сразу открываем вкладку, чтобы было видно результат.
+   */
+  const moveToNotes = (src: string) => {
+    setForm((f) => ({
+      ...f,
+      images: f.images.filter((x) => x !== src),
+      notes: [...f.notes, { type: 'image' as const, image: src, caption: '' }],
+    }));
+    setSection('notes');
+  };
+
   const toggleModel = (brand: string, model: string) => {
     setForm((f) => {
       const current = f.fits[brand] ?? [];
@@ -171,6 +185,7 @@ const ProductEditor = ({
               uploading={uploading}
               upload={upload}
               missingFields={missingFields}
+              moveToNotes={moveToNotes}
             />
           )}
 
@@ -182,6 +197,14 @@ const ProductEditor = ({
               title="Особенности и примечания"
               hint="Нюансы монтажа этого товара: что подрезать, где не встанет, какие переходники нужны. На сайте появится отдельной вкладкой «Нюансы монтажа». Пусто — напишем «Установка стандартная»."
               emptyText="Особенностей нет — на сайте будет «Установка стандартная»."
+              onMoveImageOut={(src) =>
+                setForm((f) => ({
+                  ...f,
+                  images: f.images.includes(src)
+                    ? f.images
+                    : [...f.images, src],
+                }))
+              }
             />
           )}
 

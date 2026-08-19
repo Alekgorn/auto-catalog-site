@@ -47,6 +47,8 @@ interface Props {
   title?: string;
   hint?: string;
   emptyText?: string;
+  /** Вернуть снимок в общую галерею товара */
+  onMoveImageOut?: (src: string) => void;
 }
 
 /**
@@ -60,6 +62,7 @@ const BlocksEditor = ({
   title = 'Содержание',
   hint,
   emptyText = 'Пока пусто — добавьте абзац или фото.',
+  onMoveImageOut,
 }: Props) => {
   const [busy, setBusy] = useState(false);
 
@@ -208,6 +211,19 @@ const BlocksEditor = ({
                 {b.image ? (
                   <div className="relative w-fit">
                     <img src={b.image} alt="" className="h-28 w-40 bg-card object-cover" />
+                    {onMoveImageOut && (
+                      <button
+                        onClick={() => {
+                          onMoveImageOut(b.image);
+                          onChange(blocks.filter((_, idx) => idx !== i));
+                        }}
+                        title="Вернуть в «Описание и фото»"
+                        aria-label="Вернуть в «Описание и фото»"
+                        className="absolute -left-2 -top-2 border border-foreground bg-background p-1 text-foreground transition-colors hover:bg-foreground hover:text-background"
+                      >
+                        <Icon name="ArrowRightLeft" size={11} />
+                      </button>
+                    )}
                     <button
                       onClick={() => setBlock(i, { ...b, image: '' })}
                       aria-label="Удалить"
