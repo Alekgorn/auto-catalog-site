@@ -26,13 +26,13 @@ const StockLine = ({ product, large = false }: Props) => {
 
   return (
     <div
-      className={`mt-2 flex items-center gap-1.5 font-medium leading-snug ${
-        large ? 'text-[0.9rem]' : 'text-[0.78rem]'
+      className={`flex items-center gap-1.5 font-medium leading-snug ${
+        large ? 'mt-2 text-[0.9rem]' : 'mt-1 text-[0.72rem]'
       } ${large ? '' : 'truncate'} ${inStock ? 'text-success' : 'text-info'}`}
     >
       <Icon
         name="CircleCheck"
-        size={large ? 17 : 14}
+        size={large ? 17 : 13}
         className="flex-none"
         strokeWidth={2.4}
       />
