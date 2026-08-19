@@ -100,20 +100,31 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const fitBrands = Object.keys(product.fits ?? {});
 
   /*
-   * Зелёная плашка на фото — только прямой ответ про выбранную машину.
+   * Совместимость подтверждена выбранной машиной — зелёная плашка.
    * Универсальный товар под неё не попадает: «Для всех авто» — это про
    * ассортимент, а не про совместимость именно с вашим авто.
    */
   const fitConfirmed = !!vehicle && fits && !anyCar && !universal;
 
-  const fitLabel = (() => {
+  /** Товар без ограничений по марке — про такой пишем строкой в теле */
+  const forAnyCar = anyCar || universal;
+
+  /**
+   * Плашка на фото. Показываем, когда есть что сказать про конкретные
+   * марки: подтверждённую машину, единственную марку или их количество.
+   * «Для всех авто» на фото не выносим — оно стояло бы почти везде.
+   */
+  const platePhoto = (() => {
     if (fitConfirmed) return `Подходит: ${vehicle!.brand} ${vehicle!.model}`;
-    if (anyCar || universal) return 'Для всех авто';
+    if (forAnyCar) return null;
     if (vehicle && !fits) return null;
     if (fitBrands.length === 1) return `Для ${fitBrands[0]}`;
-    if (fitBrands.length > 1) return `Подходит: ${fitBrands.length} марок`;
+    if (fitBrands.length > 1) return `Для ${fitBrands.length} марок`;
     return null;
   })();
+
+  /** Строка в теле карточки — только про универсальные позиции */
+  const fitLine = forAnyCar ? 'Для всех авто' : null;
 
   return (
     <article className="group flex flex-col border border-border bg-surface transition-colors duration-200 hover:border-foreground/40">
@@ -183,10 +194,21 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         {/* На фото — только ответ про ВАШУ машину. «Для всех авто» и
             «подходит N маркам» стояли почти на каждой карточке, съедали
             низ снимка и ничего не решали — они ушли под характеристики */}
-        {fitConfirmed && (
-          <span className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] text-success-foreground sm:px-3 sm:py-2 sm:text-[0.7rem]">
-            <Icon name="Check" size={12} strokeWidth={3} className="flex-none" />
-            <span className="truncate">{fitLabel}</span>
+        {platePhoto && (
+          <span
+            className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] sm:px-3 sm:py-2 sm:text-[0.7rem] ${
+              fitConfirmed
+                ? 'bg-success text-success-foreground'
+                : 'bg-foreground/85 text-background'
+            }`}
+          >
+            <Icon
+              name={fitConfirmed ? 'Check' : 'Car'}
+              size={12}
+              strokeWidth={fitConfirmed ? 3 : 2}
+              className="flex-none"
+            />
+            <span className="truncate">{platePhoto}</span>
           </span>
         )}
 
@@ -234,12 +256,12 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           </dl>
         )}
 
-        {/* Совместимость строкой в теле карточки — рядом с остальными
-            характеристиками, где её и ищут глазами */}
-        {!fitConfirmed && fitLabel && (
+        {/* Универсальные позиции — спокойной строкой в теле карточки:
+            плашкой на фото они стояли бы почти на каждом товаре */}
+        {fitLine && (
           <div className="mt-1.5 flex items-start gap-1.5 text-[0.68rem] leading-snug text-muted-foreground">
             <Icon name="Car" size={12} className="mt-0.5 flex-none" />
-            <span className="min-w-0 flex-1 truncate">{fitLabel}</span>
+            <span className="min-w-0 flex-1 truncate">{fitLine}</span>
           </div>
         )}
 
