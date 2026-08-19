@@ -241,7 +241,7 @@ const KitSection = ({
           {/* Карточки видны только верхушками — намёк, что раздел не пустой */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 select-none grid grid-cols-2 gap-3 opacity-30 grayscale md:gap-4 lg:grid-cols-4"
+            className="pointer-events-none absolute inset-x-0 top-0 select-none grid grid-cols-2 gap-3 opacity-30 grayscale md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
           >
             {preview.map((p) => (
               <ProductCard
@@ -346,7 +346,7 @@ const KitSection = ({
         </div>
       ) : (
         <>
-          <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {(collapsed ? [chosen!] : list.slice(0, shown)).map((p, i) => (
               <Fragment key={p.id}>
                 {/* Ниже — то, что подходит почти всем, а не именно этой машине */}
