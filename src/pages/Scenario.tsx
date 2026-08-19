@@ -1,20 +1,8 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
-import {
-  Link,
-  useNavigate,
-  useParams,
-  useSearchParams,
-} from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import ProductCard from "@/components/ProductCard";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
 import StepVehicleFilter from "@/components/StepVehicleFilter";
 import {
@@ -27,34 +15,27 @@ import {
   splitByFit,
 } from "@/data/catalog";
 import { screenSize } from "@/lib/kit-filter";
-import UniversalDivider from "@/components/UniversalDivider";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
 import { smartSearch } from "@/lib/smart-search";
-import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
-import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
-import KitSection from "@/components/kit/KitSection";
-import KitRecommend from "@/components/kit/KitRecommend";
+import { FilterState } from "@/components/CatalogFilters";
+import { crumbsJsonLd } from "@/components/Breadcrumbs";
 import { useKit } from "@/context/KitContext";
-
-type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "relevance", label: "по совпадению" },
-  { key: "price-asc", label: "сначала дешёвые" },
-  { key: "price-desc", label: "сначала дорогие" },
-  { key: "name", label: "по названию" },
-];
+import ScenarioHero from "@/components/scenario/ScenarioHero";
+import ScenarioKit from "@/components/scenario/ScenarioKit";
+import ScenarioCatalog, {
+  SortKey,
+} from "@/components/scenario/ScenarioCatalog";
+import ScenarioFooterInfo from "@/components/scenario/ScenarioFooterInfo";
 
 const PAGE_SIZE = 12;
 
 const ScenarioPage = () => {
   const { slug = "" } = useParams();
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
 
   /** Марка из ссылки — «популярные марки» в футере ведут сюда */
   const brandFilter = params.get("brand") ?? "";
@@ -165,13 +146,25 @@ const ScenarioPage = () => {
     if (target) scrollTo(target);
   };
 
+  /** Пропуск необязательного шага — ведём к следующему незаполненному */
+  const skipStep = (i: number, stepCategory: string, skip: boolean) => {
+    setSkipped((prev) => ({ ...prev, [stepCategory]: skip }));
+    // Пропустили — сразу ведём к следующему шагу
+    if (skip && scenario?.kit) {
+      const rest = scenario.kit
+        .slice(i + 1)
+        .findIndex((s) => !picks[s.category] && !skipped[s.category]);
+      if (rest >= 0) scrollTo(stepId(i + 1 + rest));
+    }
+  };
+
   /**
    * Режем вступление по выделяемой фразе. Разбиение даёт чередование
    * «обычный текст — выделенный — обычный», поэтому в вёрстке достаточно
    * подсветить куски с нечётным номером.
    */
   const introParts = useMemo(() => {
-    const text = scenario?.intro ?? '';
+    const text = scenario?.intro ?? "";
     const mark = scenario?.introHighlight;
     if (!mark) return [text];
     const at = text.indexOf(mark);
@@ -481,81 +474,16 @@ const ScenarioPage = () => {
       <Header />
 
       <main className="section-pad">
-        <Breadcrumbs
-          items={[
-            { label: "Подбор по задаче", to: "/#scenarios" },
-            { label: scenario.heading },
-          ]}
+        <ScenarioHero
+          scenario={scenario}
+          introParts={introParts}
+          brandFilter={brandFilter}
+          onClearBrand={() => {
+            const next = new URLSearchParams(params);
+            next.delete("brand");
+            setParams(next);
+          }}
         />
-
-        <div className="rule" />
-
-        {/* Заголовок и живой текст */}
-        <div className="grid grid-cols-1 gap-x-6 gap-y-6 py-9 md:grid-cols-12 md:py-12">
-          <div className="md:col-span-7">
-            <div className="flex items-start gap-4">
-              <span className="flex h-16 w-16 flex-none items-center justify-center border border-foreground bg-primary text-primary-foreground">
-                <Icon name={scenario.icon} fallback="CircleAlert" size={32} />
-              </span>
-              <div className="min-w-0 flex-1">
-                {/* Подпись прячем, когда она повторяет заголовок */}
-                {!scenario.hideEyebrow && (
-                  <div className="eyebrow">{scenario.title}</div>
-                )}
-                <h1
-                  className={`font-head text-3xl font-bold uppercase leading-[1.05] tracking-tight md:text-[40px] ${
-                    scenario.hideEyebrow ? '' : 'mt-2'
-                  }`}
-                >
-                  {scenario.heading}
-                </h1>
-              </div>
-            </div>
-          </div>
-
-          <div className="md:col-span-5">
-            <p className="text-[0.98rem] leading-relaxed text-muted-foreground">
-              {introParts.map((part, i) =>
-                // Нечётные куски — то, что попало между вырезанной фразой,
-                // то есть сама выделяемая часть
-                i % 2 === 1 ? (
-                  <strong
-                    key={i}
-                    className="font-semibold text-primary"
-                  >
-                    {part}
-                  </strong>
-                ) : (
-                  part
-                ),
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="rule-hair" />
-
-        {/* Пришли по ссылке с маркой */}
-        {brandFilter && (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-primary bg-surface px-5 py-4">
-            <div className="flex items-center gap-3">
-              <Icon name="Tag" size={20} className="flex-none text-primary" />
-              <div className="font-head text-[1.05rem] font-bold tracking-tight">
-                Оборудование для {brandFilter}
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                const next = new URLSearchParams(params);
-                next.delete("brand");
-                setParams(next);
-              }}
-              className="border border-border px-4 py-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-            >
-              Показать все марки
-            </button>
-          </div>
-        )}
 
         {/* Подбор по машине */}
         {scenario.noVehicle ? (
@@ -568,9 +496,9 @@ const ScenarioPage = () => {
             <p className="text-[0.87rem] leading-relaxed text-muted-foreground">
               <span className="font-medium text-foreground">
                 Подбор по машине здесь не нужен.
-              </span>{' '}
-              Всё оборудование в этой подборке универсальное — встаёт на
-              любой автомобиль, поэтому фильтровать по марке и модели нечего.
+              </span>{" "}
+              Всё оборудование в этой подборке универсальное — встаёт на любой
+              автомобиль, поэтому фильтровать по марке и модели нечего.
             </p>
           </div>
         ) : (
@@ -609,56 +537,22 @@ const ScenarioPage = () => {
             Загружаем каталог…
           </div>
         ) : scenario.kit ? (
-          <>
-            {scenario.kit.map((step, i) => (
-              <div key={step.category}>
-                {i > 0 && <div className="rule-hair" />}
-                <KitSection
-                  step={step}
-                  products={products}
-                  vehicle={vehicle}
-                  brandsCount={brands.length}
-                  pickedId={picks[step.category]}
-                  onPick={pickAndAdvance}
-                  onNeedVehicle={scrollToVehicle}
-                  anchorId={stepId(i)}
-                  helpOffer={step.helpOffer}
-                  locked={stepLocked(i)}
-                  size={step.matchScreen ? leadSize : null}
-                  vehicleLabel={
-                    vehicle
-                      ? `${vehicle.brand} ${vehicle.model} ${vehicle.year} г.`
-                      : ''
-                  }
-                  onNeedLead={scrollToLead}
-                  skipped={!!skipped[step.category]}
-                  onSkip={(skip) => {
-                    setSkipped((prev) => ({ ...prev, [step.category]: skip }));
-                    // Пропустили — сразу ведём к следующему шагу
-                    if (skip && scenario.kit) {
-                      const rest = scenario.kit
-                        .slice(i + 1)
-                        .findIndex(
-                          (s) => !picks[s.category] && !skipped[s.category],
-                        );
-                      if (rest >= 0) scrollTo(stepId(i + 1 + rest));
-                    }
-                  }}
-                />
-              </div>
-            ))}
-            <KitRecommend
-              products={products}
-              vehicle={vehicle}
-              picks={picks}
-              onPick={pickForKit}
-              /* Советуем только когда основа собрана */
-              ready={scenario.kit.every(
-                (s) => picks[s.category] || s.optional,
-              )}
-              exclude={scenario.kit.map((s) => s.category)}
-            />
-          </>
+          <ScenarioKit
+            kit={scenario.kit}
+            products={products}
+            vehicle={vehicle}
+            brandsCount={brands.length}
+            picks={picks}
+            skipped={skipped}
+            leadSize={leadSize}
+            stepId={stepId}
+            stepLocked={stepLocked}
+            onPick={pickAndAdvance}
+            onPickPlain={pickForKit}
+            onNeedVehicle={scrollToVehicle}
+            onNeedLead={scrollToLead}
+            onSkip={skipStep}
+          />
         ) : hits.length === 0 ? (
           <div className="py-16 text-center">
             <div className="font-head text-xl font-bold">
@@ -677,204 +571,34 @@ const ScenarioPage = () => {
             </button>
           </div>
         ) : (
-          <>
-            <div
-              id="catalog-list"
-              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-4 py-5"
-            >
-              <div className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Всего товаров: {list.length}
-              </div>
-              <label className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Сортировка
-                <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value as SortKey)}
-                  className="border border-border bg-surface px-3 py-2 text-[0.8rem] normal-case tracking-normal text-foreground outline-none transition-colors hover:border-primary"
-                >
-                  {SORTS.map((s) => (
-                    <option key={s.key} value={s.key}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-
-            {categories.length > 1 && !scenario.fullCatalog && (
-              <div className="flex flex-wrap gap-2 pb-6">
-                <button
-                  onClick={() => setCategory("")}
-                  className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-                    category
-                      ? "border-border bg-surface hover:border-primary hover:text-primary"
-                      : "border-foreground bg-foreground text-background"
-                  }`}
-                >
-                  Все ({hits.length})
-                </button>
-                {categories.map(([c, n]) => (
-                  <button
-                    key={c}
-                    onClick={() => setCategory(c)}
-                    className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-                      category === c
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-surface hover:border-primary hover:text-primary"
-                    }`}
-                  >
-                    {c} ({n})
-                  </button>
-                ))}
-              </div>
-            )}
-
-            <div
-              className={
-                scenario.fullCatalog
-                  ? "grid grid-cols-1 gap-x-6 lg:grid-cols-12"
-                  : ""
-              }
-            >
-              {scenario.fullCatalog && (
-                <>
-                  {/* Кнопка фильтров на телефоне */}
-                  <button
-                    onClick={() => setMobileFilters((v) => !v)}
-                    className="mb-4 flex items-center justify-between border border-foreground px-4 py-3 text-[0.8rem] uppercase tracking-[0.1em] lg:hidden"
-                  >
-                    Фильтры
-                    <Icon
-                      name={mobileFilters ? "X" : "SlidersHorizontal"}
-                      size={17}
-                    />
-                  </button>
-
-                  <aside
-                    className={`lg:col-span-3 ${mobileFilters ? "block" : "hidden lg:block"}`}
-                  >
-                    <div className="border border-border bg-surface p-4 lg:sticky lg:top-[100px]">
-                      <CatalogFilters
-                        state={filters}
-                        bounds={bounds}
-                        categories={allCategories}
-                        warranties={warranties}
-                        counts={catalogCounts}
-                        onChange={setFilters}
-                        onReset={() => setFilters(emptyFilters())}
-                      />
-                    </div>
-                  </aside>
-                </>
-              )}
-
-              <div className={scenario.fullCatalog ? "lg:col-span-9" : ""}>
-                <div
-                  className={`grid grid-cols-2 gap-3 pb-8 md:gap-4 ${
-                    scenario.fullCatalog ? "lg:grid-cols-3" : "lg:grid-cols-4"
-                  }`}
-                >
-                  {visible.map((h, i) => (
-                    <Fragment key={h.product.id}>
-                      {/* Граница между «точно встанет» и «подойдёт почти всем» */}
-                      {i === fit.exact.length && fit.universal.length > 0 && (
-                        <UniversalDivider count={fit.universal.length} />
-                      )}
-                      <ProductCard product={h.product} vehicle={vehicle} />
-                    </Fragment>
-                  ))}
-                </div>
-
-                {shown < ordered.length && (
-                  <div className="pb-10 text-center">
-                    <button
-                      onClick={() => setShown((s) => s + PAGE_SIZE)}
-                      className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
-                    >
-                      Показать ещё
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </>
+          <ScenarioCatalog
+            scenario={scenario}
+            list={list}
+            fit={fit}
+            ordered={ordered}
+            visible={visible}
+            hitsCount={hits.length}
+            vehicle={vehicle}
+            sort={sort}
+            onSort={setSort}
+            categories={categories}
+            category={category}
+            onCategory={setCategory}
+            filters={filters}
+            onFilters={setFilters}
+            onResetFilters={() => setFilters(emptyFilters())}
+            bounds={bounds}
+            allCategories={allCategories}
+            warranties={warranties}
+            catalogCounts={catalogCounts}
+            mobileFilters={mobileFilters}
+            onMobileFilters={setMobileFilters}
+            shown={shown}
+            onShowMore={() => setShown((s) => s + PAGE_SIZE)}
+          />
         )}
 
-        {scenario.hint && (
-          <>
-            <div className="rule-hair" />
-            <p className="flex items-start gap-3 py-6 text-[0.88rem] leading-relaxed text-muted-foreground">
-              <Icon
-                name="Info"
-                size={17}
-                className="mt-0.5 flex-none text-primary"
-              />
-              {scenario.hint}
-            </p>
-          </>
-        )}
-
-        {/* Частые вопросы */}
-        {scenario.faq.length > 0 && (
-          <>
-            <div className="rule" />
-            <div className="grid grid-cols-1 gap-x-6 py-9 md:grid-cols-12">
-              <div className="md:col-span-4">
-                <div className="eyebrow">Вопросы и ответы</div>
-                <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-tight">
-                  Частые вопросы
-                </h2>
-                <p className="mt-3 max-w-[24em] text-[0.87rem] leading-relaxed text-muted-foreground">
-                  Не нашли свой вопрос? Позвоните — подскажем по вашей машине.
-                </p>
-              </div>
-
-              <div className="mt-6 md:col-span-8 md:mt-0">
-                <Accordion type="single" collapsible className="w-full">
-                  {scenario.faq.map((item, i) => (
-                    <AccordionItem
-                      key={item.q}
-                      value={`q-${i}`}
-                      className="border-t border-foreground border-b-0"
-                    >
-                      <AccordionTrigger className="py-4 text-left font-head text-[1.05rem] font-medium tracking-tight hover:no-underline">
-                        {item.q}
-                      </AccordionTrigger>
-                      <AccordionContent className="max-w-[46em] pb-5 text-[0.92rem] leading-relaxed text-muted-foreground">
-                        {item.a}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Другие сценарии */}
-        <div className="rule-hair" />
-        <div className="py-8">
-          <div className="eyebrow">Другие задачи</div>
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {others.map((s) => (
-              <button
-                key={s.slug}
-                onClick={() => navigate(`/scenario/${s.slug}`)}
-                className="group flex h-full flex-col border border-border bg-surface p-4 text-left transition-colors hover:border-primary"
-              >
-                <Icon
-                  name={s.icon}
-                  fallback="CircleAlert"
-                  size={30}
-                  className="text-primary"
-                />
-                <span className="mt-3 block font-head text-[0.95rem] font-bold leading-snug tracking-tight transition-colors group-hover:text-primary">
-                  {s.title}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+        <ScenarioFooterInfo scenario={scenario} others={others} />
       </main>
 
       <Footer />
