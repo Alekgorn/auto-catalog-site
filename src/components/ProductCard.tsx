@@ -152,16 +152,14 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         )}
       </button>
 
+      {/* Порядок как в приложениях магазинов: сразу под фото название и
+          характеристики — по ним выбирают, а цена с наличием стоят внизу,
+          вплотную к кнопке заказа */}
       <div className="flex flex-1 flex-col p-3 sm:p-4">
-        <div>
-          <PriceBlock product={product} />
-          <StockLine product={product} />
-        </div>
-
-        <h3 className="mt-2 font-medium leading-snug tracking-tight text-foreground">
+        <h3 className="font-bold leading-snug tracking-tight text-foreground">
           <Link
             to={`/product/${product.id}`}
-            className="line-clamp-2 text-[0.85rem] transition-colors hover:text-primary sm:text-[0.95rem]"
+            className="line-clamp-3 text-[0.95rem] transition-colors hover:text-primary sm:text-[1rem]"
           >
             {product.name}
           </Link>
@@ -175,7 +173,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         </Link>
 
         {specRows.length > 0 && (
-          <dl className="mt-2.5 space-y-1 text-[0.72rem] leading-snug sm:text-[0.78rem]">
+          <dl className="mt-2 space-y-1 text-[0.74rem] leading-snug sm:text-[0.78rem]">
             {specRows.map((r) => (
               <div key={r.label} className="flex justify-between gap-2">
                 <dt className="truncate text-muted-foreground">{r.label}</dt>
@@ -189,13 +187,18 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
 
         {/* Машина не выбрана и товар подходит не всем — зовём проверить */}
         {!vehicle && !universal && !anyCar && (
-          <div className="mt-2.5 flex items-start gap-1.5 text-[0.7rem] leading-snug text-muted-foreground sm:text-[0.75rem]">
+          <div className="mt-2 flex items-start gap-1.5 text-[0.7rem] leading-snug text-muted-foreground sm:text-[0.75rem]">
             <Icon name="Car" size={13} className="mt-0.5 flex-none" />
             Укажите машину — проверим совместимость
           </div>
         )}
 
-        <div className="mt-auto flex items-center gap-2 pt-3">
+        <div className="mt-auto pt-3">
+          <PriceBlock product={product} />
+          <StockLine product={product} />
+        </div>
+
+        <div className="flex items-center gap-2 pt-3">
           <Link
             to={`/product/${product.id}`}
             className="hidden flex-none border border-border px-3 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-foreground sm:block"

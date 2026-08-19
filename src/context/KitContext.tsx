@@ -28,6 +28,10 @@ interface KitValue {
   setQty: (key: string, value: number) => void;
   /** Шаги сценария, в котором идёт сборка */
   steps: KitStep[];
+  /** Шаги, которые покупатель осознанно пропустил: раздел → пропущен */
+  skipped: Record<string, boolean>;
+  /** Отметить шаг пропущенным или вернуть его в сборку */
+  setSkipped: (category: string, skip: boolean) => void;
   /** Адрес сценария — панель ведёт обратно к сборке */
   slug: string;
   /** Начать сборку по сценарию (запоминаем шаги для панели) */
@@ -51,9 +55,10 @@ interface Saved {
   qty: Record<string, number>;
   slug: string;
   steps: KitStep[];
+  skipped: Record<string, boolean>;
 }
 
-const EMPTY: Saved = { picks: {}, qty: {}, slug: '', steps: [] };
+const EMPTY: Saved = { picks: {}, qty: {}, slug: '', steps: [], skipped: {} };
 
 const read = (): Saved => {
   if (typeof window === 'undefined') return EMPTY;
@@ -67,6 +72,7 @@ const read = (): Saved => {
       qty: parsed.qty ?? {},
       slug: parsed.slug ?? '',
       steps: Array.isArray(parsed.steps) ? parsed.steps : [],
+      skipped: parsed.skipped ?? {},
     };
   } catch {
     return EMPTY;
@@ -81,6 +87,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [qty, setQtyMap] = useState<Record<string, number>>({});
   const [steps, setSteps] = useState<KitStep[]>([]);
+  const [skipped, setSkippedMap] = useState<Record<string, boolean>>({});
   const [slug, setSlug] = useState('');
   const [ready, setReady] = useState(false);
   /**
@@ -94,6 +101,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
     const saved = read();
     setPicks(saved.picks);
     setQtyMap(saved.qty);
+    setSkippedMap(saved.skipped);
     if (!started.current) setSteps(saved.steps);
     setSlug((prev) => prev || saved.slug);
     setReady(true);
@@ -102,17 +110,23 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!ready) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ picks, qty, steps, slug }));
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ picks, qty, steps, slug, skipped }),
+      );
     } catch {
       /* приватный режим — просто не сохраняем */
     }
-  }, [picks, qty, steps, slug, ready]);
+  }, [picks, qty, steps, slug, skipped, ready]);
 
   const begin = useCallback((nextSlug: string, nextSteps: KitStep[]) => {
     started.current = true;
     setSlug((prev) => {
       // Зашли в другой сценарий — старую сборку не тащим
-      if (prev && prev !== nextSlug) setPicks({});
+      if (prev && prev !== nextSlug) {
+        setPicks({});
+        setSkippedMap({});
+      }
       return nextSlug;
     });
     setSteps(nextSteps);
@@ -175,11 +189,22 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   const reset = useCallback(() => {
     setPicks({});
     setQtyMap({});
+    setSkippedMap({});
+  }, []);
+
+  const setSkipped = useCallback((category: string, skip: boolean) => {
+    setSkippedMap((prev) => {
+      const next = { ...prev };
+      if (skip) next[category] = true;
+      else delete next[category];
+      return next;
+    });
   }, []);
 
   const finish = useCallback(() => {
     setPicks({});
     setQtyMap({});
+    setSkippedMap({});
     setSteps([]);
     setSlug('');
   }, []);
@@ -190,6 +215,8 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       qty,
       setQty,
       steps,
+      skipped,
+      setSkipped,
       slug,
       begin,
       pick,
@@ -198,7 +225,20 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
       finish,
       has: (id) => Object.values(picks).includes(id),
     }),
-    [picks, qty, setQty, steps, slug, begin, pick, drop, reset, finish],
+    [
+      picks,
+      qty,
+      setQty,
+      steps,
+      skipped,
+      setSkipped,
+      slug,
+      begin,
+      pick,
+      drop,
+      reset,
+      finish,
+    ],
   );
 
   return <KitContext.Provider value={value}>{children}</KitContext.Provider>;
@@ -210,6 +250,8 @@ const IDLE: KitValue = {
   qty: {},
   setQty: () => {},
   steps: [],
+  skipped: {},
+  setSkipped: () => {},
   slug: '',
   begin: () => {},
   pick: () => {},
