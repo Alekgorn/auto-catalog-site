@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendOrder } from '@/lib/api';
 import { loadVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
-import { telHref } from '@/lib/site-settings';
+import { maxHref, telHref, tgHref } from '@/lib/site-settings';
 
 const Contacts = () => {
   const { toast } = useToast();
@@ -92,8 +92,13 @@ const Contacts = () => {
           ))}
           <div className="mt-8 flex gap-4">
             {[
-              { icon: 'Send', href: contacts.telegram, title: 'Telegram' },
-              { icon: 'MessageCircle', href: contacts.whatsapp, title: 'WhatsApp' },
+              { icon: 'Send', href: tgHref(contacts.telegram), title: 'Telegram' },
+              { icon: 'MessageCircle', href: maxHref(contacts.max), title: 'MAX' },
+              {
+                icon: 'MessageSquare',
+                href: contacts.whatsapp,
+                title: 'WhatsApp',
+              },
               { icon: 'Phone', href: telHref(contacts.phone), title: 'Позвонить' },
             ]
               .filter((s) => s.href)
