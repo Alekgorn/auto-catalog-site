@@ -8,10 +8,12 @@ import { CartProvider } from '@/context/CartContext';
 import { DealerProvider } from '@/context/DealerContext';
 import { CatalogProvider } from '@/context/CatalogContext';
 import { KitProvider } from '@/context/KitContext';
+import { CompareProvider } from '@/context/CompareContext';
 import CartDrawer from '@/components/CartDrawer';
 import QuickViewHost from '@/components/QuickViewHost';
 import DealerToggle from '@/components/DealerToggle';
 import KitBar from '@/components/kit/KitBar';
+import CompareBar from '@/components/compare/CompareBar';
 
 const queryClient = new QueryClient();
 
@@ -25,11 +27,14 @@ const App = () => (
           <CatalogProvider>
             <CartProvider>
               <KitProvider>
+                <CompareProvider>
                 <AppRoutes />
                 <CartDrawer />
                 <QuickViewHost />
                 <DealerToggle />
                 <KitBar />
+                <CompareBar />
+                </CompareProvider>
               </KitProvider>
             </CartProvider>
           </CatalogProvider>
