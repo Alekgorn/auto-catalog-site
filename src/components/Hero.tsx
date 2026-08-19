@@ -1,7 +1,7 @@
 import MountPlan from "@/components/MountPlan";
 import Scenarios from "@/components/Scenarios";
 import HeroSearch from "@/components/HeroSearch";
-import HeroShortcuts from "@/components/HeroShortcuts";
+import { useCatalog } from "@/context/CatalogContext";
 
 interface Props {
   /** Блок подбора по машине — встаёт сразу под заголовком, до поиска */
@@ -9,6 +9,8 @@ interface Props {
 }
 
 const Hero = ({ selection }: Props) => {
+  const { hotspots } = useCatalog();
+
   return (
     <section className="section-pad flex flex-col">
       <div className="rule" />
@@ -35,17 +37,15 @@ const Hero = ({ selection }: Props) => {
           >
             <b className="font-medium text-foreground">Начни с авто – </b>
             покажем оборудование, которое встаёт на твою модель по штатным
-            местам и разъёмам. Не знаешь, что искать – выбери задачу ниже.
+            местам и разъёмам. Не знаешь, что искать – ткни в нужный узел на
+            схеме справа.
           </p>
-
         </div>
 
-        <div className="relative hidden h-[240px] flex-col py-4 md:col-span-6 md:flex md:h-[320px] md:py-6 md:pl-4">
-          <MountPlan />
+        <div className="relative hidden h-[250px] flex-col py-3 md:col-span-6 md:flex md:h-[330px] md:py-4 md:pl-2">
+          <MountPlan hotspots={hotspots} />
         </div>
       </div>
-
-      <HeroShortcuts />
 
       {selection}
 
