@@ -55,11 +55,12 @@ const ScenarioPage = () => {
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [mobileFilters, setMobileFilters] = useState(false);
-  /** Необязательные шаги, которые покупатель решил пропустить */
-  const [skipped, setSkipped] = useState<Record<string, boolean>>({});
-
-  /** Сборка комплекта живёт в общем хранилище — панель видна на всём сайте */
-  const { picks, begin, pick: pickForKit } = useKit();
+  /**
+   * Сборка комплекта живёт в общем хранилище — панель видна на всём сайте.
+   * Пропущенные шаги держим там же: панель по ним понимает, что покупатель
+   * принял решение по каждому шагу и комплект действительно собран.
+   */
+  const { picks, begin, pick: pickForKit, skipped, setSkipped } = useKit();
 
   useEffect(() => {
     if (scenario?.kit) begin(scenario.slug, scenario.kit);
@@ -148,7 +149,7 @@ const ScenarioPage = () => {
 
   /** Пропуск необязательного шага — ведём к следующему незаполненному */
   const skipStep = (i: number, stepCategory: string, skip: boolean) => {
-    setSkipped((prev) => ({ ...prev, [stepCategory]: skip }));
+    setSkipped(stepCategory, skip);
     // Пропустили — сразу ведём к следующему шагу
     if (skip && scenario?.kit) {
       const rest = scenario.kit

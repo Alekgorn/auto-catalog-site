@@ -23,7 +23,8 @@ const plural = (n: number) => {
 };
 
 const KitBar = () => {
-  const { picks, qty, setQty, steps, slug, drop, reset, finish } = useKit();
+  const { picks, qty, setQty, steps, skipped, slug, drop, reset, finish } =
+    useKit();
   const { products } = useCatalog();
   const { add, setOpen } = useCart();
   const navigate = useNavigate();
@@ -55,13 +56,22 @@ const KitBar = () => {
     .filter((x) => !!x.product);
 
   /**
-   * Комплект готов к заказу: закрыты все обязательные шаги.
-   * Камера и регистратор идут сверх комплекта — их пропуск не мешает
-   * праздновать и заказывать.
+   * Комплект готов к заказу: по каждому шагу принято решение — товар
+   * выбран либо шаг осознанно пропущен.
+   *
+   * Раньше «необязательные» шаги (проводка, камера, регистратор) не
+   * учитывались вовсе, и салют гремел сразу после рамки — покупатель
+   * ещё выбирал проводку, а ему уже сообщали, что всё готово.
    */
-  const required = steps.filter((s) => !s.optional);
   const complete =
-    required.length > 0 && required.every((s) => !!picks[s.category]);
+    steps.length > 0 &&
+    steps.every((s) => !!picks[s.category] || !!skipped[s.category]);
+
+  /** Сколько шагов ещё ждут решения — для счётчика «2 из 3» */
+  const stepsTotal = steps.filter((s) => !skipped[s.category]).length;
+  const stepsLeft = steps.filter(
+    (s) => !picks[s.category] && !skipped[s.category],
+  ).length;
 
   // Последняя позиция встала на место — салют и подсказка на кнопку
   useEffect(() => {
@@ -134,11 +144,21 @@ const KitBar = () => {
                 {steps.length ? 'Ваша сборка' : 'Ваш выбор'}
               </span>
               <span className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                {/* Считаем по обязательным: камера и регистратор — сверх */}
-                {required.length && chosen.length <= required.length
-                  ? `${chosen.length} из ${required.length}`
+                {/* Пропущенные шаги из счётчика убираем — иначе «2 из 5»
+                    висело бы даже там, где покупатель всё решил */}
+                {stepsLeft > 0
+                  ? `${chosen.length} из ${stepsTotal}`
                   : `${chosen.length} ${plural(chosen.length)}`}
               </span>
+
+              {/* Готовность на телефоне — строкой в шапке панели,
+                  чтобы не закрывать собой список позиций */}
+              {celebrate && (
+                <span className="flex items-center gap-1 bg-primary px-2 py-1 font-head text-[0.62rem] font-bold uppercase tracking-[0.06em] text-primary-foreground sm:hidden">
+                  <Icon name="Check" size={11} strokeWidth={3} />
+                  Готов
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-1 xl:hidden">
@@ -254,9 +274,12 @@ const KitBar = () => {
               )}
 
               <div className="relative">
-                {/* Комплект собран — ведём взгляд прямо на кнопку заказа */}
+                {/* Комплект собран — ведём взгляд прямо на кнопку заказа.
+                    На телефоне подсказку прячем: там она ложилась поверх
+                    списка позиций, и покупатель переставал видеть сборку.
+                    Вместо неё под шапкой панели идёт спокойная строка. */}
                 {celebrate && (
-                  <div className="pointer-events-none absolute bottom-[calc(100%+2.1rem)] right-0 z-10 w-max animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  <div className="pointer-events-none absolute bottom-[calc(100%+2.1rem)] right-0 z-10 hidden w-max animate-in fade-in slide-in-from-bottom-2 duration-500 sm:block">
                     <div className="relative border-2 border-primary bg-primary px-4 py-2.5 text-primary-foreground shadow-lg">
                       <div className="font-head text-[0.78rem] font-bold uppercase tracking-[0.06em]">
                         Комплект для вашего авто готов
