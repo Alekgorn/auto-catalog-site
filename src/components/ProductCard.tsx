@@ -98,16 +98,22 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
    * занимал половину места, а нужен единицам (есть на странице товара).
    */
   const fitBrands = Object.keys(product.fits ?? {});
+
+  /*
+   * Зелёная плашка на фото — только прямой ответ про выбранную машину.
+   * Универсальный товар под неё не попадает: «Для всех авто» — это про
+   * ассортимент, а не про совместимость именно с вашим авто.
+   */
+  const fitConfirmed = !!vehicle && fits && !anyCar && !universal;
+
   const fitLabel = (() => {
+    if (fitConfirmed) return `Подходит: ${vehicle!.brand} ${vehicle!.model}`;
     if (anyCar || universal) return 'Для всех авто';
-    if (vehicle) return fits ? `Подходит: ${vehicle.brand} ${vehicle.model}` : null;
+    if (vehicle && !fits) return null;
     if (fitBrands.length === 1) return `Для ${fitBrands[0]}`;
     if (fitBrands.length > 1) return `Подходит: ${fitBrands.length} марок`;
     return null;
   })();
-
-  /* Зелёная плашка — только когда совместимость подтверждена машиной */
-  const fitConfirmed = !!vehicle && fits && !anyCar;
 
   return (
     <article className="group flex flex-col border border-border bg-surface transition-colors duration-200 hover:border-foreground/40">
@@ -174,21 +180,12 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           <Icon name={comparing ? "Check" : "GitCompare"} size={15} />
         </span>
 
-        {/* Совместимость коротким текстом прямо на фото */}
-        {fitLabel && (
-          <span
-            className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] sm:px-3 sm:py-2 sm:text-[0.7rem] ${
-              fitConfirmed
-                ? 'bg-success text-success-foreground'
-                : 'bg-foreground/85 text-background'
-            }`}
-          >
-            <Icon
-              name={fitConfirmed ? 'Check' : 'Car'}
-              size={12}
-              strokeWidth={fitConfirmed ? 3 : 2}
-              className="flex-none"
-            />
+        {/* На фото — только ответ про ВАШУ машину. «Для всех авто» и
+            «подходит N маркам» стояли почти на каждой карточке, съедали
+            низ снимка и ничего не решали — они ушли под характеристики */}
+        {fitConfirmed && (
+          <span className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] text-success-foreground sm:px-3 sm:py-2 sm:text-[0.7rem]">
+            <Icon name="Check" size={12} strokeWidth={3} className="flex-none" />
             <span className="truncate">{fitLabel}</span>
           </span>
         )}
@@ -218,10 +215,18 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
 
         {specRows.length > 0 && (
           <dl className="mt-1.5 space-y-0.5 text-[0.72rem] leading-snug">
+            {/* Значение не сжималось из-за flex-none и вылезало за карточку.
+                Даём обеим колонкам ужиматься и обрезаем длинный текст */}
             {specRows.map((r) => (
-              <div key={r.label} className="flex justify-between gap-2">
-                <dt className="truncate text-muted-foreground">{r.label}</dt>
-                <dd className="flex-none truncate text-right font-medium text-foreground">
+              <div
+                key={r.label}
+                className="flex items-baseline justify-between gap-2"
+                title={`${r.label}: ${r.value}`}
+              >
+                <dt className="min-w-0 max-w-[55%] flex-none truncate text-muted-foreground">
+                  {r.label}
+                </dt>
+                <dd className="min-w-0 flex-1 truncate text-right font-medium text-foreground">
                   {r.value}
                 </dd>
               </div>
@@ -229,10 +234,19 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           </dl>
         )}
 
-        {/* Машина не выбрана и товар подходит не всем — зовём проверить */}
-        {!vehicle && !universal && !anyCar && (
+        {/* Совместимость строкой в теле карточки — рядом с остальными
+            характеристиками, где её и ищут глазами */}
+        {!fitConfirmed && fitLabel && (
           <div className="mt-1.5 flex items-start gap-1.5 text-[0.68rem] leading-snug text-muted-foreground">
             <Icon name="Car" size={12} className="mt-0.5 flex-none" />
+            <span className="min-w-0 flex-1 truncate">{fitLabel}</span>
+          </div>
+        )}
+
+        {/* Машина не выбрана, а товар подходит не всем: строка выше
+            сказала «подходит N маркам» — тут зовём проверить свою */}
+        {!vehicle && !universal && !anyCar && (
+          <div className="mt-1 text-[0.66rem] leading-snug text-primary">
             Укажите машину — проверим совместимость
           </div>
         )}
