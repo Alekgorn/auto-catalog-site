@@ -1,9 +1,7 @@
-import { useNavigate } from "react-router-dom";
-import Icon from "@/components/ui/icon";
 import MountPlan from "@/components/MountPlan";
 import Scenarios from "@/components/Scenarios";
 import HeroSearch from "@/components/HeroSearch";
-import { useCatalog } from "@/context/CatalogContext";
+import HeroShortcuts from "@/components/HeroShortcuts";
 
 interface Props {
   /** Блок подбора по машине — встаёт сразу под заголовком, до поиска */
@@ -11,13 +9,6 @@ interface Props {
 }
 
 const Hero = ({ selection }: Props) => {
-  const navigate = useNavigate();
-  const { shortcuts, shortcutsHidden } = useCatalog();
-
-  /** Быстрая ссылка ведёт на страницу поиска — там же подбор по машине */
-  const goToCategory = (category: string, label: string) =>
-    navigate(`/search?q=${encodeURIComponent(category || label)}`);
-
   return (
     <section className="section-pad flex flex-col">
       <div className="rule" />
@@ -47,47 +38,14 @@ const Hero = ({ selection }: Props) => {
             местам и разъёмам. Не знаешь, что искать – выбери задачу ниже.
           </p>
 
-          {/*
-            Направления ассортимента. Одна строка, которая листается вбок:
-            так блок не растёт в высоту от длинных подписей и не разъезжается
-            рядами. На телефоне скрыт — там сразу под текстом должен идти
-            подбор по машине, а не ряд кнопок.
-          */}
-          {!shortcutsHidden && shortcuts.length > 0 && (
-            <div
-              className="rise no-scrollbar mt-7 hidden w-full max-w-full gap-2 overflow-x-auto md:ml-4 md:flex"
-              style={{ animationDelay: ".35s" }}
-            >
-              {shortcuts.map((s, i) => (
-                <button
-                  key={`${s.label}-${i}`}
-                  onClick={() => goToCategory(s.category, s.label)}
-                  className={`flex flex-none items-center gap-2 whitespace-nowrap border px-3.5 py-2.5 text-[0.78rem] transition-colors ${
-                    s.category
-                      ? "border-border bg-surface hover:border-primary hover:text-primary"
-                      : "border-foreground bg-foreground text-background hover:border-primary hover:bg-primary hover:text-primary-foreground"
-                  }`}
-                >
-                  {/^(https?:)?\//.test(s.icon) ? (
-                    <img
-                      src={s.icon}
-                      alt=""
-                      className="h-4 w-4 flex-none object-contain"
-                    />
-                  ) : (
-                    <Icon name={s.icon} size={16} className="flex-none" />
-                  )}
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="relative hidden h-[240px] flex-col py-4 md:col-span-6 md:flex md:h-[320px] md:py-6 md:pl-4">
           <MountPlan />
         </div>
       </div>
+
+      <HeroShortcuts />
 
       {selection}
 
