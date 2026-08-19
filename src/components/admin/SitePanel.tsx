@@ -27,7 +27,11 @@ const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
   { key: 'address', label: 'Адрес склада', hint: 'Москва, улица, дом' },
   { key: 'hours', label: 'Часы работы', hint: 'Пн–Сб, 09:00 — 20:00' },
   { key: 'telegram', label: 'Telegram', hint: 'https://t.me/имя или @имя' },
-  { key: 'max', label: 'MAX', hint: 'номер телефона или ссылка на профиль' },
+  {
+    key: 'max',
+    label: 'MAX',
+    hint: 'https://max.ru/u/... — ссылка «Поделиться профилем» из приложения',
+  },
   { key: 'whatsapp', label: 'WhatsApp', hint: 'https://wa.me/79001234567' },
 ];
 
@@ -108,8 +112,9 @@ const SitePanel = ({ onSaved }: Props) => {
             Данные на сайте
           </h2>
           <p className="mt-4 max-w-[34em] text-muted-foreground">
-            Телефон, почта и адрес меняются сразу во всех местах: шапка, подвал и
-            блок контактов. Пустые поля просто не показываются.
+            Телефон, почта, адрес и ссылки на мессенджеры меняются сразу во
+            всех местах: шапка, подвал, блок контактов и кнопки «прислать
+            фото». Пустые поля просто не показываются.
           </p>
 
           <div className="mt-8 space-y-5">
