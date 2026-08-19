@@ -258,7 +258,7 @@ const CategoryPage = () => {
             ) : (
               <div
                 id="catalog-top"
-                className="grid grid-cols-2 gap-3 py-8 sm:gap-6 xl:grid-cols-3"
+                className="grid grid-cols-2 gap-3 py-8 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
               >
                 {list.map((p) => (
                   <ProductCard key={p.id} product={p} vehicle={vehicle} />

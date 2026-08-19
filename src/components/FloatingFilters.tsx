@@ -162,7 +162,7 @@ const FloatingFilters = ({
           setOpen(true);
         }}
         aria-label="Открыть фильтры"
-        className={`fixed right-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 border-2 border-r-0 border-primary bg-primary px-2 py-4 text-primary-foreground shadow-lg transition-all duration-300 ${
+        className={`fixed right-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 rounded-l-2xl border-2 border-r-0 border-primary-foreground/30 bg-primary px-2.5 py-5 text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300 hover:px-3.5 ${
           open
             ? 'pointer-events-none translate-x-full opacity-0'
             : 'translate-x-0 opacity-100'
@@ -177,7 +177,7 @@ const FloatingFilters = ({
 
         {/* Сколько товаров сейчас доступно — видно, не открывая панель */}
         {typeof resultCount === 'number' && (
-          <span className="flex min-w-[1.6rem] items-center justify-center border border-primary-foreground/40 bg-primary-foreground px-1 py-0.5 font-head text-[0.68rem] font-bold text-primary">
+          <span className="flex min-w-[1.7rem] items-center justify-center rounded-full bg-primary-foreground px-1.5 py-0.5 font-head text-[0.68rem] font-bold text-primary">
             {resultCount}
           </span>
         )}
@@ -202,7 +202,7 @@ const FloatingFilters = ({
           />
 
           <aside
-            className={`fixed right-0 top-[92px] z-[56] flex max-h-[calc(100vh-120px)] w-[86%] max-w-[22rem] flex-col border-2 border-primary bg-surface-muted shadow-[0_16px_40px_rgba(0,0,0,0.22)] transition-transform duration-300 ease-out sm:right-4 sm:w-[20rem] ${
+            className={`fixed right-0 top-[92px] z-[56] flex max-h-[calc(100vh-120px)] w-[86%] max-w-[22rem] flex-col overflow-hidden rounded-l-2xl border-2 border-primary bg-surface shadow-[0_20px_50px_rgba(0,0,0,0.35)] transition-transform duration-300 ease-out sm:right-4 sm:w-[20rem] sm:rounded-2xl ${
               open ? 'translate-x-0' : 'translate-x-[110%]'
             }`}
           >
@@ -211,7 +211,7 @@ const FloatingFilters = ({
                 <Icon name="SlidersHorizontal" size={16} />
                 Фильтры
                 {typeof resultCount === 'number' && (
-                  <span className="bg-primary-foreground px-1.5 py-0.5 text-[0.68rem] text-primary">
+                  <span className="rounded-full bg-primary-foreground px-2 py-0.5 text-[0.68rem] font-bold text-primary">
                     {resultCount}
                   </span>
                 )}
