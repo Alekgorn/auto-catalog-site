@@ -216,10 +216,15 @@ const ScenarioPage = () => {
     const sync = () => {
       const car = loadVehicle();
       setVehicle(car);
-      // Пошаговый фильтр показывает ту же машину, что и шапка
-      setPartial(
-        car ? { brand: car.brand, model: car.model, year: car.year } : null,
-      );
+      /*
+       * Пошаговый фильтр подхватывает машину из шапки, но только когда
+       * она там есть. Пустое хранилище — это промежуточный шаг подбора
+       * (сменили марку, модель ещё не выбрали), и затирать поля нельзя:
+       * иначе фильтр обнулялся бы прямо во время выбора.
+       */
+      if (car) {
+        setPartial({ brand: car.brand, model: car.model, year: car.year });
+      }
     };
     sync();
     window.addEventListener(VEHICLE_EVENT, sync);
@@ -426,12 +431,18 @@ const ScenarioPage = () => {
    * запоминаем как обычно — она нужна другим страницам и шапке.
    */
   const applyPartial = (v: PartialVehicle | null) => {
+    const wasComplete = !!(partial?.brand && partial.model && partial.year);
+    const complete = !!(v?.brand && v.model && v.year);
+
     setPartial(v);
     setShown(PAGE_SIZE);
-    if (v?.brand && v.model && v.year) {
-      const full = { brand: v.brand, model: v.model, year: v.year };
+
+    if (complete) {
+      const full = { brand: v!.brand, model: v!.model!, year: v!.year! };
       setVehicle(full);
       saveVehicle(full);
+      // Подбор завершён — сразу показываем результат, мотать не нужно
+      if (!wasComplete) scrollTo("catalog-list");
     } else if (vehicle) {
       setVehicle(null);
       saveVehicle(null);
@@ -667,7 +678,10 @@ const ScenarioPage = () => {
           </div>
         ) : (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-4 py-5">
+            <div
+              id="catalog-list"
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-4 py-5"
+            >
               <div className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
                 Всего товаров: {list.length}
               </div>
