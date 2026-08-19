@@ -10,6 +10,11 @@ interface Props {
   onChange: (v: PartialVehicle | null) => void;
   /** Сколько товаров осталось после текущего шага */
   count: number;
+  /** Показывать ли товары без привязки к авто */
+  withUniversal: boolean;
+  onUniversal: (v: boolean) => void;
+  /** Сколько среди показанных — универсальные */
+  universalCount: number;
 }
 
 /**
@@ -19,7 +24,14 @@ interface Props {
  * шаге: выбрали марку — список уже отфильтрован, добавили модель — сузился
  * ещё, год — окончательно. Ждать заполнения всей формы не нужно.
  */
-const StepVehicleFilter = ({ value, onChange, count }: Props) => {
+const StepVehicleFilter = ({
+  value,
+  onChange,
+  count,
+  withUniversal,
+  onUniversal,
+  universalCount,
+}: Props) => {
   const { brands: BRANDS } = useCatalog();
 
   const brand = value?.brand ?? "";
@@ -148,6 +160,56 @@ const StepVehicleFilter = ({ value, onChange, count }: Props) => {
           </span>
         )}
       </div>
+
+      {/*
+        Универсальные позиции — без привязки к авто, встают на любую машину.
+        По умолчанию показываем; переключатель убирает их, оставляя только
+        то, что заявлено именно под выбранный автомобиль.
+      */}
+      {brand && (
+        <button
+          onClick={() => onUniversal(!withUniversal)}
+          aria-pressed={!withUniversal}
+          className={`flex w-full items-center gap-3 border-t-2 border-foreground px-4 py-4 text-left transition-colors md:px-5 ${
+            withUniversal
+              ? "bg-surface hover:bg-primary/10"
+              : "bg-foreground text-background"
+          }`}
+        >
+          <span
+            className={`relative flex h-6 w-11 flex-none items-center rounded-full transition-colors ${
+              withUniversal ? "bg-muted-foreground/40" : "bg-primary"
+            }`}
+          >
+            <span
+              className={`absolute h-5 w-5 rounded-full bg-background shadow transition-transform ${
+                withUniversal ? "translate-x-0.5" : "translate-x-[22px]"
+              }`}
+            />
+          </span>
+
+          <span className="min-w-0">
+            <span className="block font-head text-[0.95rem] font-bold uppercase tracking-tight">
+              Скрыть товары, подходящие ко всем авто
+            </span>
+            <span
+              className={`mt-0.5 block text-[0.82rem] ${
+                withUniversal ? "text-muted-foreground" : "text-background/70"
+              }`}
+            >
+              {withUniversal
+                ? `Сейчас показаны и универсальные позиции — их ${universalCount}. Включите, чтобы оставить только совместимые с вашим авто.`
+                : "Универсальные скрыты — в списке только то, что заявлено под ваш автомобиль."}
+            </span>
+          </span>
+
+          <Icon
+            name={withUniversal ? "Filter" : "FilterX"}
+            size={20}
+            className={`ml-auto flex-none ${withUniversal ? "text-primary" : ""}`}
+          />
+        </button>
+      )}
     </div>
   );
 };

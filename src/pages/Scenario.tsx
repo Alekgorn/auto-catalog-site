@@ -21,6 +21,7 @@ import {
   PartialVehicle,
   Product,
   Vehicle,
+  fitsAll,
   matchVehicle,
   matchesPartial,
   splitByFit,
@@ -67,6 +68,8 @@ const ScenarioPage = () => {
    */
   const stepMode = !!scenario?.fullCatalog;
   const [partial, setPartial] = useState<PartialVehicle | null>(null);
+  /** Универсальные позиции показываем по умолчанию */
+  const [withUniversal, setWithUniversal] = useState(true);
   const [sort, setSort] = useState<SortKey>("relevance");
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
@@ -273,14 +276,30 @@ const ScenarioPage = () => {
     // Полный каталог сужается на каждом шаге выбора авто
     if (stepMode) {
       if (!partial?.brand) return out;
-      return out.filter((h) => matchesPartial(h.product, partial));
+      return out.filter((h) =>
+        matchesPartial(h.product, partial, withUniversal),
+      );
     }
 
     if (!vehicle) return out;
     return out.filter(
       (h) => matchVehicle(h.product, vehicle, brands.length) !== null,
     );
-  }, [found, vehicle, brands.length, brandFilter, stepMode, partial]);
+  }, [
+    found,
+    vehicle,
+    brands.length,
+    brandFilter,
+    stepMode,
+    partial,
+    withUniversal,
+  ]);
+
+  /** Сколько в подборке универсальных позиций — их убирает переключатель */
+  const universalShown = useMemo(() => {
+    if (!stepMode || !partial?.brand) return 0;
+    return found.filter((h) => fitsAll(h.product)).length;
+  }, [found, stepMode, partial]);
 
   /** По чему группируем кнопки над каталогом: раздел, подраздел или тип */
   const groupOf = (p: Product) => {
@@ -550,6 +569,12 @@ const ScenarioPage = () => {
                 value={partial}
                 onChange={applyPartial}
                 count={hits.length}
+                withUniversal={withUniversal}
+                onUniversal={(v) => {
+                  setWithUniversal(v);
+                  setShown(PAGE_SIZE);
+                }}
+                universalCount={universalShown}
               />
             ) : (
               <>
