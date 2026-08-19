@@ -387,6 +387,14 @@ export interface Vehicle {
 }
 
 /**
+ * В товаре не отмечена ни одна марка — значит ограничений по авто нет.
+ * Такую позицию честно показываем как подходящую всем машинам, даже
+ * когда покупатель уже выбрал свою.
+ */
+export const fitsAll = (product: Product): boolean =>
+  Object.keys(product.fits ?? {}).length === 0;
+
+/**
  * Незаконченный выбор авто: марка есть, модель и год — не обязательно.
  * Нужен для каталога, который сужается на каждом шаге, а не только
  * после полностью заполненной формы.
@@ -405,8 +413,11 @@ export interface PartialVehicle {
 export const matchesPartial = (
   product: Product,
   v: PartialVehicle | null,
+  /** Показывать товары без привязки к авто — они подходят всем машинам */
+  withUniversal = true,
 ): boolean => {
   if (!v?.brand) return true;
+  if (fitsAll(product)) return withUniversal;
   const models = product.fits?.[v.brand];
   if (!models) return false;
   if (v.model && !models.includes(v.model)) return false;
@@ -427,14 +438,6 @@ export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
  * шумоизоляция). Такие не отсеиваем при подборе по авто: даже если конкретной
  * модели нет в списке, товар всё равно подойдёт.
  */
-/**
- * В товаре не отмечена ни одна марка — значит ограничений по авто нет.
- * Такую позицию честно показываем как подходящую всем машинам, даже
- * когда покупатель уже выбрал свою.
- */
-export const fitsAll = (product: Product): boolean =>
-  Object.keys(product.fits ?? {}).length === 0;
-
 export const isUniversal = (product: Product, totalBrands: number): boolean => {
   const brands = Object.keys(product.fits ?? {}).length;
   if (!brands) return true;
