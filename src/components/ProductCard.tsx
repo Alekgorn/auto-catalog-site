@@ -11,7 +11,7 @@ import {
   productImages,
   productSpecs,
 } from '@/data/catalog';
-import { useKit } from '@/context/KitContext';
+import { useCart } from '@/context/CartContext';
 import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
@@ -45,8 +45,16 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
    * Идёт сборка комплекта — товар уходит в плавающую панель внизу,
    * а не в корзину. Так покупатель сначала собирает комплект целиком.
    */
-  const { pick: pickKit, has: inKit } = useKit();
-  const chosen = onPick ? !!picked : inKit(product.id);
+  /*
+   * Обычный каталог — товар уходит прямо в корзину.
+   *
+   * Раньше кнопка всегда звала сборку комплекта: человек хотел купить
+   * один регистратор, а внизу выезжала панель «Ваша сборка 1 из 3» с
+   * рамкой, проводкой и кнопкой в сценарий. Сборка нужна только внутри
+   * сценария — там карточке передают onPick.
+   */
+  const { add: addToCart, has: inCart } = useCart();
+  const chosen = onPick ? !!picked : inCart(product.id);
 
   /* Сравнение: отмечаем товар, чтобы потом свести характеристики в таблицу */
   const { toggle: toggleCompare, has: inCompare, canAdd } = useCompare();
@@ -248,7 +256,9 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             Подробнее
           </Link>
           <button
-            onClick={() => (onPick ? onPick(product) : pickKit(product))}
+            onClick={() =>
+              onPick ? onPick(product) : addToCart(product)
+            }
             className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.06em] transition-colors sm:text-[0.76rem] ${
               chosen
                 ? 'border-primary bg-primary text-primary-foreground'
@@ -256,14 +266,14 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             }`}
           >
             {/* В сборке комплекта товар не уходит в корзину, а отмечается
-                на своём шаге — «Выбрать» честнее, чем «В заказ» */}
+                на своём шаге — «Выбрать» честнее, чем «В корзину» */}
             {onPick
               ? chosen
                 ? 'Выбрано'
                 : 'Выбрать'
               : chosen
-                ? 'В заказе'
-                : 'В заказ'}
+                ? 'В корзине'
+                : 'В корзину'}
             <Icon name={chosen ? 'Check' : 'Plus'} size={14} />
           </button>
         </div>

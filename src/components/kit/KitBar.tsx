@@ -92,8 +92,17 @@ const KitBar = () => {
     wasFull.current = complete;
   }, [complete]);
 
-  // Пустая сборка или оформление заказа — панель только мешает
-  if (!chosen.length || pathname.startsWith('/checkout')) return null;
+  /*
+   * Панель сборки живёт только там, где идёт сборка: страница сценария
+   * и сравнение, куда из неё уходят выбирать. В обычном каталоге товар
+   * кладут в корзину, и «Ваша сборка 1 из 3» там только путала.
+   */
+  const inKitFlow =
+    pathname.startsWith('/scenario/') || pathname.startsWith('/compare');
+
+  if (!chosen.length || !inKitFlow || pathname.startsWith('/checkout')) {
+    return null;
+  }
 
   const total = chosen.reduce(
     (sum, x) => sum + (x.product?.price ?? 0) * x.count,
