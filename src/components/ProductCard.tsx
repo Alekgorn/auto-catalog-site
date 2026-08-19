@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { slugify } from '@/lib/slug';
-import FitsBrief from '@/components/FitsBrief';
 import {
   CARD_FIELDS,
   Product,
@@ -29,6 +28,9 @@ interface Props {
   onPick?: (product: Product) => void;
 }
 
+/** Сколько характеристик влезает в карточку, не раздувая её */
+const SPEC_LIMIT = 3;
+
 const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(raw) ? raw : null;
@@ -45,41 +47,57 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const { pick: pickKit, has: inKit } = useKit();
   const chosen = onPick ? !!picked : inKit(product.id);
 
-  const rows = CARD_FIELDS.filter((f) => cardFields.includes(f.key))
-    .map((f) => ({ label: f.label, value: f.get(product) }))
-    .filter((r) => r.value);
+  /**
+   * Характеристики под названием — то, ради чего покупатель раньше заходил
+   * в карточку. Сначала важные поля категории (диагональ, память), затем
+   * общие вроде гарантии. Показываем только первые несколько.
+   */
+  const specRows = (() => {
+    const rows: { label: string; value: string }[] = [];
+    const seen = new Set<string>();
+    const add = (label: string, value: string) => {
+      const key = label.trim().toLowerCase();
+      if (!value || seen.has(key)) return;
+      seen.add(key);
+      rows.push({ label, value });
+    };
 
-  // Важные параметры категории — видны сразу, без захода в товар
-  const categoryRows = (() => {
-    const wanted = categorySpecs[product.category] ?? [];
-    if (!wanted.length) return [];
     const all = productSpecs(product);
-    return wanted
-      .map((field) => {
-        const hit = all.find(
-          ([k]) => k.trim().toLowerCase() === field.trim().toLowerCase(),
-        );
-        return hit ? { label: field, value: hit[1] } : null;
-      })
-      .filter((x): x is { label: string; value: string } => !!x);
+    (categorySpecs[product.category] ?? []).forEach((field) => {
+      const hit = all.find(
+        ([k]) => k.trim().toLowerCase() === field.trim().toLowerCase(),
+      );
+      if (hit) add(field, hit[1]);
+    });
+
+    // Своих характеристик мало — дополняем тем, что настроено для карточек
+    CARD_FIELDS.filter((f) => cardFields.includes(f.key)).forEach((f) =>
+      add(f.label, f.get(product)),
+    );
+
+    return rows.slice(0, SPEC_LIMIT);
   })();
 
-  return (
-    <article className="group flex flex-col bg-surface p-3 shadow-card transition-shadow duration-300 hover:shadow-card-hover sm:p-5">
-      <div className="flex items-start justify-between gap-4">
-        <Link
-          to={`/catalog/${slugify(product.category)}`}
-          className="eyebrow truncate transition-colors hover:text-primary"
-        >
-          {product.category}
-        </Link>
-        {product.badge && (
-          <span className="bg-primary px-2 py-1 text-[0.62rem] font-medium uppercase tracking-[0.12em] text-primary-foreground">
-            {product.badge}
-          </span>
-        )}
-      </div>
+  /**
+   * Короткая подпись о совместимости — плашкой прямо на фото.
+   * Машина выбрана: «Подходит для Kia Rio». Не выбрана: сколько марок
+   * поддерживает товар. Полный список моделей из карточки убран — он
+   * занимал половину места, а нужен единицам (есть на странице товара).
+   */
+  const fitBrands = Object.keys(product.fits ?? {});
+  const fitLabel = (() => {
+    if (anyCar || universal) return 'Для всех авто';
+    if (vehicle) return fits ? `Подходит: ${vehicle.brand} ${vehicle.model}` : null;
+    if (fitBrands.length === 1) return `Для ${fitBrands[0]}`;
+    if (fitBrands.length > 1) return `Подходит: ${fitBrands.length} марок`;
+    return null;
+  })();
 
+  /* Зелёная плашка — только когда совместимость подтверждена машиной */
+  const fitConfirmed = !!vehicle && fits && !anyCar;
+
+  return (
+    <article className="group flex flex-col bg-surface shadow-card transition-shadow duration-300 hover:shadow-card-hover">
       <button
         type="button"
         onClick={() =>
@@ -88,7 +106,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           )
         }
         aria-label={`Быстрый просмотр: ${product.name}`}
-        className="relative mt-4 block w-full overflow-hidden bg-surface-muted text-left"
+        className="relative block w-full overflow-hidden bg-surface-muted text-left"
       >
         <img
           src={productImages(product)[0]}
@@ -97,131 +115,99 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           decoding="async"
           /* Размеры заранее — страница не прыгает, пока фото грузится */
           width={800}
-          height={600}
-          className="aspect-[4/3] w-full object-contain p-3 transition-transform duration-300 group-hover:scale-[1.03]"
+          height={800}
+          className="aspect-square w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03] sm:p-4"
         />
 
-        {/* Подсказка: фото открывает характеристики, а не страницу товара */}
-        {/* На телефоне — компактный значок в углу, на широком экране — полоса при наведении */}
-        <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1.5 bg-foreground/85 px-2 py-1.5 text-[0.62rem] font-medium uppercase tracking-[0.08em] text-background sm:hidden">
-          <Icon name="Eye" size={12} />
-          Обзор
-        </span>
-        <span className="pointer-events-none absolute inset-x-0 bottom-0 hidden items-center justify-center gap-2 bg-foreground/80 py-2 text-[0.7rem] font-medium uppercase tracking-[0.1em] text-background opacity-0 transition-opacity duration-200 group-hover:opacity-100 sm:flex">
-          <Icon name="Eye" size={14} />
-          Быстрый просмотр
-        </span>
-
-        {vehicle && fits && !anyCar && (
-          <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-success px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-success-foreground sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
-            <Icon name="Check" size={12} strokeWidth={3} />
-            Подходит
+        {product.badge && (
+          <span className="absolute right-0 top-2 bg-primary px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-primary-foreground sm:top-3 sm:px-2.5 sm:text-[0.68rem]">
+            {product.badge}
           </span>
         )}
 
-        {/* Без ограничений по авто — метка прямо на фото, чтобы не
-            раздувать карточку отдельной плашкой внизу. Тон спокойнее
-            зелёного: это не подбор под конкретную машину */}
-        {anyCar && (
-          <span className="absolute left-0 top-2 flex items-center gap-1.5 bg-foreground/85 px-2 py-1.5 text-[0.6rem] font-bold uppercase tracking-[0.08em] text-background sm:top-3 sm:gap-2 sm:px-3 sm:py-2 sm:text-[0.7rem]">
-            <Icon name="Car" size={12} />
-            Для всех авто
+        {/* Совместимость коротким текстом прямо на фото */}
+        {fitLabel && (
+          <span
+            className={`absolute inset-x-0 bottom-0 flex items-center gap-1.5 px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] sm:px-3 sm:py-2 sm:text-[0.7rem] ${
+              fitConfirmed
+                ? 'bg-success text-success-foreground'
+                : 'bg-foreground/85 text-background'
+            }`}
+          >
+            <Icon
+              name={fitConfirmed ? 'Check' : 'Car'}
+              size={12}
+              strokeWidth={fitConfirmed ? 3 : 2}
+              className="flex-none"
+            />
+            <span className="truncate">{fitLabel}</span>
+          </span>
+        )}
+
+        {vehicle && !fits && !anyCar && (
+          <span className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-muted px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] text-muted-foreground sm:px-3 sm:py-2 sm:text-[0.7rem]">
+            <Icon name="CircleSlash" size={12} className="flex-none" />
+            <span className="truncate">Не подходит машине</span>
           </span>
         )}
       </button>
 
-      <h3 className="mt-3 font-head text-[0.98rem] font-medium leading-tight tracking-tight sm:mt-4 sm:text-xl">
-        <Link to={`/product/${product.id}`} className="transition-colors hover:text-primary">
-          {product.name}
-        </Link>
-      </h3>
-
-      <FitsBrief product={product} />
-
-      {rows.length > 0 && (
-        <dl className="mt-5 hidden space-y-2 text-[0.82rem] text-muted-foreground sm:block">
-          {rows.map((r) => (
-            <div
-              key={r.label}
-              className="flex justify-between gap-4 border-b border-border pb-2"
-            >
-              <dt>{r.label}</dt>
-              <dd className="text-right text-foreground">{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {categoryRows.length > 0 && (
-        <dl className="mt-4 hidden space-y-2 text-[0.82rem] text-muted-foreground sm:block">
-          {categoryRows.map((r) => (
-            <div
-              key={r.label}
-              className="flex justify-between gap-4 border-b border-border pb-2"
-            >
-              <dt>{r.label}</dt>
-              <dd className="text-right text-foreground">{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {/* Машина не выбрана: «подходит всем» — только если это правда,
-          иначе честно предлагаем проверить свою машину */}
-      {!vehicle && !universal ? (
-        <div className="mt-3 flex items-start gap-2 border border-border bg-surface-muted px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
-          <Icon
-            name="Car"
-            size={15}
-            className="mt-0.5 flex-none text-muted-foreground"
-          />
-          <span className="text-[0.78rem] leading-snug text-muted-foreground sm:text-[0.85rem]">
-            Подходит не всем машинам — укажите свою, проверим совместимость
-          </span>
-        </div>
-      ) : anyCar ? null : !vehicle || fits ? (
-        <div className="mt-3 flex items-start gap-2 border border-success bg-success-soft px-2.5 py-2 sm:mt-5 sm:gap-3 sm:px-4 sm:py-3">
-          <span className="mt-0.5 flex h-5 w-5 flex-none items-center justify-center rounded-full bg-success text-success-foreground">
-            <Icon name="Check" size={13} strokeWidth={3} />
-          </span>
-          <span className="text-[0.78rem] font-medium leading-snug text-success sm:text-[0.85rem]">
-            {vehicle ? (
-              <>
-                Подходит к вашему автомобилю
-                <span className="block font-normal">
-                  {vehicle.brand} {vehicle.model}, {vehicle.year} г.
-                </span>
-              </>
-            ) : (
-              'Подходит ко всем автомобилям'
-            )}
-          </span>
-        </div>
-      ) : (
-        <div className="mt-5 flex items-center gap-2 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-          <Icon name="CircleSlash" size={15} />
-          Не подходит к выбранной машине
-        </div>
-      )}
-
-      <div className="mt-auto flex flex-wrap items-end justify-between gap-x-4 gap-y-3 pt-4 sm:pt-6">
-        <div className="flex-none">
+      <div className="flex flex-1 flex-col p-3 sm:p-4">
+        <div>
           <PriceBlock product={product} />
           <StockLine product={product} />
         </div>
-        <div className="flex w-full flex-none items-center gap-2 sm:w-auto">
+
+        <h3 className="mt-2 font-medium leading-snug tracking-tight text-foreground">
           <Link
             to={`/product/${product.id}`}
-            className="hidden border border-border px-4 py-3 font-head text-[0.78rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-foreground sm:block"
+            className="line-clamp-2 text-[0.85rem] transition-colors hover:text-primary sm:text-[0.95rem]"
+          >
+            {product.name}
+          </Link>
+        </h3>
+
+        <Link
+          to={`/catalog/${slugify(product.category)}`}
+          className="mt-1 truncate text-[0.7rem] text-muted-foreground transition-colors hover:text-primary sm:text-[0.75rem]"
+        >
+          {product.category}
+        </Link>
+
+        {specRows.length > 0 && (
+          <dl className="mt-2.5 space-y-1 text-[0.72rem] leading-snug sm:text-[0.78rem]">
+            {specRows.map((r) => (
+              <div key={r.label} className="flex justify-between gap-2">
+                <dt className="truncate text-muted-foreground">{r.label}</dt>
+                <dd className="flex-none truncate text-right font-medium text-foreground">
+                  {r.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {/* Машина не выбрана и товар подходит не всем — зовём проверить */}
+        {!vehicle && !universal && !anyCar && (
+          <div className="mt-2.5 flex items-start gap-1.5 text-[0.7rem] leading-snug text-muted-foreground sm:text-[0.75rem]">
+            <Icon name="Car" size={13} className="mt-0.5 flex-none" />
+            Укажите машину — проверим совместимость
+          </div>
+        )}
+
+        <div className="mt-auto flex items-center gap-2 pt-3">
+          <Link
+            to={`/product/${product.id}`}
+            className="hidden flex-none border border-border px-3 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-foreground sm:block"
           >
             Подробнее
           </Link>
           <button
             onClick={() => (onPick ? onPick(product) : pickKit(product))}
-            className={`flex w-full items-center justify-center gap-2 border px-4 py-2.5 font-head text-[0.75rem] font-medium uppercase tracking-[0.08em] transition-colors sm:w-auto sm:py-3 sm:text-[0.78rem] ${
+            className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.06em] transition-colors sm:text-[0.76rem] ${
               chosen
                 ? 'border-primary bg-primary text-primary-foreground'
-                : 'border-foreground hover:bg-primary hover:border-primary hover:text-primary-foreground'
+                : 'border-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'
             }`}
           >
             {/* В сборке комплекта товар не уходит в корзину, а отмечается
@@ -233,7 +219,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
               : chosen
                 ? 'В заказе'
                 : 'В заказ'}
-            <Icon name={chosen ? 'Check' : 'Plus'} size={15} />
+            <Icon name={chosen ? 'Check' : 'Plus'} size={14} />
           </button>
         </div>
       </div>

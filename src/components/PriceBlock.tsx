@@ -17,27 +17,44 @@ const PriceBlock = ({ product, large = false }: Props) => {
 
   const strike = strikeOf(product);
   const isDealer = hasDealerPrice(product);
+  const price = priceOf(product);
+
+  /**
+   * Со скидкой цену показываем красным и рядом ставим зачёркнутую старую —
+   * так покупатель считывает выгоду мгновенно, как на маркетплейсах.
+   * Без скидки цифра обычная, чёрная: подсвечивать нечего.
+   */
+  const discount =
+    strike && strike > price ? Math.round((1 - price / strike) * 100) : 0;
 
   return (
     <div>
-      {strike && (
-        <div
-          className={`text-muted-foreground line-through ${
-            large ? 'text-base' : 'text-[0.8rem]'
-          }`}
-        >
-          {formatPrice(strike)}
-        </div>
-      )}
-
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <span
           className={`whitespace-nowrap font-head font-bold tracking-tight ${
-            large ? 'text-4xl' : 'text-xl sm:text-2xl'
-          }`}
+            discount ? 'text-primary' : 'text-foreground'
+          } ${large ? 'text-4xl' : 'text-xl sm:text-2xl'}`}
         >
-          {formatPrice(priceOf(product))}
+          {formatPrice(price)}
         </span>
+
+        {/* Старая цена и процент — одним блоком, чтобы в узкой карточке
+            процент не срывался на отдельную строку. Зачёркнута при этом
+            только сама цена, процент остаётся читаемым */}
+        {strike && (
+          <span
+            className={`flex items-baseline gap-1.5 whitespace-nowrap ${
+              large ? 'text-base' : 'text-[0.78rem]'
+            }`}
+          >
+            <span className="text-muted-foreground line-through">
+              {formatPrice(strike)}
+            </span>
+            {discount > 0 && (
+              <span className="font-bold text-primary">−{discount}%</span>
+            )}
+          </span>
+        )}
 
         {isDealer && (
           <span

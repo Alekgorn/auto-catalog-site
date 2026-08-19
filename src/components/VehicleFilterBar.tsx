@@ -48,8 +48,8 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
   /* Машина уже выбрана — показываем компактную плашку */
   if (vehicle && !open) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-4 border-2 border-foreground bg-surface px-5 py-5 md:px-6 md:py-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 border-2 border-foreground bg-surface px-5 py-5 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between md:px-6 md:py-6">
+        <div className="flex min-w-0 items-center gap-4">
           <Icon name="Car" size={30} className="flex-none text-primary" />
           <div>
             <div className="font-head text-xl font-bold uppercase tracking-tight md:text-2xl">
@@ -63,17 +63,17 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <PhotoToMessenger inline />
           <button
             onClick={() => setOpen(true)}
-            className="border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+            className="flex-1 border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
           >
             Сменить
           </button>
           <button
             onClick={onReset}
-            className="border border-border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="flex-1 border border-border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex-none"
           >
             Сбросить
           </button>
@@ -85,10 +85,10 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
   /* Машина не выбрана — свёрнутая подсказка */
   if (!open) {
     return (
-      <div className="flex flex-wrap items-center gap-3 border-2 border-foreground bg-surface px-5 py-5 md:px-6 md:py-6">
+      <div className="flex flex-col gap-4 border-2 border-foreground bg-surface px-5 py-5 sm:flex-row sm:flex-wrap sm:items-center md:px-6 md:py-6">
         <button
           onClick={() => setOpen(true)}
-          className="flex min-w-0 flex-1 items-center gap-4 text-left"
+          className="flex w-full min-w-0 items-center gap-4 text-left sm:w-auto sm:flex-1"
         >
           <Icon name="Car" size={30} className="flex-none text-primary" />
           <span className="min-w-0">
@@ -101,11 +101,11 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
           </span>
         </button>
 
-        <div className="flex flex-none items-center gap-2">
+        <div className="flex w-full flex-none items-center gap-2 sm:w-auto">
           <PhotoToMessenger inline />
           <button
             onClick={() => setOpen(true)}
-            className="flex items-center gap-2 bg-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+            className="flex flex-1 items-center justify-center gap-2 bg-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground sm:flex-none"
           >
             Выбрать
             <Icon name="ChevronDown" size={16} />

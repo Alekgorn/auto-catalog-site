@@ -17,15 +17,18 @@ interface Props {
  */
 const StockLine = ({ product, large = false }: Props) => {
   const inStock = (product.stock ?? 0) > 0;
+  /* В карточке каталога места мало — там текст короче, без потери смысла */
   const text = inStock
-    ? 'На складе – отправка сегодня'
+    ? large
+      ? 'На складе – отправка сегодня'
+      : 'На складе'
     : product.stockNote || DEFAULT_STOCK_NOTE;
 
   return (
     <div
       className={`mt-2 flex items-center gap-1.5 font-medium leading-snug ${
         large ? 'text-[0.9rem]' : 'text-[0.78rem]'
-      } ${inStock ? 'text-success' : 'text-info'}`}
+      } ${large ? '' : 'truncate'} ${inStock ? 'text-success' : 'text-info'}`}
     >
       <Icon
         name="CircleCheck"
