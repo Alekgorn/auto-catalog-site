@@ -54,7 +54,6 @@ const ScenarioPage = () => {
   const [sort, setSort] = useState<SortKey>("relevance");
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
-  const [mobileFilters, setMobileFilters] = useState(false);
   /**
    * Сборка комплекта живёт в общем хранилище — панель видна на всём сайте.
    * Пропущенные шаги держим там же: панель по ним понимает, что покупатель
@@ -592,8 +591,6 @@ const ScenarioPage = () => {
             allCategories={allCategories}
             warranties={warranties}
             catalogCounts={catalogCounts}
-            mobileFilters={mobileFilters}
-            onMobileFilters={setMobileFilters}
             shown={shown}
             onShowMore={() => setShown((s) => s + PAGE_SIZE)}
           />

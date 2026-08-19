@@ -1,8 +1,8 @@
 import { Fragment } from "react";
-import Icon from "@/components/ui/icon";
 import ProductCard from "@/components/ProductCard";
 import UniversalDivider from "@/components/UniversalDivider";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
+import FloatingFilters from "@/components/FloatingFilters";
 import { Vehicle } from "@/data/catalog";
 import { Scenario } from "@/data/scenarios";
 import { SearchHit } from "@/lib/smart-search";
@@ -43,8 +43,6 @@ interface Props {
   allCategories: string[];
   warranties: string[];
   catalogCounts: Record<string, number>;
-  mobileFilters: boolean;
-  onMobileFilters: (v: boolean) => void;
 
   shown: number;
   onShowMore: () => void;
@@ -74,8 +72,6 @@ const ScenarioCatalog = ({
   allCategories,
   warranties,
   catalogCounts,
-  mobileFilters,
-  onMobileFilters,
   shown,
   onShowMore,
 }: Props) => (
@@ -103,74 +99,61 @@ const ScenarioCatalog = ({
       </label>
     </div>
 
+    {/* Разделы сценария уехали в плавающую панель справа: раньше они
+        занимали несколько строк над каталогом и отодвигали товары вниз */}
     {categories.length > 1 && !scenario.fullCatalog && (
-      <div className="flex flex-wrap gap-2 pb-6">
-        <button
-          onClick={() => onCategory("")}
-          className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-            category
-              ? "border-border bg-surface hover:border-primary hover:text-primary"
-              : "border-foreground bg-foreground text-background"
-          }`}
-        >
-          Все ({hitsCount})
-        </button>
-        {categories.map(([c, n]) => (
+      <FloatingFilters activeCount={category ? 1 : 0} hideOn={category}>
+        <div className="flex flex-col gap-2">
           <button
-            key={c}
-            onClick={() => onCategory(c)}
-            className={`border px-3.5 py-2 text-[0.78rem] transition-colors ${
-              category === c
-                ? "border-foreground bg-foreground text-background"
-                : "border-border bg-surface hover:border-primary hover:text-primary"
+            onClick={() => onCategory("")}
+            className={`flex items-center justify-between border px-3.5 py-2.5 text-left text-[0.82rem] transition-colors ${
+              category
+                ? "border-border bg-surface hover:border-primary hover:text-primary"
+                : "border-foreground bg-foreground text-background"
             }`}
           >
-            {c} ({n})
+            Все
+            <span className="text-[0.75rem] opacity-70">{hitsCount}</span>
           </button>
-        ))}
-      </div>
+          {categories.map(([c, n]) => (
+            <button
+              key={c}
+              onClick={() => onCategory(c)}
+              className={`flex items-center justify-between gap-3 border px-3.5 py-2.5 text-left text-[0.82rem] transition-colors ${
+                category === c
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-surface hover:border-primary hover:text-primary"
+              }`}
+            >
+              <span className="min-w-0 flex-1">{c}</span>
+              <span className="flex-none text-[0.75rem] opacity-70">{n}</span>
+            </button>
+          ))}
+        </div>
+      </FloatingFilters>
     )}
 
-    <div
-      className={
-        scenario.fullCatalog ? "grid grid-cols-1 gap-x-6 lg:grid-cols-12" : ""
-      }
-    >
+    <div>
       {scenario.fullCatalog && (
-        <>
-          {/* Кнопка фильтров на телефоне */}
-          <button
-            onClick={() => onMobileFilters(!mobileFilters)}
-            className="mb-4 flex items-center justify-between border border-foreground px-4 py-3 text-[0.8rem] uppercase tracking-[0.1em] lg:hidden"
-          >
-            Фильтры
-            <Icon name={mobileFilters ? "X" : "SlidersHorizontal"} size={17} />
-          </button>
-
-          <aside
-            className={`lg:col-span-3 ${mobileFilters ? "block" : "hidden lg:block"}`}
-          >
-            <div className="border border-border bg-surface p-4 lg:sticky lg:top-[100px]">
-              <CatalogFilters
-                state={filters}
-                bounds={bounds}
-                categories={allCategories}
-                warranties={warranties}
-                counts={catalogCounts}
-                onChange={onFilters}
-                onReset={onResetFilters}
-              />
-            </div>
-          </aside>
-        </>
+        <FloatingFilters
+          activeCount={filters.categories.length + filters.warranties.length}
+          resultCount={list.length}
+          hideOn={filters.categories.join("|")}
+        >
+          <CatalogFilters
+            state={filters}
+            bounds={bounds}
+            categories={allCategories}
+            warranties={warranties}
+            counts={catalogCounts}
+            onChange={onFilters}
+            onReset={onResetFilters}
+          />
+        </FloatingFilters>
       )}
 
-      <div className={scenario.fullCatalog ? "lg:col-span-9" : ""}>
-        <div
-          className={`grid grid-cols-2 gap-3 pb-8 md:gap-4 ${
-            scenario.fullCatalog ? "lg:grid-cols-3" : "lg:grid-cols-4"
-          }`}
-        >
+      <div>
+        <div className="grid grid-cols-2 gap-3 pb-8 md:gap-4 lg:grid-cols-4">
           {visible.map((h, i) => (
             <Fragment key={h.product.id}>
               {/* Граница между «точно встанет» и «подойдёт почти всем» */}

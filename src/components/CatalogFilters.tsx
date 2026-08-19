@@ -83,8 +83,9 @@ const CatalogFilters = ({
 
   return (
     <div>
-      <div className="flex items-center justify-between pb-4">
-        <div className="font-head text-lg font-bold uppercase tracking-tight">Фильтры</div>
+      {/* Заголовок «Фильтры» рисует плавающая панель — здесь оставляем
+          только сброс, иначе слово дублировалось бы дважды подряд */}
+      <div className="flex items-center justify-end pb-3">
         <button
           onClick={onReset}
           className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
