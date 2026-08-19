@@ -1,3 +1,5 @@
+import base64
+import gzip
 import json
 import os
 import psycopg2
@@ -120,19 +122,37 @@ def handler(event: dict, context) -> dict:
     for p in products:
         p['guides'] = product_guides.get(p['id'], [])
 
+    payload = json.dumps(
+        {
+            'products': products,
+            'brands': brands,
+            'categories': category_rows,
+            'categorySpecs': category_specs,
+            'guides': guides,
+            'settings': settings,
+        },
+        ensure_ascii=False,
+    )
+
+    # Каталог вырос за лимит ответа функции (4 МБ), поэтому отдаём его
+    # сжатым — так помещаемся с большим запасом и грузится быстрее.
+    # Клиенту, который сжатие не принимает, отвечаем как раньше.
+    headers = event.get('headers') or {}
+    accepts = str(
+        headers.get('Accept-Encoding') or headers.get('accept-encoding') or ''
+    ).lower()
+    if 'gzip' in accepts:
+        packed = gzip.compress(payload.encode('utf-8'), 6)
+        return {
+            'statusCode': 200,
+            'headers': {**CORS, 'Content-Encoding': 'gzip'},
+            'isBase64Encoded': True,
+            'body': base64.b64encode(packed).decode('ascii'),
+        }
+
     return {
         'statusCode': 200,
         'headers': CORS,
         'isBase64Encoded': False,
-        'body': json.dumps(
-            {
-                'products': products,
-                'brands': brands,
-                'categories': category_rows,
-                'categorySpecs': category_specs,
-                'guides': guides,
-                'settings': settings,
-            },
-            ensure_ascii=False,
-        ),
+        'body': payload,
     }
