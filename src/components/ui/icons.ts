@@ -32,6 +32,7 @@ import CarFront from 'lucide-react/dist/esm/icons/car-front';
 import Check from 'lucide-react/dist/esm/icons/check';
 import CheckCheck from 'lucide-react/dist/esm/icons/check-check';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
 import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
 import CircleAlert from 'lucide-react/dist/esm/icons/circle-alert';
@@ -90,6 +91,8 @@ import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Save from 'lucide-react/dist/esm/icons/save';
 import Search from 'lucide-react/dist/esm/icons/search';
+import GitCompare from 'lucide-react/dist/esm/icons/git-compare';
+import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
 import Send from 'lucide-react/dist/esm/icons/send';
 import Settings from 'lucide-react/dist/esm/icons/settings';
 import Share2 from 'lucide-react/dist/esm/icons/share-2';
@@ -145,6 +148,7 @@ export const ICONS: Record<string, FC<LucideProps>> = {
   Check,
   CheckCheck,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   ChevronUp,
   CircleAlert,
@@ -203,6 +207,8 @@ export const ICONS: Record<string, FC<LucideProps>> = {
   RotateCcw,
   Save,
   Search,
+  GitCompare,
+  Maximize2,
   Send,
   Settings,
   Share2,

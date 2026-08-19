@@ -19,6 +19,7 @@ import ScenarioPage from './pages/Scenario';
  */
 const Admin = lazy(() => import('./pages/Admin'));
 const SearchPage = lazy(() => import('./pages/Search'));
+const ComparePage = lazy(() => import('./pages/Compare'));
 
 /** Пока грузится страница — короткая заглушка вместо пустоты */
 const Loading = () => (
@@ -36,6 +37,14 @@ const AppRoutes = () => (
       element={
         <Suspense fallback={<Loading />}>
           <SearchPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/compare"
+      element={
+        <Suspense fallback={<Loading />}>
+          <ComparePage />
         </Suspense>
       }
     />

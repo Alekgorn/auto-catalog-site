@@ -16,6 +16,7 @@ import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
 import { useCatalog } from '@/context/CatalogContext';
+import { useCompare } from '@/context/CompareContext';
 
 interface Props {
   product: Product;
@@ -46,6 +47,11 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
    */
   const { pick: pickKit, has: inKit } = useKit();
   const chosen = onPick ? !!picked : inKit(product.id);
+
+  /* Сравнение: отмечаем товар, чтобы потом свести характеристики в таблицу */
+  const { toggle: toggleCompare, has: inCompare, canAdd } = useCompare();
+  const comparing = inCompare(product.id);
+  const compareBlocked = !canAdd(product);
 
   /**
    * Характеристики под названием — то, ради чего покупатель раньше заходил
@@ -124,6 +130,42 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             {product.badge}
           </span>
         )}
+
+        {/* Сравнение — значком в углу фото: кнопкой внизу карточки он
+            конкурировал бы с «В заказ», а нужен заметно реже */}
+        <span
+          role="button"
+          tabIndex={0}
+          aria-label={
+            comparing ? 'Убрать из сравнения' : 'Добавить к сравнению'
+          }
+          title={
+            compareBlocked
+              ? 'Сравнивать можно товары одного раздела'
+              : comparing
+                ? 'В сравнении'
+                : 'Добавить к сравнению'
+          }
+          onClick={(e) => {
+            e.stopPropagation();
+            if (!compareBlocked) toggleCompare(product);
+          }}
+          onKeyDown={(e) => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (!compareBlocked) toggleCompare(product);
+          }}
+          className={`absolute left-2 top-2 flex h-8 w-8 items-center justify-center border transition-colors sm:top-3 ${
+            comparing
+              ? 'border-primary bg-primary text-primary-foreground'
+              : compareBlocked
+                ? 'cursor-not-allowed border-border bg-background/80 text-muted-foreground/50'
+                : 'border-border bg-background/85 text-foreground hover:border-primary hover:text-primary'
+          }`}
+        >
+          <Icon name={comparing ? "Check" : "GitCompare"} size={15} />
+        </span>
 
         {/* Совместимость коротким текстом прямо на фото */}
         {fitLabel && (
