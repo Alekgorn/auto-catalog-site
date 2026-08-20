@@ -42,6 +42,56 @@ export const fixLayout = (value: string): string => {
   return out;
 };
 
+/**
+ * Латинские слова, которые реально встречаются в каталоге: марки, модели,
+ * названия товаров, технические сокращения (usb, dsp, carplay).
+ * Нужен, чтобы отличить настоящий запрос «camry» от набранного
+ * не в той раскладке «vfuybnjkf».
+ *
+ * Собираем один раз при первом поиске и запоминаем: каталог за время
+ * работы страницы не меняется.
+ */
+let latinTerms: Set<string> | null = null;
+
+export const buildLatinTerms = (
+  products: Product[],
+  brandBook: BrandBook[],
+): Set<string> => {
+  const set = new Set<string>();
+  const add = (raw: string) => {
+    normalize(raw)
+      .split(' ')
+      .forEach((w) => {
+        // Слова короче трёх букв слишком часто совпадают со случайным набором
+        if (w.length >= 3 && /^[a-z]+$/.test(w)) set.add(w);
+      });
+  };
+
+  brandBook.forEach((b) => {
+    add(b.name);
+    (b.models ?? []).forEach(add);
+  });
+  products.forEach((p) => {
+    add(p.name);
+    add(p.category);
+    Object.entries(p.fits ?? {}).forEach(([brand, models]) => {
+      add(brand);
+      (models ?? []).forEach(add);
+    });
+  });
+
+  // Технические слова, которых может не быть в названиях
+  `usb gps sim dsp can iso android carplay qled hdmi bluetooth wifi
+   led tft ips din rca aux nfc obd tpms`
+    .split(/\s+/)
+    .forEach((w) => set.add(w));
+
+  return set;
+};
+
+/** Есть ли такое латинское слово в каталоге */
+const isLatinTerm = (word: string): boolean => !!latinTerms?.has(word);
+
 /** Отрезаем русские окончания: «камеру», «камеры» → «камер». */
 export const stem = (word: string): string => {
   if (word.length <= 4) return word;
@@ -308,15 +358,23 @@ export const parseQuery = (
 ): ParsedQuery => {
   const cleanedRaw = normalize(query);
 
+  // Словарь латиницы каталога — собираем при первом запросе
+  if (!latinTerms && (products.length || brandBook.length)) {
+    latinTerms = buildLatinTerms(products, brandBook);
+  }
+
   // Кириллицы нет вовсе, но и осмысленной латиницы тоже — пробуем раскладку
   // Артикулы и коды (есть цифры или дефис) раскладкой не трогаем
   const codeLike = /\d|-/.test(cleanedRaw);
   const looksLatin =
     !codeLike && /^[a-z\s]+$/.test(cleanedRaw) && cleanedRaw.length > 2;
   const swapped = normalize(fixLayout(cleanedRaw));
-  const knownLatin = /audi|bmw|kia|honda|ford|mazda|iso|can|usb|gps|sim|dsp|android|qled|toyota|lada|volvo|opel|nissan|lexus|skoda|hyundai|renault|suzuki|isuzu|chery|geely|haval|omoda|exeed|dodge|buick|saab|gmc/.test(
-    cleanedRaw,
-  );
+  /* Слово есть в каталоге на латинице — значит, это настоящий запрос
+     («camry», «venza»), а не набранный не в той раскладке. Раньше здесь
+     был список марок вручную, и любая модель вне его превращалась
+     в бессмыслицу: «camry» → «сфькн», и поиск не находил ничего */
+  const knownLatin =
+    looksLatin && cleanedRaw.split(' ').filter(Boolean).some(isLatinTerm);
   const cleaned = looksLatin && !knownLatin ? swapped : cleanedRaw;
 
   const allWords = cleaned.split(' ').filter(Boolean);
@@ -370,7 +428,7 @@ export const parseQuery = (
     );
     known.forEach((m) => {
       const mn = normalize(m);
-      if (mn.length < 3) return;
+      if (mn.length < 2) return;
       // Чисто числовое «название» — это год из запроса, а не модель
       if (/^\d{4}$/.test(mn)) return;
       // Только по границе слова — иначе «hd» из артикула станет моделью
@@ -379,6 +437,10 @@ export const parseQuery = (
         models.push(m);
         return;
       }
+      /* Короткие названия («XF», «BX», «ZX») дальше не проверяем:
+         похожесть и склейка соседних слов на двух буквах дают
+         случайные попадания. Точное совпадение выше уже отработало */
+      if (mn.length < 3) return;
       // Модель могли написать по-русски: «рав4», «камри», «солярис»
       if (words.some((w) => sameModel(w, mn))) {
         models.push(m);
@@ -419,7 +481,16 @@ export const parseQuery = (
       return (
         words.includes(wn) ||
         stems.includes(ws) ||
-        stems.some((s) => s.length > 3 && (s.startsWith(ws) || ws.startsWith(s))) ||
+        /* Совпадение по началу слова — только для длинных основ.
+           Короткие коды («can», «usb») ловились как начало нормальных
+           слов: «canyon» и «canter» превращались в CAN-шину, и поиск
+           по этим моделям не находил ничего */
+        stems.some(
+          (s) =>
+            s.length > 3 &&
+            ws.length > 3 &&
+            (s.startsWith(ws) || ws.startsWith(s)),
+        ) ||
         fuzzyHit(wn, words)
       );
     });
@@ -559,8 +630,14 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
   const reasons: string[] = [];
 
   /* --- 1. Артикул: точное совпадение важнее всего --- */
-  if (q.words.length && item.sku && q.words.includes(item.sku)) {
-    return { product: item.product, score: 10000, reason: 'Совпал артикул' };
+  if (q.words.length && item.sku) {
+    /* Артикул часто содержит пробел («DH 007T», «FI 040N») — запрос
+       к этому моменту уже разбит на слова, поэтому сверяем и целую
+       строку запроса, иначе такой артикул не находился вовсе */
+    const whole = normalize(q.raw);
+    if (q.words.includes(item.sku) || (whole && whole === item.sku)) {
+      return { product: item.product, score: 10000, reason: 'Совпал артикул' };
+    }
   }
 
   /* --- 2. Классический поиск по словам --- */
