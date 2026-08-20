@@ -203,6 +203,7 @@ const CategoryPage = () => {
 
         <div className="rule" />
         <SectionHead
+          as="h1"
           index="01"
           eyebrow="Категория"
           title={category}

@@ -92,6 +92,7 @@ const BrandPage = () => {
 
         <div className="rule" />
         <SectionHead
+          as="h1"
           index="01"
           eyebrow="Подбор по марке"
           title={`Оборудование для ${brand.name}`}
