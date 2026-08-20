@@ -5,6 +5,7 @@ export type AdminTab =
   | "dealers"
   | "brands"
   | "categories"
+  | "fits"
   | "site"
   | "settings";
 
@@ -16,6 +17,8 @@ interface Props {
   guidesCount: number;
   brandsCount: number;
   categoriesCount: number;
+  /** Сколько товаров с ошибками совместимости — счётчик у вкладки */
+  fitsIssues: number;
 }
 
 /** Панель вкладок админки со счётчиками заявок, товаров, инструкций и т.д. */
@@ -27,6 +30,7 @@ const AdminTabs = ({
   guidesCount,
   brandsCount,
   categoriesCount,
+  fitsIssues,
 }: Props) => (
   <div className="flex flex-wrap gap-8 border-b border-border py-5">
     {(
@@ -36,6 +40,12 @@ const AdminTabs = ({
         ["guides", `Инструкции (${guidesCount})`],
         ["brands", `Марки (${brandsCount})`],
         ["categories", `Категории (${categoriesCount})`],
+        [
+          "fits",
+          fitsIssues > 0
+            ? `Совместимость (${fitsIssues})`
+            : "Совместимость",
+        ],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],
         ["settings", "Настройки"],
@@ -47,7 +57,10 @@ const AdminTabs = ({
         className={`border-b-2 pb-2 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
           tab === key
             ? "border-primary text-primary"
-            : "border-transparent text-muted-foreground hover:text-foreground"
+            : key === "fits" && fitsIssues > 0
+              ? // Ошибки совместимости прячут товары от покупателя — видно сразу
+                "border-transparent text-primary hover:text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
         }`}
       >
         {label}
