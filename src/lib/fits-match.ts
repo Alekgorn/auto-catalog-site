@@ -98,28 +98,35 @@ export const findFitKey = (
 };
 
 /**
- * Есть ли модель в списке. Учитывает уточнения в скобках и приписки:
- * в справочнике «3 (Axela)», в товаре «3» — это одна модель.
+ * Название без пояснения в скобках: «3 (Axela)» → «3»,
+ * «MX-5 (Miata/Roadster)» → «MX-5». Скобки — это второе имя той же
+ * машины, а не отдельная модель.
+ */
+const withoutNote = (raw: string): string =>
+  fitKey((raw ?? '').replace(/\([^)]*\)/g, ' '));
+
+/**
+ * Есть ли модель в списке.
+ *
+ * Совпадением считаем только одно и то же название — с поправкой на
+ * регистр, дефисы и диакритику — либо пояснение в скобках.
+ * Приписку через пробел НЕ считаем: «Move» и «Move Canbus» у Daihatsu,
+ * как и «Tiggo» и «Tiggo 8», — разные машины, и путать их нельзя.
  */
 export const hasFitModel = (models: string[], model: string): boolean => {
   const key = fitKey(model);
   if (!key) return false;
+
+  const base = withoutNote(model);
 
   return models.some((m) => {
     const k = fitKey(m);
     if (!k) return false;
     if (k === key) return true;
 
-    /* Одно название — уточнение другого: «3» и «3(axela)», «outlander»
-       и «outlanderxl». Короткое должно быть началом длинного, иначе
-       «CX-5» совпало бы с «CX-50» */
-    const [short, long] = k.length < key.length ? [k, key] : [key, k];
-    if (long.startsWith(short)) {
-      // Отсекаем случай, когда дальше идёт цифра: CX-5 ≠ CX-50
-      const next = long[short.length];
-      return !(next >= '0' && next <= '9');
-    }
-    return false;
+    // «3» из товара и «3 (Axela)» из справочника — одна модель
+    const mBase = withoutNote(m);
+    return !!mBase && !!base && (mBase === key || base === k || mBase === base);
   });
 };
 
