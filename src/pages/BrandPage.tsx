@@ -10,6 +10,7 @@ import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
+import { findFitModels } from "@/lib/fits-match";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 /** Оборудование для одной марки авто по собственному адресу. */
@@ -26,7 +27,9 @@ const BrandPage = () => {
   const items = useMemo(
     () =>
       brand
-        ? products.filter((p) => (p.fits?.[brand.name] ?? []).length > 0)
+        ? products.filter(
+            (p) => (findFitModels(p.fits, brand.name) ?? []).length > 0,
+          )
         : [],
     [products, brand],
   );

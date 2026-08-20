@@ -8,6 +8,7 @@ import ProductMainTab from '@/components/admin/product-editor/ProductMainTab';
 import ProductContentTab from '@/components/admin/product-editor/ProductContentTab';
 import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
 import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
+import { findFitKey, hasFitModel, sameFit } from '@/lib/fits-match';
 
 export type { AdminProduct };
 export { emptyProduct };
@@ -82,13 +83,21 @@ const ProductEditor = ({
     setSection('notes');
   };
 
+  /**
+   * Отметка модели. Марка в товаре может быть записана иначе, чем в
+   * справочнике («Fiat» против «FIAT») — находим её в любом написании
+   * и перекладываем под название справочника, чтобы не плодить дубли.
+   */
   const toggleModel = (brand: string, model: string) => {
     setForm((f) => {
-      const current = f.fits[brand] ?? [];
-      const next = current.includes(model)
-        ? current.filter((m) => m !== model)
-        : [...current, model];
       const fits = { ...f.fits };
+      const key = findFitKey(fits, brand);
+      const current = key ? fits[key] : [];
+      const next = hasFitModel(current, model)
+        ? current.filter((m) => !sameFit(m, model))
+        : [...current, model];
+
+      if (key && key !== brand) delete fits[key];
       if (next.length) fits[brand] = next;
       else delete fits[brand];
       return { ...f, fits };
@@ -114,8 +123,13 @@ const ProductEditor = ({
   const toggleBrand = (brand: AdminBrand) => {
     setForm((f) => {
       const fits = { ...f.fits };
-      if (fits[brand.name]?.length === brand.models.length) delete fits[brand.name];
-      else fits[brand.name] = [...brand.models];
+      const key = findFitKey(fits, brand.name);
+      const current = key ? fits[key] : [];
+      if (key) delete fits[key];
+      // Отмечены все модели — снимаем марку целиком, иначе отмечаем все
+      if (current.length !== brand.models.length) {
+        fits[brand.name] = [...brand.models];
+      }
       return { ...f, fits };
     });
   };
