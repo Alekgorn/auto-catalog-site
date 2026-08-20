@@ -41,13 +41,11 @@ const suggestFrom = (list: string[], raw: string): string | undefined => {
   const exact = list.find((x) => fitKey(x) === key);
   if (exact) return exact;
 
-  // Одно название — начало другого: «Tiggo» и «Tiggo 8»
-  return list.find((x) => {
-    const k = fitKey(x);
-    if (!k) return false;
-    const [short, long] = k.length < key.length ? [k, key] : [key, k];
-    return long.startsWith(short) && short.length >= 3;
-  });
+  /* Совпадение без пояснения в скобках: «3» подскажет «3 (Axela)».
+     Приписку через пробел в подсказки не берём — «Move» и «Move Canbus»
+     разные машины, и подсказка сбила бы с толку */
+  const bare = (s: string) => fitKey(s.replace(/\([^)]*\)/g, ' '));
+  return list.find((x) => bare(x) === key || fitKey(x) === bare(raw));
 };
 
 /**
