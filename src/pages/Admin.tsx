@@ -21,6 +21,7 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import AdminTabs, { AdminTab } from "@/components/admin/AdminTabs";
 import AdminGuidesTab from "@/components/admin/AdminGuidesTab";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
+import FitsCheckPanel from "@/components/admin/FitsCheckPanel";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -288,6 +289,24 @@ const Admin = () => {
     return set;
   }, [products, catalogCategories]);
 
+  /**
+   * Сколько товаров с ошибками совместимости — цифра на вкладке.
+   * Считаем по тем же правилам, что и сама панель: марка или модель,
+   * которых нет в справочнике.
+   */
+  const fitsIssues = useMemo(() => {
+    if (!brands.length) return 0;
+    return products.filter((p) => {
+      if (!p.isActive) return false;
+      return Object.entries(p.fits ?? {}).some(([brand, models]) => {
+        if (!Array.isArray(models)) return false;
+        const ref = brands.find((b) => b.name === brand);
+        if (!ref) return true;
+        return models.some((m) => !ref.models.includes(m));
+      });
+    }).length;
+  }, [products, brands]);
+
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -320,6 +339,7 @@ const Admin = () => {
           guidesCount={guides.length}
           brandsCount={brands.length}
           categoriesCount={categories.length}
+          fitsIssues={fitsIssues}
         />
 
         {tab === "orders" && <OrdersPanel />}
@@ -341,6 +361,14 @@ const Admin = () => {
         )}
 
         {tab === "categories" && <CategoriesEditor onSaved={load} />}
+
+        {tab === "fits" && (
+          <FitsCheckPanel
+            products={products}
+            brands={brands}
+            onEdit={setEditing}
+          />
+        )}
 
         {tab === "site" && <SitePanel onSaved={load} />}
 
