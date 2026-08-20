@@ -63,9 +63,18 @@ interface Saved {
   slug: string;
   steps: KitStep[];
   skipped: Record<string, boolean>;
+  /** Когда сборку меняли в последний раз */
+  at: number;
 }
 
-const EMPTY: Saved = { picks: {}, qty: {}, slug: '', steps: [], skipped: {} };
+const EMPTY: Saved = {
+  picks: {},
+  qty: {},
+  slug: '',
+  steps: [],
+  skipped: {},
+  at: 0,
+};
 
 const read = (): Saved => {
   if (typeof window === 'undefined') return EMPTY;
@@ -89,6 +98,7 @@ const read = (): Saved => {
       slug: parsed.slug ?? '',
       steps: Array.isArray(parsed.steps) ? parsed.steps : [],
       skipped: parsed.skipped ?? {},
+      at,
     };
   } catch {
     return EMPTY;
@@ -112,9 +122,15 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
    * Флаг бережёт свежие шаги от затирания старыми.
    */
   const started = useRef(false);
+  /**
+   * Когда сборку трогали в последний раз. Простой заход на сайт срок не
+   * продлевает — иначе сборка жила бы вечно у любого частого гостя.
+   */
+  const touchedAt = useRef(0);
 
   useEffect(() => {
     const saved = read();
+    touchedAt.current = saved.at;
     setPicks(saved.picks);
     setQtyMap(saved.qty);
     setSkippedMap(saved.skipped);
@@ -126,9 +142,19 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     if (!ready) return;
     try {
+      /* Пустую сборку не помечаем — метка ставится первым выбором */
+      const empty = !Object.keys(picks).length;
+      if (!empty) touchedAt.current = Date.now();
       localStorage.setItem(
         KEY,
-        JSON.stringify({ picks, qty, steps, slug, skipped, at: Date.now() }),
+        JSON.stringify({
+          picks,
+          qty,
+          steps,
+          slug,
+          skipped,
+          at: touchedAt.current || Date.now(),
+        }),
       );
     } catch {
       /* приватный режим — просто не сохраняем */
