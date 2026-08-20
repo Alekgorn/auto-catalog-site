@@ -12,6 +12,13 @@ import { KitStep } from '@/data/scenarios';
 
 const KEY = 'kit-build';
 
+/**
+ * Сколько живёт незаконченная сборка. Через сутки покупатель уже забыл,
+ * что выбирал, и всплывающая панель со старыми позициями его только
+ * путает — начинаем с чистого листа.
+ */
+const TTL = 24 * 60 * 60 * 1000;
+
 /** Позиция сборки: шаг и выбранный товар */
 export interface KitPick {
   /** Раздел каталога — он же ключ шага */
@@ -66,6 +73,15 @@ const read = (): Saved => {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : null;
     if (!parsed || typeof parsed !== 'object') return EMPTY;
+
+    /* Сборка старше суток — забываем. Сохранения без метки времени
+       остались с прошлой версии, их тоже считаем устаревшими */
+    const at = typeof parsed.at === 'number' ? parsed.at : 0;
+    if (!at || Date.now() - at > TTL) {
+      localStorage.removeItem(KEY);
+      return EMPTY;
+    }
+
     return {
       picks: parsed.picks ?? {},
       // Старые сохранения без количеств — там везде по одной штуке
@@ -112,7 +128,7 @@ export const KitProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       localStorage.setItem(
         KEY,
-        JSON.stringify({ picks, qty, steps, slug, skipped }),
+        JSON.stringify({ picks, qty, steps, slug, skipped, at: Date.now() }),
       );
     } catch {
       /* приватный режим — просто не сохраняем */
