@@ -1,3 +1,5 @@
+import { findFitModels, hasFitModel } from '@/lib/fits-match';
+
 export type Category = string;
 
 export interface Product {
@@ -418,9 +420,9 @@ export const matchesPartial = (
 ): boolean => {
   if (!v?.brand) return true;
   if (fitsAll(product)) return withUniversal;
-  const models = product.fits?.[v.brand];
+  const models = findFitModels(product.fits, v.brand);
   if (!models) return false;
-  if (v.model && !models.includes(v.model)) return false;
+  if (v.model && !hasFitModel(models, v.model)) return false;
   if (v.year && (v.year < product.years[0] || v.year > product.years[1]))
     return false;
   return true;
@@ -428,8 +430,8 @@ export const matchesPartial = (
 
 export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
   if (!v) return true;
-  const models = product.fits?.[v.brand];
-  if (!models || !models.includes(v.model)) return false;
+  const models = findFitModels(product.fits, v.brand);
+  if (!models || !hasFitModel(models, v.model)) return false;
   return v.year >= product.years[0] && v.year <= product.years[1];
 };
 

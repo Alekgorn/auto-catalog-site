@@ -1,6 +1,7 @@
 import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from './product-types';
+import { findFitModels, hasFitModel } from '@/lib/fits-match';
 
 interface Props {
   form: AdminProduct;
@@ -51,7 +52,10 @@ const ProductFitsTab = ({
       </div>
     )}
     {brands.map((b) => {
-      const selected = form.fits[b.name] ?? [];
+      /* Марка в товаре может быть записана иначе, чем в справочнике
+         («Fiat» против «FIAT») — ищем с поправкой на написание,
+         иначе отметки выглядят снятыми, хотя в товаре они есть */
+      const selected = findFitModels(form.fits, b.name) ?? [];
       return (
         <div key={b.name} className="border-t border-border pt-4">
           <div className="flex items-center justify-between">
@@ -67,7 +71,7 @@ const ProductFitsTab = ({
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             {b.models.map((m) => {
-              const on = selected.includes(m);
+              const on = hasFitModel(selected, m);
               return (
                 <button
                   key={m}

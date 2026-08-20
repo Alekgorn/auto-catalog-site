@@ -30,6 +30,7 @@ import ScenarioCatalog, {
   SortKey,
 } from "@/components/scenario/ScenarioCatalog";
 import ScenarioFooterInfo from "@/components/scenario/ScenarioFooterInfo";
+import { findFitModels } from "@/lib/fits-match";
 
 const PAGE_SIZE = 12;
 
@@ -268,7 +269,9 @@ const ScenarioPage = () => {
 
     // Пришли по ссылке с маркой — оставляем только её оборудование
     if (brandFilter) {
-      out = out.filter((h) => (h.product.fits?.[brandFilter] ?? []).length > 0);
+      out = out.filter(
+        (h) => (findFitModels(h.product.fits, brandFilter) ?? []).length > 0,
+      );
     }
 
     // Полный каталог сужается на каждом шаге выбора авто
