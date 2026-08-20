@@ -30,6 +30,7 @@ const Guides = () => {
         <Breadcrumbs items={[{ label: "Инструкции" }]} />
         <div className="rule" />
         <SectionHead
+          as="h1"
           index="07"
           eyebrow="Технические описания"
           title="Инструкции по установке"
