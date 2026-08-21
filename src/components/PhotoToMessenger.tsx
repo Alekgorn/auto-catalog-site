@@ -10,6 +10,8 @@ interface Props {
   hideHint?: boolean;
   /** Одна кнопка вместо двух — для тесных панелей */
   inline?: boolean;
+  /** Ссылка одной строкой — открывает то же окно выбора мессенджера */
+  asLink?: boolean;
   /** Кнопки стоят на тёмной плашке подбора */
   onDark?: boolean;
 }
@@ -19,7 +21,7 @@ interface Props {
  * комплектацию машины и подбирает оборудование вручную — точнее,
  * чем любой автоматический подбор по марке и году.
  */
-const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
+const PhotoToMessenger = ({ compact, hideHint, inline, asLink, onDark }: Props) => {
   const { contacts } = useCatalog();
   /* Окно выбора мессенджера — для тесной кнопки «Фото нам» */
   const [open, setOpen] = useState(false);
@@ -39,26 +41,9 @@ const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
 
   if (!tg && !max && !maxNumber) return null;
 
-  /*
-   * Тесная панель: кнопка открывает окно выбора мессенджера.
-   * Раньше она молча уводила в Telegram — тем, у кого его нет,
-   * деваться было некуда.
-   */
-  if (inline) {
-    if (!tg && !max && !maxNumber) return null;
-    return (
-      <>
-        <button
-          onClick={() => setOpen(true)}
-          title="Пришлите фото торпедо — подберём по комплектации"
-          className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
-        >
-          <Icon name="Camera" size={16} className="flex-none" />
-          Фото нам
-        </button>
-
-        {open && (
-          <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+  /* Окно выбора мессенджера — одно на все режимы компонента */
+  const dialog = open ? (
+    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
             <button
               aria-label="Закрыть"
               onClick={() => setOpen(false)}
@@ -126,7 +111,51 @@ const PhotoToMessenger = ({ compact, hideHint, inline, onDark }: Props) => {
               </div>
             </div>
           </div>
-        )}
+  ) : null;
+
+  /*
+   * Одной строкой: подчёркнутая ссылка вместо блока с кнопками.
+   * Нужна там, где рядом уже есть главное действие — например
+   * в шаге подбора, чтобы не спорить с ним за внимание.
+   */
+  if (asLink) {
+    return (
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          className={`inline-flex items-center gap-1.5 border-b font-medium transition-colors ${
+            onDark
+              ? 'border-pick-accent/50 text-pick-foreground hover:border-pick-accent hover:text-pick-accent'
+              : 'border-primary/40 text-foreground hover:border-primary hover:text-primary'
+          }`}
+        >
+          Пришлите фото торпедо — подберём сами
+          <Icon name="ArrowRight" size={14} className="flex-none" />
+        </button>
+        {dialog}
+      </>
+    );
+  }
+
+  /*
+   * Тесная панель: кнопка открывает окно выбора мессенджера.
+   * Раньше она молча уводила в Telegram — тем, у кого его нет,
+   * деваться было некуда.
+   */
+  if (inline) {
+    if (!tg && !max && !maxNumber) return null;
+    return (
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          title="Пришлите фото торпедо — подберём по комплектации"
+          className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
+        >
+          <Icon name="Camera" size={16} className="flex-none" />
+          Фото нам
+        </button>
+
+        {dialog}
       </>
     );
   }

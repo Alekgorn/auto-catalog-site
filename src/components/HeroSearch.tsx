@@ -12,11 +12,16 @@ const EXAMPLES = [
   'шумоизоляция дверей',
 ];
 
+interface Props {
+  /** Поиск стоит на тёмной плашке подбора — светлые рамки и текст */
+  onDark?: boolean;
+}
+
 /**
  * Крупный поиск на главной: строка, подсказки и загрузка фото.
  * Поиск понимает живые формулировки — «магнитола для Тойоты», «хочу тише».
  */
-const HeroSearch = () => {
+const HeroSearch = ({ onDark = false }: Props) => {
   const navigate = useNavigate();
   const { products, brands } = useCatalog();
   const [query, setQuery] = useState('');
@@ -41,12 +46,16 @@ const HeroSearch = () => {
           e.preventDefault();
           go(query);
         }}
-        className="flex items-center gap-3 border-2 border-foreground bg-surface px-4 py-4 transition-colors focus-within:border-primary md:px-5 md:py-5"
+        className={`flex items-center gap-3 border-2 px-4 py-4 transition-colors md:px-5 md:py-5 ${
+          onDark
+            ? 'border-pick-border bg-pick-field focus-within:border-pick-accent'
+            : 'border-foreground bg-surface focus-within:border-primary'
+        }`}
       >
         <Icon
           name="Search"
           size={22}
-          className="flex-none text-muted-foreground"
+          className={`flex-none ${onDark ? 'text-pick-muted' : 'text-muted-foreground'}`}
         />
 
         <input
@@ -58,7 +67,11 @@ const HeroSearch = () => {
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder="Что нужно для машины? Например, магнитола для Toyota"
-          className="w-full min-w-0 border-0 bg-transparent font-head text-[1rem] outline-none placeholder:font-body placeholder:text-[0.92rem] placeholder:text-muted-foreground md:text-[1.15rem]"
+          className={`w-full min-w-0 border-0 bg-transparent font-head text-[1rem] outline-none placeholder:font-body placeholder:text-[0.92rem] md:text-[1.15rem] ${
+            onDark
+              ? 'text-pick-foreground placeholder:text-pick-muted'
+              : 'placeholder:text-muted-foreground'
+          }`}
         />
 
         {query && (
@@ -66,7 +79,11 @@ const HeroSearch = () => {
             type="button"
             onClick={() => setQuery('')}
             aria-label="Очистить"
-            className="flex-none text-muted-foreground transition-colors hover:text-primary"
+            className={`flex-none transition-colors ${
+              onDark
+                ? 'text-pick-muted hover:text-pick-foreground'
+                : 'text-muted-foreground hover:text-primary'
+            }`}
           >
             <Icon name="X" size={18} />
           </button>
@@ -75,7 +92,11 @@ const HeroSearch = () => {
         <button
           type="submit"
           aria-label="Найти"
-          className="flex-none bg-foreground px-4 py-3 text-background transition-colors hover:bg-primary hover:text-primary-foreground md:px-5"
+          className={`flex-none px-4 py-3 transition-colors md:px-5 ${
+            onDark
+              ? 'bg-pick-accent text-white hover:bg-white hover:text-pick'
+              : 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground'
+          }`}
         >
           <Icon name="ArrowRight" size={20} />
         </button>
@@ -129,12 +150,18 @@ const HeroSearch = () => {
 
       {/* Примеры запросов */}
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[0.78rem]">
-        <span className="text-muted-foreground">Например:</span>
+        <span className={onDark ? 'text-pick-muted' : 'text-muted-foreground'}>
+          Например:
+        </span>
         {EXAMPLES.map((e) => (
           <button
             key={e}
             onClick={() => go(e)}
-            className="border border-border bg-surface px-3 py-1.5 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className={`border px-3 py-1.5 transition-colors ${
+              onDark
+                ? 'border-pick-border bg-pick-field text-pick-muted hover:border-pick-accent hover:text-pick-foreground'
+                : 'border-border bg-surface text-muted-foreground hover:border-primary hover:text-primary'
+            }`}
           >
             {e}
           </button>
