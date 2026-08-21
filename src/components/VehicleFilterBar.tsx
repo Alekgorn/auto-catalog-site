@@ -63,20 +63,27 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
           </div>
         </div>
 
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <PhotoToMessenger inline />
+        {/*
+         * Три кнопки в ряд на телефон не влезали — «Сбросить» уезжала
+         * за край экрана. Теперь на узком экране «Сменить» и «Сбросить»
+         * делят строку пополам, а «Фото нам» встаёт под ними.
+         */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <button
             onClick={() => setOpen(true)}
-            className="flex-1 border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
+            className="min-w-0 whitespace-nowrap border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
           >
             Сменить
           </button>
           <button
             onClick={onReset}
-            className="flex-1 border border-border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary sm:flex-none"
+            className="min-w-0 whitespace-nowrap border border-border px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             Сбросить
           </button>
+          <div className="col-span-2 flex sm:col-auto">
+            <PhotoToMessenger inline />
+          </div>
         </div>
       </div>
     );

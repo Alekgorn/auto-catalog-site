@@ -149,7 +149,7 @@ const PhotoToMessenger = ({ compact, hideHint, inline, asLink, onDark }: Props) 
         <button
           onClick={() => setOpen(true)}
           title="Пришлите фото торпедо — подберём по комплектации"
-          className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
+          className="flex min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap border border-foreground px-4 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary sm:flex-none"
         >
           <Icon name="Camera" size={16} className="flex-none" />
           Фото нам
