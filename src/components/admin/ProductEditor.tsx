@@ -37,11 +37,15 @@ const ProductEditor = ({
     specs: product.specs ?? [],
     images: product.images ?? [],
     notes: product.notes ?? [],
+    extra: product.extra ?? [],
+    extraTitle: product.extraTitle ?? '',
     fits: product.fits ?? {},
   });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [section, setSection] = useState<'main' | 'content' | 'notes' | 'fits'>(
+  const [section, setSection] = useState<
+    'main' | 'content' | 'notes' | 'extra' | 'fits'
+  >(
     'main',
   );
 
@@ -149,6 +153,8 @@ const ProductEditor = ({
       kit: form.kit.filter((k) => k.trim()),
       specs: form.specs.filter(([k]) => k.trim()),
       notes: cleanBlocks(form.notes),
+      extra: cleanBlocks(form.extra),
+      extraTitle: form.extraTitle.trim(),
     });
   };
 
@@ -170,6 +176,7 @@ const ProductEditor = ({
               ['main', 'Основное'],
               ['content', 'Описание и фото'],
               ['notes', 'Особенности'],
+              ['extra', 'Свой раздел'],
               ['fits', 'Совместимость'],
             ] as const
           ).map(([key, text]) => (
@@ -220,6 +227,47 @@ const ProductEditor = ({
                 }))
               }
             />
+          )}
+
+          {section === 'extra' && (
+            <div>
+              {/* Заголовок задаёт магазин. Пустой — раздел на сайте скрыт,
+                  поэтому подписываем это прямо под полем */}
+              <label className="block">
+                <span className="eyebrow">Заголовок раздела</span>
+                <input
+                  value={form.extraTitle}
+                  onChange={(e) => set('extraTitle', e.target.value)}
+                  placeholder="Например: Экран магнитолы"
+                  maxLength={160}
+                  className="mt-2 w-full border-b border-border bg-transparent py-2 font-head text-lg outline-none transition-colors focus:border-primary"
+                />
+              </label>
+              <p className="mt-2 text-[0.8rem] text-muted-foreground">
+                {form.extraTitle.trim()
+                  ? `На сайте появится вкладка «${form.extraTitle.trim()}».`
+                  : 'Пока заголовок пустой — раздел на сайте не показывается.'}
+              </p>
+
+              <div className="mt-7">
+                <BlocksEditor
+                  blocks={form.extra}
+                  onChange={(next) => set('extra', next)}
+                  types={['text', 'image', 'note']}
+                  title="Содержание раздела"
+                  hint="Свободный блок: скриншоты экрана, фото в салоне, примеры работы. Несколько фото подряд встанут аккуратной плиткой, а по клику откроются на весь экран."
+                  emptyText="Пусто — добавьте фото или текст."
+                  onMoveImageOut={(src) =>
+                    setForm((f) => ({
+                      ...f,
+                      images: f.images.includes(src)
+                        ? f.images
+                        : [...f.images, src],
+                    }))
+                  }
+                />
+              </div>
+            </div>
           )}
 
           {section === 'fits' && (

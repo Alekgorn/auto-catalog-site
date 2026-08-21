@@ -241,7 +241,14 @@ const resetShell = (html) =>
     .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/g, '')
     // Ссылка на файл каталога от прошлой сборки — имя меняется каждый раз
     .replace(/\s*<script src="\/catalog-data-\d+\.js"><\/script>/g, '')
-    .replace(/\s*<script>\(function\(\)\{var d=document;function heal[\s\S]*?<\/script>/g, '')
+    /* Страховочный скрипт от прошлой сборки. Шаблон должен ловить любую
+       его версию: правило искало точное «var d=document;», а в самом
+       скрипте появилось «var d=document,done=false;» — совпадения не
+       было, и копия оставалась в файле. За сборку добавлялась новая. */
+    .replace(
+      /\s*<script>\(function\(\)\{var d=document[\s\S]*?function heal[\s\S]*?<\/script>/g,
+      '',
+    )
     .replace(
       /\s*<script type="application\/ld\+json" id="seo-json-ld">[\s\S]*?<\/script>/g,
       '',
