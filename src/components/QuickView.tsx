@@ -28,6 +28,9 @@ interface Props {
 /** Сколько характеристик показываем сразу — остальные под кнопкой */
 const SPECS_SHOWN = 5;
 
+/** Длина краткого описания: примерно два предложения */
+const SUMMARY_MAX = 230;
+
 /** Быстрый просмотр: главное о товаре без ухода из каталога. */
 const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   // Неполные данные машины = машина не выбрана
@@ -66,6 +69,24 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
       document.body.style.overflow = '';
     };
   }, [product, onClose]);
+
+  /**
+   * Суть товара в двух предложениях. Берём начало описания и режем
+   * по концу предложения, чтобы не обрывать фразу на полуслове.
+   */
+  const summary = useMemo(() => {
+    const full = (product?.description ?? [])[0]?.trim();
+    if (!full) return '';
+    if (full.length <= SUMMARY_MAX) return full;
+
+    const cut = full.slice(0, SUMMARY_MAX);
+    // Последняя точка (но не в сокращении вроде «т.д.») — конец мысли
+    const dot = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('! '));
+    if (dot > SUMMARY_MAX * 0.45) return cut.slice(0, dot + 1);
+
+    const space = cut.lastIndexOf(' ');
+    return `${cut.slice(0, space > 0 ? space : SUMMARY_MAX).trim()}…`;
+  }, [product]);
 
   const specs = useMemo(() => {
     if (!product) return [];
@@ -219,6 +240,14 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
 
               <StockLine product={product} />
 
+              {/* Суть товара словами: характеристики отвечают «какой»,
+                  а покупателю сначала нужно понять «что это» */}
+              {summary && (
+                <p className="mt-3 border-l-2 border-border pl-3 text-[0.85rem] leading-relaxed text-muted-foreground">
+                  {summary}
+                </p>
+              )}
+
               {specs.length > 0 && (
                 <>
                   <div className="eyebrow mt-4">Технические данные</div>
@@ -268,34 +297,50 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 border-t border-border px-5 py-3 sm:flex-row sm:items-center sm:px-6">
-          <button
-            onClick={() => (kitFlow ? pick(product) : addToCart(product))}
-            className={`flex flex-1 items-center justify-center gap-2 px-5 py-3 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors ${
-              chosen
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground'
-            }`}
-          >
-            {/* В сборке товар отмечается на шаге, вне её — уходит в корзину.
-                Подпись честно называет то, что произойдёт */}
-            {kitFlow
-              ? chosen
-                ? 'Выбрано'
-                : 'Выбрать'
-              : chosen
-                ? 'В корзине'
-                : 'В корзину'}
-            <Icon name={chosen ? 'Check' : 'Plus'} size={16} />
-          </button>
-          <Link
-            to={`/product/${product.id}`}
-            onClick={onClose}
-            className="flex flex-1 items-center justify-center gap-2 border border-foreground px-5 py-3 font-head text-[0.85rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
-          >
-            Все характеристики
-            <Icon name="ArrowRight" size={15} />
-          </Link>
+        {/* На телефоне главное действие во всю ширину, а «Закрыть»
+            и «Характеристики» делят строку под ним — три кнопки
+            столбиком съедали пол-экрана */}
+        <div className="border-t border-border px-5 py-3 sm:px-6">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
+            <div className="flex gap-2 sm:contents">
+              {/* Закрыть можно снизу — не нужно тянуться к крестику наверху */}
+              <button
+                onClick={onClose}
+                className="flex flex-1 items-center justify-center gap-2 border border-border px-5 py-3 font-head text-[0.85rem] font-medium uppercase tracking-[0.02em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground sm:order-first sm:flex-none"
+              >
+                <Icon name="X" size={15} />
+                Закрыть
+              </button>
+              <Link
+                to={`/product/${product.id}`}
+                onClick={onClose}
+                className="flex flex-1 items-center justify-center gap-2 border border-foreground px-5 py-3 font-head text-[0.85rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary sm:order-last"
+              >
+                <span className="sm:hidden">Подробнее</span>
+                <span className="hidden sm:inline">Все характеристики</span>
+                <Icon name="ArrowRight" size={15} />
+              </Link>
+            </div>
+            <button
+              onClick={() => (kitFlow ? pick(product) : addToCart(product))}
+              className={`flex flex-1 items-center justify-center gap-2 px-5 py-3 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors ${
+                chosen
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground'
+              }`}
+            >
+              {/* В сборке товар отмечается на шаге, вне её — уходит в корзину.
+                  Подпись честно называет то, что произойдёт */}
+              {kitFlow
+                ? chosen
+                  ? 'Выбрано'
+                  : 'Выбрать'
+                : chosen
+                  ? 'В корзине'
+                  : 'В корзину'}
+              <Icon name={chosen ? 'Check' : 'Plus'} size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
