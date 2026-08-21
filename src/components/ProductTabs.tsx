@@ -4,7 +4,7 @@ import Icon from '@/components/ui/icon';
 import GuideContent from '@/components/GuideContent';
 import { Guide, Product, productDescription, productKit } from '@/data/catalog';
 
-export type ProductTab = 'about' | 'notes' | 'guides';
+export type ProductTab = 'about' | 'notes' | 'extra' | 'guides';
 
 interface Props {
   product: Product;
@@ -21,6 +21,11 @@ interface Props {
 const ProductTabs = ({ product, guides, active, onChange }: Props) => {
   const notes = product.notes ?? [];
   const hasNotes = notes.length > 0;
+  /* Свой раздел магазина. Показываем только когда задан заголовок
+     и есть содержимое — иначе вкладка была бы безымянной */
+  const extra = product.extra ?? [];
+  const extraTitle = (product.extraTitle ?? '').trim();
+  const hasExtra = extra.length > 0 && !!extraTitle;
   const hasGuides = guides.length > 0;
   const [openGuides, setOpenGuides] = useState<string[]>([]);
 
@@ -46,6 +51,15 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
       icon: hasNotes ? 'TriangleAlert' : 'Check',
       disabled: !hasNotes,
     },
+    ...(hasExtra
+      ? [
+          {
+            key: 'extra' as ProductTab,
+            label: extraTitle,
+            icon: 'Images',
+          },
+        ]
+      : []),
     ...(hasGuides
       ? [
           {
@@ -131,6 +145,27 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
                 difficulty: '',
                 tools: [],
                 blocks: notes,
+                products: [],
+              } as Guide
+            }
+            compact
+          />
+        </div>
+      )}
+
+      {active === 'extra' && hasExtra && (
+        <div className="pt-7">
+          <GuideContent
+            guide={
+              {
+                slug: `${product.id}-extra`,
+                title: extraTitle,
+                excerpt: '',
+                cover: '',
+                duration: '',
+                difficulty: '',
+                tools: [],
+                blocks: extra,
                 products: [],
               } as Guide
             }

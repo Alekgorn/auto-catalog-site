@@ -25,6 +25,10 @@ export interface AdminProduct {
   kit: string[];
   /** Особенности и нюансы монтажа — блоки текста и фото */
   notes: GuideBlock[];
+  /** Дополнительный раздел карточки со своим заголовком */
+  extra: GuideBlock[];
+  /** Заголовок дополнительного раздела — пустой прячет весь раздел */
+  extraTitle: string;
   fits: Record<string, string[]>;
   /** Сколько штук на складе. 0 — только под заказ */
   stock?: number;
@@ -56,6 +60,8 @@ export const emptyProduct = (): AdminProduct => ({
   specs: [],
   kit: [''],
   notes: [],
+  extra: [],
+  extraTitle: '',
   fits: {},
   sortOrder: 100,
   isActive: true,
