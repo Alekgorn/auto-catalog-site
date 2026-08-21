@@ -47,42 +47,41 @@ const Selection = (selector: Props) => {
       id="select"
       className="anchor-offset -mx-6 bg-pick px-6 text-pick-foreground md:-mx-14 md:px-14"
     >
-      <div className="grid grid-cols-1 gap-x-6 gap-y-4 py-7 md:grid-cols-12 md:py-9">
-        <div className="md:col-span-7">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
-              1
-            </span>
-            <span className="eyebrow !ml-0 !text-pick-muted">
-              Подбор оборудования
-            </span>
-          </div>
-          <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-[1.06] tracking-[-0.025em] sm:text-3xl lg:text-4xl">
-            Найдём то, что{" "}
-            <span className="text-pick-accent">подходит</span>
-          </h2>
-        </div>
-
-        <p className="max-w-[34em] self-end text-[0.9rem] leading-relaxed text-pick-muted md:col-span-5">
-          {active.hint}
-        </p>
+      {/* Крупного заголовка здесь больше нет: он повторял слоган
+          первого экрана почти теми же словами. Осталась служебная
+          строка — что это шаг 1 и что сейчас происходит */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-7 md:pt-9">
+        <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
+          1
+        </span>
+        <span className="eyebrow !ml-0 !text-pick-muted">
+          Как будем искать
+        </span>
       </div>
 
-      {/* Вкладки способов подбора. На телефоне занимают всю ширину
-          по половине — попасть пальцем проще, чем в мелкие ссылки */}
-      <div className="flex gap-0">
+      {/*
+       * Переключатель способов. Раньше это были подчёркнутые надписи —
+       * их принимали за два ярлыка и не понимали, что можно нажать.
+       * Теперь активный вариант залит светлым и выглядит нажатым.
+       */}
+      <div
+        role="tablist"
+        aria-label="Способ подбора"
+        className="mt-4 flex w-full gap-1 border border-pick-border bg-pick-field p-1 sm:w-fit"
+      >
         {tabs.map((t) => {
           const on = t.key === mode;
           return (
             <button
               key={t.key}
               type="button"
+              role="tab"
+              aria-selected={on}
               onClick={() => setMode(t.key)}
-              aria-pressed={on}
-              className={`flex flex-1 items-center justify-center gap-2 border-b-2 px-3 py-3.5 font-head text-[0.78rem] font-bold uppercase tracking-[0.06em] transition-colors sm:flex-none sm:px-7 sm:text-[0.82rem] ${
+              className={`flex flex-1 items-center justify-center gap-2 px-3 py-3 font-head text-[0.78rem] font-bold uppercase tracking-[0.06em] transition-colors sm:flex-none sm:px-8 sm:text-[0.82rem] ${
                 on
-                  ? "border-pick-accent text-pick-foreground"
-                  : "border-pick-border text-pick-muted hover:text-pick-foreground"
+                  ? "bg-white text-pick shadow-sm"
+                  : "text-pick-muted hover:text-pick-foreground"
               }`}
             >
               <Icon name={t.icon} size={16} className="flex-none" />
@@ -90,9 +89,13 @@ const Selection = (selector: Props) => {
             </button>
           );
         })}
-        {/* Хвост линии до правого края — вкладки не висят в воздухе */}
-        <span className="hidden flex-1 border-b-2 border-pick-border sm:block" />
       </div>
+
+      <p className="mt-3 max-w-[34em] text-[0.88rem] leading-relaxed text-pick-muted">
+        {active.hint}
+      </p>
+
+      <div className="mt-5 h-px bg-pick-border" />
 
       {mode === "car" ? (
         <VehicleSelector

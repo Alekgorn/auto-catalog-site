@@ -16,20 +16,29 @@ const Hero = ({ selection }: Props) => {
 
       <div className="grid grid-cols-1 items-center gap-x-6 md:grid-cols-12">
         <div className="flex min-h-0 min-w-0 flex-col pb-5 pt-6 md:col-span-6 md:pb-8 md:pr-8 md:pt-8">
+          {/* Слоган ушёл из H1 в подпись: поисковику и покупателю нужен
+              предмет («автоэлектроника и мультимедиа»), а не обещание —
+              его же словами люди ищут. Обещание осталось рядом строкой ниже */}
           <div
             className="eyebrow rise ml-0 md:ml-4"
             style={{ animationDelay: ".05s" }}
           >
-            Автоэлектроника и мультимедиа для авто
+            Подбор по марке, модели и году
           </div>
           <h1
-            className="rise ml-0 mt-3 font-head text-[9.5vw] font-bold uppercase leading-[1.04] tracking-[-0.035em] sm:text-5xl md:ml-3 md:mt-4 lg:text-[58px]"
+            className="rise ml-0 mt-3 font-head text-[7.6vw] font-bold uppercase leading-[1.06] tracking-[-0.035em] sm:text-[40px] md:ml-3 md:mt-4 lg:text-[52px]"
             style={{ animationDelay: ".15s" }}
           >
-            Только то, что
-            <br />
-            <span className="text-primary">подойдет</span>
+            Автоэлектроника{" "}
+            <br />и мультимедиа{" "}
+            <span className="text-muted-foreground">для авто</span>
           </h1>
+          <div
+            className="rise ml-0 mt-3 font-head text-[1.35rem] font-bold uppercase leading-none tracking-[-0.02em] md:ml-4 md:text-[1.6rem]"
+            style={{ animationDelay: ".2s" }}
+          >
+            Только то, что <span className="text-primary">подойдет</span>
+          </div>
           <p
             className="rise ml-0 mt-4 max-w-[26em] text-[0.95rem] leading-relaxed text-muted-foreground md:ml-4 md:mt-5 md:text-base"
             style={{ animationDelay: ".25s" }}
