@@ -34,7 +34,7 @@ const Selection = (selector: Props) => {
     },
     {
       key: "search",
-      label: "Знаю, что ищу",
+      label: "Умный поиск",
       icon: "Search",
       hint: "Название, марка или артикул с коробки — найдём сразу.",
     },
