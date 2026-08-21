@@ -52,7 +52,7 @@ const BrandPage = () => {
           canonical: `${SITE_URL}/brand/${slug}`,
           jsonLd: [
             crumbsJsonLd([
-              { label: "Каталог", to: "/#catalog" },
+              { label: "Каталог", to: "/scenario/vse-po-mashine" },
               { label: brand.name },
             ]),
             {
@@ -90,7 +90,7 @@ const BrandPage = () => {
       <Header />
       <main className="section-pad">
         <Breadcrumbs
-          items={[{ label: "Каталог", to: "/#catalog" }, { label: brand.name }]}
+          items={[{ label: "Каталог", to: "/scenario/vse-po-mashine" }, { label: brand.name }]}
         />
 
         <div className="rule" />

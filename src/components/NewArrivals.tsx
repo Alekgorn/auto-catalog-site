@@ -7,7 +7,7 @@ import { Vehicle } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 
 /**
- * Восемь товаров, добавленных последними.
+ * Десять товаров, добавленных последними — два ряда по пять.
  * Показывает, что каталог живой и пополняется.
  */
 const NewArrivals = ({ vehicle }: { vehicle: Vehicle | null }) => {
@@ -19,7 +19,7 @@ const NewArrivals = ({ vehicle }: { vehicle: Vehicle | null }) => {
     const list = dated.length ? dated : products;
     return [...list]
       .sort((a, b) => time(b.createdAt) - time(a.createdAt))
-      .slice(0, 8);
+      .slice(0, 10);
   }, [products]);
 
   if (items.length < 4) return null;
@@ -28,13 +28,13 @@ const NewArrivals = ({ vehicle }: { vehicle: Vehicle | null }) => {
     <section id="new" className="section-pad anchor-offset">
       <div className="rule" />
       <SectionHead
-        index="04"
+        index="03"
         eyebrow="Новое в каталоге"
         title="Только что привезли"
         note="Последние поступления на склад. Совместимость с вашей машиной проверяется так же, как и по всему каталогу — подберите авто, и мы отметим, что подходит."
       />
 
-      <div className="grid grid-cols-2 gap-3 pb-10 sm:gap-6 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 pb-10 sm:gap-5 md:grid-cols-3 lg:grid-cols-5">
         {items.map((p) => (
           <ProductCard key={p.id} product={p} vehicle={vehicle} />
         ))}
@@ -42,7 +42,7 @@ const NewArrivals = ({ vehicle }: { vehicle: Vehicle | null }) => {
 
       <div className="pb-12">
         <Link
-          to="/#catalog"
+          to="/scenario/vse-po-mashine"
           className="inline-flex items-center gap-2 border border-foreground px-6 py-4 font-head text-[0.85rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
         >
           Весь каталог

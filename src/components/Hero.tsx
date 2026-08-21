@@ -1,6 +1,5 @@
 import MountPlan from "@/components/MountPlan";
 import Scenarios from "@/components/Scenarios";
-import HeroSearch from "@/components/HeroSearch";
 import { useCatalog } from "@/context/CatalogContext";
 
 interface Props {
@@ -37,8 +36,8 @@ const Hero = ({ selection }: Props) => {
           >
             <b className="font-medium text-foreground">Начни с авто – </b>
             покажем оборудование, которое встаёт на твою модель по штатным
-            местам и разъёмам. Не знаешь, что искать – ткни в нужный узел на
-            схеме справа.
+            местам и разъёмам. Не знаешь, что искать – начни с марки или
+            просто напиши, что нужно.
           </p>
         </div>
 
@@ -52,24 +51,6 @@ const Hero = ({ selection }: Props) => {
       <div className="rule" />
 
       <Scenarios />
-
-      <div className="rule-hair" />
-
-      <div className="py-6 md:py-10">
-        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span className="flex h-6 w-6 flex-none items-center justify-center bg-primary text-[0.72rem] font-bold text-primary-foreground">
-            3
-          </span>
-          <span className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
-            Знаете, что нужно
-          </span>
-          <span className="text-[0.85rem] text-muted-foreground">
-            найдите сразу — «магнитола для Тойоты» или артикул с коробки
-          </span>
-        </div>
-
-        <HeroSearch />
-      </div>
 
       <div className="rule-hair" />
 
