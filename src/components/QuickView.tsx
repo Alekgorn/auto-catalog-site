@@ -18,6 +18,7 @@ import { isVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
+import PhotoViewer from '@/components/PhotoViewer';
 
 interface Props {
   product: Product | null;
@@ -53,22 +54,29 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
 
   const [active, setActive] = useState(0);
   const [allSpecs, setAllSpecs] = useState(false);
+  /** Какое фото открыто во весь экран; null — просмотр закрыт */
+  const [zoom, setZoom] = useState<number | null>(null);
 
   useEffect(() => {
     setActive(0);
     setAllSpecs(false);
+    setZoom(null);
   }, [product]);
 
   useEffect(() => {
     if (!product) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    /* Esc при открытом фото закрывает только фото — окно товара
+       остаётся. Иначе одно нажатие выбрасывало бы в каталог */
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && zoom === null) onClose();
+    };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [product, onClose]);
+  }, [product, onClose, zoom]);
 
   /**
    * Суть товара в двух предложениях. Берём начало описания и режем
@@ -101,6 +109,8 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   if (!product) return null;
 
   const images = productImages(product);
+  /** Сколько фото не поместилось в ряд миниатюр */
+  const restCount = images.length > 5 ? images.length - 4 : 0;
   const fits = isCompatible(product, vehicle);
   /** Подходит любой машине по данным товара, а не «машина не выбрана» */
   const universal = isUniversal(product, brands.length);
@@ -143,17 +153,29 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-6">
           <div className="grid grid-cols-1 gap-x-6 gap-y-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] sm:items-start">
             <div>
-              <div className="border border-border bg-surface-muted">
-                <img
-                  src={images[active]}
-                  alt={product.name}
-                  className="aspect-[16/10] w-full object-contain p-3 sm:aspect-[4/3]"
-                />
+              <div className="group relative border border-border bg-surface-muted">
+                <button
+                  onClick={() => setZoom(active)}
+                  aria-label="Открыть фото на весь экран"
+                  className="block w-full cursor-zoom-in"
+                >
+                  <img
+                    src={images[active]}
+                    alt={product.name}
+                    className="aspect-[16/10] w-full object-contain p-3 sm:aspect-[4/3]"
+                  />
+                </button>
+                <span className="pointer-events-none absolute bottom-2 right-2 flex items-center gap-1.5 bg-foreground/80 px-2 py-1 text-[0.68rem] uppercase tracking-[0.06em] text-background opacity-0 transition-opacity group-hover:opacity-100">
+                  <Icon name="Maximize2" size={12} />
+                  Увеличить
+                </span>
               </div>
 
               {images.length > 1 && (
                 <div className="mt-2 grid grid-cols-5 gap-1.5">
-                  {images.slice(0, 5).map((src, i) => (
+                  {/* Больше пяти фото в ряд не помещается — остальные
+                      показываем счётчиком, он открывает просмотр целиком */}
+                  {images.slice(0, restCount > 0 ? 4 : 5).map((src, i) => (
                     <button
                       key={src + i}
                       onClick={() => setActive(i)}
@@ -171,6 +193,15 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
                       />
                     </button>
                   ))}
+                  {restCount > 0 && (
+                    <button
+                      onClick={() => setZoom(4)}
+                      aria-label={`Ещё ${restCount} фото`}
+                      className="flex aspect-square items-center justify-center border border-border bg-surface text-[0.78rem] font-medium text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+                    >
+                      +{restCount}
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -343,6 +374,13 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
           </div>
         </div>
       </div>
+
+      <PhotoViewer
+        images={images}
+        alt={product.name}
+        index={zoom}
+        onClose={() => setZoom(null)}
+      />
     </div>
   );
 };
