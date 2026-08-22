@@ -9,6 +9,30 @@ import {
 import { KitStep } from '@/data/scenarios';
 
 /**
+ * Русское склонение после числа: 1 вариант, 2 варианта, 5 вариантов.
+ * Отдельный случай — 11–14: там всегда форма множественного числа.
+ */
+export const plural = (
+  count: number,
+  one: string,
+  few: string,
+  many: string,
+): string => {
+  const n = Math.abs(count) % 100;
+  if (n >= 11 && n <= 14) return many;
+  switch (n % 10) {
+    case 1:
+      return one;
+    case 2:
+    case 3:
+    case 4:
+      return few;
+    default:
+      return many;
+  }
+};
+
+/**
  * Диагональ экрана в дюймах из характеристик товара.
  * У магнитол это «Диагональ», у переходных рамок — «Типоразмер».
  * Если параметра нет — берём число из названия, магазины часто пишут
