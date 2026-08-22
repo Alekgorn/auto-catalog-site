@@ -138,7 +138,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             options={BRANDS.map((b) => b.name)}
             placeholder="Выберите марку"
             alphabet
-            carIcon
+            brandMark
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => {
               setBrand(b);
@@ -155,7 +155,6 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             options={models}
             placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
             alphabet
-            carIcon
             emptyText="Сначала выберите марку"
             onChange={setModel}
           />

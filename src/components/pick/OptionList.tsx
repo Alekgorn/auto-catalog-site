@@ -1,10 +1,9 @@
 import { RefObject } from 'react';
 import Icon from '@/components/ui/icon';
+import BrandMark from '@/components/pick/BrandMark';
 
 export interface PickOption {
   value: string;
-  /** Сколько товаров под эту марку/модель — 0 означает «пока ничего нет» */
-  count?: number;
 }
 
 interface Props {
@@ -12,10 +11,8 @@ interface Props {
   options: PickOption[];
   value: string;
   highlight: number;
-  /** Показывать число товаров рядом с названием */
-  showCount: boolean;
-  /** Значок автомобиля слева от названия */
-  carIcon?: boolean;
+  /** Значок марки слева от названия — цветная буква вместо логотипа */
+  brandMark?: boolean;
   emptyText: string;
   columns: boolean;
   listRef: RefObject<HTMLDivElement>;
@@ -35,8 +32,7 @@ const OptionList = ({
   options,
   value,
   highlight,
-  showCount,
-  carIcon = false,
+  brandMark = false,
   emptyText,
   columns,
   listRef,
@@ -76,29 +72,8 @@ const OptionList = ({
               : 'text-foreground hover:bg-muted'
           }`}
         >
-          {carIcon && (
-            <Icon
-              name="Car"
-              size={16}
-              className={`flex-none ${
-                i === highlight
-                  ? 'text-primary-foreground/80'
-                  : 'text-muted-foreground'
-              }`}
-            />
-          )}
+          {brandMark && <BrandMark name={o.value} active={i === highlight} />}
           <span className="min-w-0 flex-1 truncate">{o.value}</span>
-          {showCount && !!o.count && (
-            <span
-              className={`flex-none text-[0.78rem] tabular-nums ${
-                i === highlight
-                  ? 'text-primary-foreground/80'
-                  : 'text-muted-foreground'
-              }`}
-            >
-              {o.count}
-            </span>
-          )}
           {o.value === value && <Icon name="Check" size={15} className="flex-none" />}
         </button>
       ))
