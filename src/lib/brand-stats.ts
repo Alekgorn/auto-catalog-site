@@ -1,4 +1,4 @@
-import { Brand, Product } from '@/data/catalog';
+import { Product } from '@/data/catalog';
 import { fitKey } from '@/lib/fits-match';
 
 /**
@@ -49,19 +49,3 @@ export const modelCount = (
   brand: string,
   model: string,
 ): number => stats.byModel[modelKey(brand, model)] ?? 0;
-
-/**
- * Марки, которые стоит показать первыми: у кого больше всего товаров.
- * Марки без единого товара в «популярные» не попадают никогда.
- */
-export const topBrands = (
-  brands: Brand[],
-  stats: BrandStats,
-  limit = 8,
-): string[] =>
-  brands
-    .map((b) => ({ name: b.name, n: brandCount(stats, b.name) }))
-    .filter((b) => b.n > 0)
-    .sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'ru'))
-    .slice(0, limit)
-    .map((b) => b.name);
