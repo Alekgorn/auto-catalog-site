@@ -131,6 +131,19 @@ const KitSection = ({
   const list = priceRelaxed ? full : byPrice;
 
   /**
+   * Кнопка «Показать дороже/дешевле» пропала не по ошибке: под эту машину
+   * других моделей просто нет. Молчаливое исчезновение выглядит как сбой,
+   * поэтому говорим прямо. Показываем только когда список реально сужен
+   * машиной — иначе объяснять нечего.
+   */
+  const noPriceAlternatives =
+    !!vehicle &&
+    !priceRelaxed &&
+    overLimit === 0 &&
+    !!(step.maxPrice || step.minPrice) &&
+    list.length > 0;
+
+  /**
    * Что предложить сомневающемуся: самый доступный из подходящих,
    * но не дешевле 500 ₽ — совсем дешёвые позиции это отдельные
    * мелочи (антенна, USB), а не полноценный жгут для магнитолы.
@@ -289,8 +302,17 @@ const KitSection = ({
                     : `Только до ${formatPrice(step.maxPrice!)}`
                   : step.minPrice
                     ? `Показать дешевле (+${overLimit})`
-                    : `Показать все (+${overLimit})`}
+                    : `Показать дороже (+${overLimit})`}
               </button>
+            )}
+
+            {/* Кнопки нет — объясняем почему, чтобы не выглядело сбоем */}
+            {!needCar && !collapsed && !locked && noPriceAlternatives && (
+              <span className="flex flex-none items-center gap-1.5 text-[0.78rem] text-muted-foreground">
+                <Icon name="Info" size={14} className="flex-none" />
+                {step.minPrice ? 'Дешевле' : 'Дороже'} под эту машину нет —
+                показаны все подходящие
+              </span>
             )}
 
             {/* Выбор сделан — даём заменить, не листая весь список */}
