@@ -656,6 +656,9 @@ const ScenarioPage = () => {
                 [title]: (m[title] ?? CATEGORY_FIRST) + CATEGORY_STEP,
               }))
             }
+            onSectionCollapse={(title) =>
+              setSectionShown((m) => ({ ...m, [title]: CATEGORY_FIRST }))
+            }
           />
         )}
 

@@ -55,6 +55,7 @@ interface Props {
   /** Раздел → сколько его товаров показано */
   sectionShown: Record<string, number>;
   onSectionMore: (title: string) => void;
+  onSectionCollapse: (title: string) => void;
 }
 
 /**
@@ -86,6 +87,7 @@ const ScenarioCatalog = ({
   sections,
   sectionShown,
   onSectionMore,
+  onSectionCollapse,
 }: Props) => (
   <>
     <div
@@ -190,6 +192,7 @@ const ScenarioCatalog = ({
                 exactCount={s.exactCount}
                 vehicle={vehicle}
                 onShowMore={() => onSectionMore(s.title)}
+                onCollapse={() => onSectionCollapse(s.title)}
               />
             ))
           )}
