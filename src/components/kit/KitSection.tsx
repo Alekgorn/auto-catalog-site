@@ -111,12 +111,24 @@ const KitSection = ({
     return 0;
   }, [full, step.maxPrice, step.minPrice]);
 
-  const list = useMemo(() => {
+  /** Список с учётом ценовой подборки — до снятия ограничения */
+  const byPrice = useMemo(() => {
     if (allPrices) return full;
     if (step.maxPrice) return full.filter((p) => p.price <= step.maxPrice!);
     if (step.minPrice) return full.filter((p) => p.price >= step.minPrice!);
     return full;
   }, [full, step.maxPrice, step.minPrice, allPrices]);
+
+  /**
+   * Порог цены («сначала доступные» или «топовые») — пожелание, а не
+   * жёсткое условие. После сужения по машине в подборке может не остаться
+   * ничего: например, на Kia Rio встают только 9-дюймовые магнитолы, и все
+   * они дешевле премиум-порога. Показывать пустой шаг в такой ситуации
+   * неправильно — товары есть, поэтому снимаем порог сами.
+   */
+  const priceRelaxed = byPrice.length === 0 && full.length > 0;
+
+  const list = priceRelaxed ? full : byPrice;
 
   /**
    * Что предложить сомневающемуся: самый доступный из подходящих,
@@ -210,9 +222,13 @@ const KitSection = ({
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
-              {allPrices && (step.maxPrice || step.minPrice)
-                ? 'Показаны все модели раздела — вместе с теми, что вне подборки.'
-                : step.text}
+              {priceRelaxed
+                ? step.minPrice
+                  ? 'Под вашу машину в этой ценовой категории моделей нет — показываем все, что встают.'
+                  : 'Под вашу машину моделей в этом бюджете нет — показываем все, что встают.'
+                : allPrices && (step.maxPrice || step.minPrice)
+                  ? 'Показаны все модели раздела — вместе с теми, что вне подборки.'
+                  : step.text}
             </p>
 
             {/* Покупатель должен видеть, почему список именно такой */}
@@ -255,8 +271,10 @@ const KitSection = ({
               </span>
             ) : null}
 
-            {/* Порог цены условен: что «бюджетно» — решает покупатель */}
-            {!needCar && !collapsed && !locked && overLimit > 0 && (
+            {/* Порог цены условен: что «бюджетно» — решает покупатель.
+                Если порог уже снят автоматически (в подборке пусто),
+                кнопка не нужна — весь список и так на экране */}
+            {!needCar && !collapsed && !locked && !priceRelaxed && overLimit > 0 && (
               <button
                 onClick={() => {
                   setAllPrices((v) => !v);
