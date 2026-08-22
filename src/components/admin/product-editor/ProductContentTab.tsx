@@ -19,7 +19,20 @@ const ProductContentTab = ({
   upload,
   missingFields,
   moveToNotes,
-}: Props) => (
+}: Props) => {
+  /**
+   * Меняет характеристики местами. Порядок здесь — порядок строк на
+   * странице товара, а первые три видны прямо в плитке каталога.
+   */
+  const moveSpec = (i: number, dir: -1 | 1) => {
+    const j = i + dir;
+    if (j < 0 || j >= form.specs.length) return;
+    const next = [...form.specs];
+    [next[i], next[j]] = [next[j], next[i]];
+    set('specs', next);
+  };
+
+  return (
   <div className="space-y-7">
     <div>
       <span className={label}>Фотографии</span>
@@ -130,8 +143,25 @@ const ProductContentTab = ({
         </div>
       )}
 
+      {form.specs.length > 1 && (
+        <p className="mb-2 text-[0.78rem] text-muted-foreground">
+          Стрелками меняйте порядок.{' '}
+          <span className="font-medium text-primary">Первые три</span> строки
+          покупатель видит прямо в каталоге — ставьте наверх главное.
+        </p>
+      )}
+
       {form.specs.map(([k, v], i) => (
-        <div key={i} className="mb-2 flex gap-2">
+        <div key={i} className="mb-2 flex items-center gap-2">
+          {/* Номер: по нему видно, какие строки попадут в плитку каталога */}
+          <span
+            className={`w-5 flex-none text-center font-head text-[0.72rem] ${
+              i < 3 ? 'text-primary' : 'text-muted-foreground'
+            }`}
+            title={i < 3 ? 'Видно в каталоге' : 'Только на странице товара'}
+          >
+            {i + 1}
+          </span>
           <input
             value={k}
             placeholder="Название"
@@ -159,6 +189,24 @@ const ProductContentTab = ({
             className={field}
           />
           <button
+            onClick={() => moveSpec(i, -1)}
+            disabled={i === 0}
+            title="Выше"
+            aria-label="Поднять характеристику"
+            className="flex-none p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-30"
+          >
+            <Icon name="ChevronUp" size={16} />
+          </button>
+          <button
+            onClick={() => moveSpec(i, 1)}
+            disabled={i === form.specs.length - 1}
+            title="Ниже"
+            aria-label="Опустить характеристику"
+            className="flex-none p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-30"
+          >
+            <Icon name="ChevronDown" size={16} />
+          </button>
+          <button
             onClick={() =>
               set(
                 'specs',
@@ -166,7 +214,7 @@ const ProductContentTab = ({
               )
             }
             aria-label="Удалить"
-            className="text-muted-foreground transition-colors hover:text-primary"
+            className="flex-none text-muted-foreground transition-colors hover:text-primary"
           >
             <Icon name="X" size={16} />
           </button>
@@ -218,6 +266,7 @@ const ProductContentTab = ({
       </button>
     </div>
   </div>
-);
+  );
+};
 
 export default ProductContentTab;
