@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, Vehicle, formatPrice, splitByFit } from '@/data/catalog';
-import { kitStepList } from '@/lib/kit-filter';
+import { fitsAvailableSizes, kitStepList } from '@/lib/kit-filter';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
@@ -32,6 +32,12 @@ interface Props {
   locked?: boolean;
   /** Диагональ выбранной магнитолы — под неё подбираем рамку */
   size?: number | null;
+  /**
+   * Диагонали, под которые есть рамки на выбранную машину.
+   * Ограничивают выбор магнитол: экран, который некуда поставить,
+   * показывать незачем.
+   */
+  availableSizes?: number[];
   /** Машина покупателя строкой — для пояснения, почему список такой */
   vehicleLabel?: string;
   /** Прокрутить к первому шагу — выбору магнитолы */
@@ -59,6 +65,7 @@ const KitSection = ({
   onSkip,
   locked,
   size,
+  availableSizes,
   vehicleLabel,
   onNeedLead,
 }: Props) => {
@@ -71,9 +78,31 @@ const KitSection = ({
 
   /** Все товары раздела, подходящие машине и экрану магнитолы */
   const full = useMemo(
-    () => kitStepList({ step, products, vehicle, brandsCount, size }),
-    [step, products, vehicle, brandsCount, size],
+    () =>
+      kitStepList({
+        step,
+        products,
+        vehicle,
+        brandsCount,
+        size,
+        availableSizes,
+      }),
+    [step, products, vehicle, brandsCount, size, availableSizes],
   );
+
+  /**
+   * Сколько магнитол скрыто из-за того, что под них нет рамки на эту
+   * машину. Если ноль — подпись не нужна: покупатель видит весь раздел
+   * и объяснять нечего.
+   */
+  const hiddenBySize = useMemo(() => {
+    if (!step.leading || !availableSizes?.length) return 0;
+    return products.filter(
+      (p) =>
+        p.category === step.category &&
+        !fitsAvailableSizes(p, availableSizes),
+    ).length;
+  }, [products, step.leading, step.category, availableSizes]);
 
   /** Сколько позиций скрывает ценовой порог */
   const overLimit = useMemo(() => {
@@ -196,6 +225,33 @@ const KitSection = ({
                 />
                 Показаны рамки под {String(size).replace('.', ',')} дюймов
                 {vehicleLabel ? ` для ${vehicleLabel}` : ''}
+              </span>
+            ) : null}
+
+            {/*
+              Магнитолы сузили по размеру рамок: экран, под который нет
+              рамки на эту машину, поставить некуда. Объясняем прямо,
+              иначе пропажа моделей выглядит как сбой каталога.
+            */}
+            {step.leading && vehicle && hiddenBySize > 0 ? (
+              <span className="flex w-full items-center gap-2 border border-success/60 bg-success/5 px-3 py-2 text-[0.82rem] leading-snug text-foreground">
+                <Icon
+                  name="Filter"
+                  size={14}
+                  className="flex-none text-success"
+                />
+                <span>
+                  {vehicleLabel ? `На ${vehicleLabel} ` : 'На эту машину '}
+                  встают экраны{' '}
+                  <b className="font-semibold">
+                    {(availableSizes ?? [])
+                      .map((s) => String(s).replace('.', ','))
+                      .join(' и ')}
+                    {'\u00A0'}дюймов
+                  </b>{' '}
+                  — только под них есть переходные рамки. Остальные
+                  диагонали скрыли.
+                </span>
               </span>
             ) : null}
 
