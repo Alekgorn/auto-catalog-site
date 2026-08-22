@@ -85,12 +85,6 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/catalog/kamery-parktroniki</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/catalog/kamery-krugovogo-obzora</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
@@ -146,12 +140,6 @@
   </url>
   <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/catalog/shumoizolyaciya</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/catalog/drugoe</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -481,36 +469,6 @@
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-9-dyuymov-2-32-gb</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-10-dyuymov-4-64-gb</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-qled-13-dyuymov-8-128-gb-dsp</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-12-3-dyuyma-8-128-gb-4g-dsp</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-9-dyuymov-6-128-gb-carplay</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/product/videoregistrator-kompaktnyy-1080p-wifi</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
@@ -547,19 +505,19 @@
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/kamera-zadnego-vida-v-ramku-nomera</loc>
+    <loc>https://xn--80a0adnb7a.xn--p1ai/product/kamera-zadnego-perednego-carsanbo-ahd-1080p-vint</loc>
+    <lastmod>2026-08-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://xn--80a0adnb7a.xn--p1ai/product/kamera-zadnego-perednego-carsanbo-ahd-1080p-babochka</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/product/shumoizolyaciya-kolesnyh-arok-komplekt</loc>
-    <lastmod>2026-08-22</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://xn--80a0adnb7a.xn--p1ai/product/kamera-zadnego-vida-vreznaya-dinamicheskaya</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -7472,6 +7430,12 @@
   </url>
   <url>
     <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-topway-ts20-9-8-128-gb-ips-2k</loc>
+    <lastmod>2026-08-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://xn--80a0adnb7a.xn--p1ai/product/android-magnitola-fyt-7862s-12-3-8-128-gb-qled</loc>
     <lastmod>2026-08-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
