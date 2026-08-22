@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
 import { Vehicle, YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
+import { useBrandPicker } from '@/hooks/use-brand-picker';
 import PhotoToMessenger from '@/components/PhotoToMessenger';
 
 interface Props {
@@ -34,10 +35,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
     }
   }, [vehicle]);
 
-  const models = useMemo(
-    () => BRANDS.find((b) => b.name === brand)?.models ?? [],
-    [brand, BRANDS],
-  );
+  const { popular, brandCounts, models, modelCounts } = useBrandPicker(brand);
 
   const apply = () => {
     if (!brand || !model || !year) return;
@@ -140,6 +138,8 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             options={BRANDS.map((b) => b.name)}
             placeholder="Выберите марку"
             alphabet
+            popular={popular}
+            counts={brandCounts}
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => {
               setBrand(b);
@@ -156,6 +156,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             options={models}
             placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
             alphabet
+            counts={modelCounts}
             emptyText="Сначала выберите марку"
             onChange={setModel}
           />
