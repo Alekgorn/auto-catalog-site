@@ -2,6 +2,9 @@ import { Fragment } from "react";
 import ProductCard from "@/components/ProductCard";
 import UniversalDivider from "@/components/UniversalDivider";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
+import CategorySection, {
+  CATEGORY_STEP,
+} from "@/components/scenario/CategorySection";
 import FloatingFilters from "@/components/FloatingFilters";
 import { Vehicle } from "@/data/catalog";
 import { Scenario } from "@/data/scenarios";
@@ -46,6 +49,12 @@ interface Props {
 
   shown: number;
   onShowMore: () => void;
+
+  /** Полный каталог: товары, разложенные по разделам */
+  sections: { title: string; items: SearchHit[]; exactCount: number }[];
+  /** Раздел → сколько его товаров показано */
+  sectionShown: Record<string, number>;
+  onSectionMore: (title: string) => void;
 }
 
 /**
@@ -74,6 +83,9 @@ const ScenarioCatalog = ({
   catalogCounts,
   shown,
   onShowMore,
+  sections,
+  sectionShown,
+  onSectionMore,
 }: Props) => (
   <>
     <div
@@ -160,33 +172,57 @@ const ScenarioCatalog = ({
         </FloatingFilters>
       )}
 
-      <div>
-        <div
-          id="catalog-top"
-          className="grid grid-cols-2 gap-3 pb-8 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-        >
-          {visible.map((h, i) => (
-            <Fragment key={h.product.id}>
-              {/* Граница между «точно встанет» и «подойдёт почти всем» */}
-              {i === fit.exact.length && fit.universal.length > 0 && (
-                <UniversalDivider count={fit.universal.length} />
-              )}
-              <ProductCard product={h.product} vehicle={vehicle} />
-            </Fragment>
-          ))}
+      {/* Полный каталог разложен по разделам: покупатель сразу видит,
+          что вообще есть, и разворачивает только нужный раздел */}
+      {scenario.fullCatalog ? (
+        <div id="catalog-top">
+          {sections.length === 0 ? (
+            <div className="border border-border bg-surface px-5 py-8 text-center text-[0.9rem] text-muted-foreground">
+              По заданным условиям товаров не нашлось. Снимите часть фильтров.
+            </div>
+          ) : (
+            sections.map((s) => (
+              <CategorySection
+                key={s.title}
+                title={s.title}
+                items={s.items}
+                shown={sectionShown[s.title] ?? CATEGORY_STEP}
+                exactCount={s.exactCount}
+                vehicle={vehicle}
+                onShowMore={() => onSectionMore(s.title)}
+              />
+            ))
+          )}
         </div>
-
-        {shown < ordered.length && (
-          <div className="pb-10 text-center">
-            <button
-              onClick={onShowMore}
-              className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
-            >
-              Показать ещё
-            </button>
+      ) : (
+        <div>
+          <div
+            id="catalog-top"
+            className="grid grid-cols-2 gap-3 pb-8 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+          >
+            {visible.map((h, i) => (
+              <Fragment key={h.product.id}>
+                {/* Граница между «точно встанет» и «подойдёт почти всем» */}
+                {i === fit.exact.length && fit.universal.length > 0 && (
+                  <UniversalDivider count={fit.universal.length} />
+                )}
+                <ProductCard product={h.product} vehicle={vehicle} />
+              </Fragment>
+            ))}
           </div>
-        )}
-      </div>
+
+          {shown < ordered.length && (
+            <div className="pb-10 text-center">
+              <button
+                onClick={onShowMore}
+                className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+              >
+                Показать ещё
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   </>
 );

@@ -20,12 +20,13 @@ import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
-import { smartSearch } from "@/lib/smart-search";
+import { smartSearch, SearchHit } from "@/lib/smart-search";
 import { FilterState } from "@/components/CatalogFilters";
 import { crumbsJsonLd } from "@/components/Breadcrumbs";
 import { useKit } from "@/context/KitContext";
 import ScenarioHero from "@/components/scenario/ScenarioHero";
 import ScenarioKit from "@/components/scenario/ScenarioKit";
+import { CATEGORY_STEP } from "@/components/scenario/CategorySection";
 import ScenarioCatalog, {
   SortKey,
 } from "@/components/scenario/ScenarioCatalog";
@@ -55,6 +56,12 @@ const ScenarioPage = () => {
   const [sort, setSort] = useState<SortKey>("relevance");
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
+  /**
+   * Полный каталог разложен по разделам, и каждый разворачивается сам:
+   * «показать ещё» в магнитолах не должно тянуть за собой регистраторы.
+   * Раздел → сколько его товаров сейчас на экране.
+   */
+  const [sectionShown, setSectionShown] = useState<Record<string, number>>({});
   /**
    * Сборка комплекта живёт в общем хранилище — панель видна на всём сайте.
    * Пропущенные шаги держим там же: панель по ним понимает, что покупатель
@@ -236,6 +243,7 @@ const ScenarioPage = () => {
   }, []);
   useEffect(() => {
     setShown(PAGE_SIZE);
+    setSectionShown({});
     setCategory("");
     window.scrollTo({ top: 0 });
   }, [slug]);
@@ -420,6 +428,30 @@ const ScenarioPage = () => {
     [fit.exact, fit.universal],
   );
   const visible = ordered.slice(0, shown);
+
+  /**
+   * Полный каталог — раскладываем по разделам. Внутри раздела сохраняем
+   * общий порядок: сначала то, что точно встаёт на машину, потом
+   * универсальное. Пустые разделы не показываем.
+   */
+  const sections = useMemo(() => {
+    if (!scenario?.fullCatalog) return [];
+    const map = new Map<string, { exact: SearchHit[]; universal: SearchHit[] }>();
+    const put = (h: SearchHit, key: "exact" | "universal") => {
+      const name = h.product.category || "Прочее";
+      if (!map.has(name)) map.set(name, { exact: [], universal: [] });
+      map.get(name)![key].push(h);
+    };
+    fit.exact.forEach((h) => put(h, "exact"));
+    fit.universal.forEach((h) => put(h, "universal"));
+    return [...map.entries()]
+      .map(([title, g]) => ({
+        title,
+        items: [...g.exact, ...g.universal],
+        exactCount: g.exact.length,
+      }))
+      .sort((a, b) => b.items.length - a.items.length);
+  }, [fit.exact, fit.universal, scenario?.fullCatalog]);
 
   const applyVehicle = (v: Vehicle) => {
     setVehicle(v);
@@ -607,6 +639,14 @@ const ScenarioPage = () => {
             catalogCounts={catalogCounts}
             shown={shown}
             onShowMore={() => setShown((s) => s + PAGE_SIZE)}
+            sections={sections}
+            sectionShown={sectionShown}
+            onSectionMore={(title) =>
+              setSectionShown((m) => ({
+                ...m,
+                [title]: (m[title] ?? CATEGORY_STEP) + CATEGORY_STEP,
+              }))
+            }
           />
         )}
 
