@@ -1,7 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, Vehicle, formatPrice, splitByFit } from '@/data/catalog';
-import { fitsAvailableSizes, kitStepList } from '@/lib/kit-filter';
+import { fitsAvailableSizes, kitStepList, plural } from '@/lib/kit-filter';
 import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
@@ -293,16 +293,36 @@ const KitSection = ({
                   setAllPrices((v) => !v);
                   setShown(STEP_SIZE);
                 }}
-                className="flex flex-none items-center gap-1.5 border border-foreground px-3.5 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
+                className={
+                  allPrices
+                    ? /* Список раскрыт — кнопка становится тихой: её работа
+                         сделана, теперь это способ вернуться к подборке */
+                      'flex flex-none items-center gap-2 border border-foreground px-3.5 py-2.5 font-head text-[0.74rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary'
+                    : /* Свёрнуто — кнопка должна звать: заливка бренда,
+                         число в кружке и живая формулировка */
+                      'flex flex-none items-center gap-2.5 border border-primary bg-primary px-4 py-2.5 font-head text-[0.78rem] font-bold uppercase tracking-[0.04em] text-primary-foreground shadow-sm transition-colors hover:border-foreground hover:bg-foreground'
+                }
               >
-                <Icon name={allPrices ? 'ChevronUp' : 'ChevronDown'} size={14} />
-                {allPrices
-                  ? step.minPrice
-                    ? `Только от ${formatPrice(step.minPrice)}`
-                    : `Только до ${formatPrice(step.maxPrice!)}`
-                  : step.minPrice
-                    ? `Показать дешевле (+${overLimit})`
-                    : `Показать дороже (+${overLimit})`}
+                {allPrices ? (
+                  <>
+                    <Icon name="ChevronUp" size={15} />
+                    {step.minPrice
+                      ? `Только от ${formatPrice(step.minPrice)}`
+                      : `Только до ${formatPrice(step.maxPrice!)}`}
+                  </>
+                ) : (
+                  <>
+                    {/* Цифру видно раньше, чем читается текст */}
+                    <span className="flex h-6 min-w-6 flex-none items-center justify-center rounded-full bg-primary-foreground px-1.5 text-[0.82rem] font-bold leading-none text-primary">
+                      {overLimit}
+                    </span>
+                    <span>
+                      {plural(overLimit, 'вариант', 'варианта', 'вариантов')}{' '}
+                      {step.minPrice ? 'подешевле' : 'подороже'}
+                    </span>
+                    <Icon name="ChevronDown" size={15} className="flex-none" />
+                  </>
+                )}
               </button>
             )}
 
