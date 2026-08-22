@@ -56,6 +56,20 @@ const CategoriesEditor = ({ onSaved }: Props) => {
     setRows(next);
   };
 
+  /**
+   * Переставляет характеристику внутри категории. Порядок в этом списке —
+   * порядок строк в карточке товара на сайте, причём в плитку каталога
+   * попадают только первые три. Поэтому важное нужно уметь поднять наверх.
+   */
+  const moveSpec = (i: number, fi: number, dir: -1 | 1) => {
+    const fields = rows[i].specFields;
+    const j = fi + dir;
+    if (j < 0 || j >= fields.length) return;
+    const next = [...fields];
+    [next[fi], next[j]] = [next[j], next[fi]];
+    setAt(i, { specFields: next });
+  };
+
   const remove = (i: number) => {
     const row = rows[i];
     if (row.products > 0) {
@@ -192,12 +206,31 @@ const CategoriesEditor = ({ onSaved }: Props) => {
                     <div className="mt-3 border-l-2 border-border pl-4">
                       <p className="max-w-[36em] text-[0.8rem] text-muted-foreground">
                         Названия полей для товаров этой категории — например «Экран»,
-                        «Память». Значения заполняются в карточке каждого товара и
-                        показываются внизу его страницы.
+                        «Память». Значения заполняются в карточке каждого товара.
+                        Стрелками меняйте порядок:{' '}
+                        <span className="font-medium text-primary">
+                          первые три
+                        </span>{' '}
+                        показываются покупателю прямо в каталоге, остальные —
+                        на странице товара.
                       </p>
 
                       {r.specFields.map((f, fi) => (
                         <div key={fi} className="mt-2 flex items-center gap-2">
+                          {/* Номер: первые три строки видны прямо в плитке
+                              каталога, поэтому порядок здесь — не косметика */}
+                          <span
+                            className={`w-5 flex-none text-center font-head text-[0.72rem] ${
+                              fi < 3 ? 'text-primary' : 'text-muted-foreground'
+                            }`}
+                            title={
+                              fi < 3
+                                ? 'Видно в каталоге'
+                                : 'Только на странице товара'
+                            }
+                          >
+                            {fi + 1}
+                          </span>
                           <input
                             value={f}
                             placeholder="Название характеристики"
@@ -210,6 +243,24 @@ const CategoriesEditor = ({ onSaved }: Props) => {
                             }
                             className="min-w-0 flex-1 border-b border-border bg-transparent py-1.5 text-[0.9rem] outline-none transition-colors focus:border-primary"
                           />
+                          <button
+                            onClick={() => moveSpec(i, fi, -1)}
+                            disabled={fi === 0}
+                            title="Выше"
+                            aria-label="Поднять характеристику"
+                            className="flex-none p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-30"
+                          >
+                            <Icon name="ChevronUp" size={15} />
+                          </button>
+                          <button
+                            onClick={() => moveSpec(i, fi, 1)}
+                            disabled={fi === r.specFields.length - 1}
+                            title="Ниже"
+                            aria-label="Опустить характеристику"
+                            className="flex-none p-1 text-muted-foreground transition-colors hover:text-primary disabled:opacity-30"
+                          >
+                            <Icon name="ChevronDown" size={15} />
+                          </button>
                           <button
                             onClick={() =>
                               setAt(i, {
