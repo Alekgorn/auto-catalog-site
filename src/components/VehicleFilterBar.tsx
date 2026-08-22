@@ -35,7 +35,7 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
     }
   }, [vehicle]);
 
-  const { brandCounts, models, modelCounts } = useBrandPicker(brand);
+  const { models } = useBrandPicker(brand);
 
   const apply = () => {
     if (!brand || !model || !year) return;
@@ -139,7 +139,6 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             placeholder="Выберите марку"
             alphabet
             carIcon
-            counts={brandCounts}
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => {
               setBrand(b);
@@ -157,7 +156,6 @@ const VehicleFilterBar = ({ vehicle, onApply, onReset, count }: Props) => {
             placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
             alphabet
             carIcon
-            counts={modelCounts}
             emptyText="Сначала выберите марку"
             onChange={setModel}
           />
