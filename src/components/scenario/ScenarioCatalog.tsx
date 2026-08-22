@@ -120,7 +120,6 @@ const ScenarioCatalog = ({
         activeCount={category ? 1 : 0}
         resultCount={list.length}
         hideOn={category}
-        storageKey={`scenario:${scenario.slug}`}
         scrollTargetId="catalog-top"
       >
         <div className="flex flex-col gap-2">
@@ -159,7 +158,6 @@ const ScenarioCatalog = ({
           activeCount={filters.categories.length + filters.warranties.length}
           resultCount={list.length}
           hideOn={filters.categories.join("|")}
-          storageKey={`scenario:${scenario.slug}`}
           scrollTargetId="catalog-top"
         >
           <CatalogFilters
