@@ -44,7 +44,14 @@ interface Props {
   onNeedLead?: () => void;
 }
 
-const STEP_SIZE = 6;
+/**
+ * Сколько позиций шага видно сразу — ровно один ряд на большом экране,
+ * пятой ячейкой встаёт кнопка «Показать ещё». Так же устроен каталог.
+ */
+const STEP_SIZE = 4;
+
+/** По сколько добавляем за нажатие «Показать ещё» */
+const STEP_MORE = 15;
 
 /**
  * Один шаг сборки комплекта: раздел каталога с товарами.
@@ -483,18 +490,25 @@ const KitSection = ({
                 />
               </Fragment>
             ))}
-          </div>
 
-          {!collapsed && shown < list.length && (
-            <div className="mt-5 text-center">
+            {/* Кнопка стоит ячейкой сетки сразу за карточками — так же, как
+                в каталоге. Отдельной строкой под сеткой она отрывалась от
+                товаров и терялась на длинных шагах */}
+            {!collapsed && shown < list.length && (
               <button
-                onClick={() => setShown((s) => s + STEP_SIZE)}
-                className="border border-foreground px-6 py-3 text-[0.78rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+                onClick={() => setShown((s) => s + STEP_MORE)}
+                className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
-                Показать ещё ({list.length - shown})
+                <Icon name="Plus" size={22} className="flex-none" />
+                <span className="font-head text-[0.8rem] font-bold uppercase tracking-[0.06em]">
+                  Показать ещё
+                </span>
+                <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
+                  ещё {list.length - shown}
+                </span>
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </>
       )}
 
