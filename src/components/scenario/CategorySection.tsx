@@ -4,6 +4,7 @@ import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
 import { Vehicle } from '@/data/catalog';
 import { SearchHit } from '@/lib/smart-search';
+import { plural } from '@/lib/kit-filter';
 
 interface Props {
   title: string;
@@ -17,8 +18,11 @@ interface Props {
   onShowMore: () => void;
 }
 
-/** По сколько добавляем за нажатие */
-export const CATEGORY_STEP = 4;
+/** Сколько товаров раздела видно сразу — ровно один ряд на большом экране */
+export const CATEGORY_FIRST = 4;
+
+/** По сколько добавляем за нажатие «Показать ещё» */
+export const CATEGORY_STEP = 15;
 
 /**
  * Раздел каталога: название, число товаров и сетка карточек.
@@ -41,12 +45,12 @@ const CategorySection = ({
 
   return (
     <section className="pb-9">
-      <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
+      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2">
         <h2 className="font-head text-[1.05rem] font-bold uppercase tracking-tight md:text-[1.15rem]">
           {title}
         </h2>
-        <span className="text-[0.8rem] text-muted-foreground">
-          {items.length}
+        <span className="flex-none bg-primary px-2.5 py-1 font-head text-[0.72rem] font-bold uppercase tracking-[0.04em] text-primary-foreground">
+          всего {items.length} {plural(items.length, 'товар', 'товара', 'товаров')}
         </span>
       </div>
 

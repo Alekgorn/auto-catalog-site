@@ -26,7 +26,10 @@ import { crumbsJsonLd } from "@/components/Breadcrumbs";
 import { useKit } from "@/context/KitContext";
 import ScenarioHero from "@/components/scenario/ScenarioHero";
 import ScenarioKit from "@/components/scenario/ScenarioKit";
-import { CATEGORY_STEP } from "@/components/scenario/CategorySection";
+import {
+  CATEGORY_FIRST,
+  CATEGORY_STEP,
+} from "@/components/scenario/CategorySection";
 import ScenarioCatalog, {
   SortKey,
 } from "@/components/scenario/ScenarioCatalog";
@@ -430,9 +433,10 @@ const ScenarioPage = () => {
   const visible = ordered.slice(0, shown);
 
   /**
-   * Полный каталог — раскладываем по разделам. Внутри раздела сохраняем
-   * общий порядок: сначала то, что точно встаёт на машину, потом
-   * универсальное. Пустые разделы не показываем.
+   * Полный каталог — раскладываем по разделам. Порядок разделов берём тот
+   * же, что в фильтре слева (задаётся в админке), чтобы список читался
+   * одинаково в обоих местах. Внутри раздела сначала то, что точно встаёт
+   * на машину, потом универсальное. Пустые разделы не показываем.
    */
   const sections = useMemo(() => {
     if (!scenario?.fullCatalog) return [];
@@ -444,14 +448,19 @@ const ScenarioPage = () => {
     };
     fit.exact.forEach((h) => put(h, "exact"));
     fit.universal.forEach((h) => put(h, "universal"));
+    const order = new Map(allCategories.map((c, i) => [c, i]));
     return [...map.entries()]
       .map(([title, g]) => ({
         title,
         items: [...g.exact, ...g.universal],
         exactCount: g.exact.length,
       }))
-      .sort((a, b) => b.items.length - a.items.length);
-  }, [fit.exact, fit.universal, scenario?.fullCatalog]);
+      .sort(
+        (a, b) =>
+          (order.get(a.title) ?? Number.MAX_SAFE_INTEGER) -
+          (order.get(b.title) ?? Number.MAX_SAFE_INTEGER),
+      );
+  }, [fit.exact, fit.universal, scenario?.fullCatalog, allCategories]);
 
   const applyVehicle = (v: Vehicle) => {
     setVehicle(v);
@@ -644,7 +653,7 @@ const ScenarioPage = () => {
             onSectionMore={(title) =>
               setSectionShown((m) => ({
                 ...m,
-                [title]: (m[title] ?? CATEGORY_STEP) + CATEGORY_STEP,
+                [title]: (m[title] ?? CATEGORY_FIRST) + CATEGORY_STEP,
               }))
             }
           />

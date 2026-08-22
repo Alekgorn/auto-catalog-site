@@ -3,7 +3,7 @@ import ProductCard from "@/components/ProductCard";
 import UniversalDivider from "@/components/UniversalDivider";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
 import CategorySection, {
-  CATEGORY_STEP,
+  CATEGORY_FIRST,
 } from "@/components/scenario/CategorySection";
 import FloatingFilters from "@/components/FloatingFilters";
 import { Vehicle } from "@/data/catalog";
@@ -186,7 +186,7 @@ const ScenarioCatalog = ({
                 key={s.title}
                 title={s.title}
                 items={s.items}
-                shown={sectionShown[s.title] ?? CATEGORY_STEP}
+                shown={sectionShown[s.title] ?? CATEGORY_FIRST}
                 exactCount={s.exactCount}
                 vehicle={vehicle}
                 onShowMore={() => onSectionMore(s.title)}
