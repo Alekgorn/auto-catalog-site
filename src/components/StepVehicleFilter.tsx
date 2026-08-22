@@ -1,9 +1,9 @@
-import { useMemo } from "react";
 import Icon from "@/components/ui/icon";
 import SearchSelect from "@/components/SearchSelect";
 import PhotoToMessenger from "@/components/PhotoToMessenger";
 import { PartialVehicle, YEARS } from "@/data/catalog";
 import { useCatalog } from "@/context/CatalogContext";
+import { useBrandPicker } from "@/hooks/use-brand-picker";
 
 interface Props {
   value: PartialVehicle | null;
@@ -38,10 +38,7 @@ const StepVehicleFilter = ({
   const model = value?.model ?? "";
   const year = value?.year ? String(value.year) : "";
 
-  const models = useMemo(
-    () => BRANDS.find((b) => b.name === brand)?.models ?? [],
-    [brand, BRANDS],
-  );
+  const { popular, brandCounts, models, modelCounts } = useBrandPicker(brand);
 
   /** Подсказка под фильтром: что уже учтено и что стоит уточнить дальше */
   const hint = () => {
@@ -103,6 +100,8 @@ const StepVehicleFilter = ({
             options={BRANDS.map((b) => b.name)}
             placeholder="Выберите марку"
             alphabet
+            popular={popular}
+            counts={brandCounts}
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => onChange(b ? { brand: b } : null)}
           />
@@ -116,6 +115,7 @@ const StepVehicleFilter = ({
             options={models}
             placeholder={brand ? "Выберите модель" : "Сначала марка"}
             alphabet
+            counts={modelCounts}
             emptyText="Сначала выберите марку"
             onChange={(m) => brand && onChange({ brand, model: m || undefined })}
           />

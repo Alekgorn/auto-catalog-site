@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
 import { YEARS } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import SearchSelect from '@/components/SearchSelect';
+import { useBrandPicker } from '@/hooks/use-brand-picker';
 
 interface Props {
   brand: string;
@@ -30,10 +30,7 @@ const VehicleSelector = ({
   onDark = false,
 }: Props) => {
   const { brands: BRANDS } = useCatalog();
-  const models = useMemo(
-    () => BRANDS.find((b) => b.name === brand)?.models ?? [],
-    [brand, BRANDS],
-  );
+  const { popular, brandCounts, models, modelCounts } = useBrandPicker(brand);
 
   /** Пока машина не названа целиком, подбирать нечего */
   const ready = Boolean(brand && model && year);
@@ -58,7 +55,9 @@ const VehicleSelector = ({
           value={brand}
           options={BRANDS.map((b) => b.name)}
           placeholder="Выберите марку"
-            alphabet
+          alphabet
+          popular={popular}
+          counts={brandCounts}
           emptyText="Такой марки нет — напишите нам"
           onDark={onDark}
           onChange={(b) => {
@@ -76,7 +75,8 @@ const VehicleSelector = ({
           value={model}
           options={models}
           placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
-            alphabet
+          alphabet
+          counts={modelCounts}
           emptyText="Сначала выберите марку"
           onDark={onDark}
           onChange={onModel}

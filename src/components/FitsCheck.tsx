@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
+import { useBrandPicker } from '@/hooks/use-brand-picker';
 import FitsList from '@/components/FitsList';
 import {
   Product,
@@ -39,6 +40,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
   /** Марки не заданы — ограничений по авто нет */
   const anyCar = fitsAll(product);
 
+  const { popular, brandCounts, modelCounts } = useBrandPicker(brand);
   const models = useMemo(
     () => BRANDS.find((b) => b.name === brand)?.models ?? [],
     [brand, BRANDS],
@@ -150,6 +152,8 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               options={BRANDS.map((b) => b.name)}
               placeholder="Марка"
               alphabet
+              popular={popular}
+              counts={brandCounts}
               emptyText="Такой марки нет"
               onChange={(b) => {
                 setBrand(b);
@@ -163,6 +167,7 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               options={models}
               placeholder="Модель"
               alphabet
+              counts={modelCounts}
               emptyText="Сначала выберите марку"
               onChange={setModel}
             />
