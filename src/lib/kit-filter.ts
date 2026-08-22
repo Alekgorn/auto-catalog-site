@@ -36,6 +36,49 @@ export const screenSize = (p: Product): number | null => {
  */
 const sameSize = (a: number, b: number): boolean => Math.abs(a - b) <= 0.5;
 
+/** Раздел каталога с переходными рамками — источник доступных размеров */
+const FRAMES_CATEGORY = 'Переходные рамки для магнитол';
+
+/**
+ * Какие диагонали реально встанут в выбранную машину.
+ *
+ * Смотрим переходные рамки, которые подходят этому авто, и собираем их
+ * типоразмеры. Если на Kia Rio есть рамки только под 9 дюймов, то
+ * магнитолу на 10 или 12 ставить некуда — предлагать её бессмысленно.
+ *
+ * Пустой ответ означает «ограничивать нечем»: рамок под эту машину нет
+ * в каталоге или у них не заполнен размер. В этом случае список магнитол
+ * не трогаем — лучше показать всё, чем случайно спрятать товар.
+ */
+export const availableScreenSizes = (
+  products: Product[],
+  vehicle: Vehicle | null,
+): number[] => {
+  if (!vehicle) return [];
+  const sizes = new Set<number>();
+  products.forEach((p) => {
+    if (p.category !== FRAMES_CATEGORY) return;
+    // Только точное совпадение по машине: универсальные рамки
+    // ничего не говорят о посадочном месте конкретной панели
+    if (!isCompatible(p, vehicle)) return;
+    const s = screenSize(p);
+    if (s) sizes.add(s);
+  });
+  return [...sizes].sort((a, b) => a - b);
+};
+
+/**
+ * Магнитола влезет, если её диагональ совпала с одним из размеров рамок.
+ * Позиции без указанной диагонали не отсеиваем — размер просто не заполнен,
+ * и прятать товар из-за пустого поля нельзя.
+ */
+export const fitsAvailableSizes = (p: Product, sizes: number[]): boolean => {
+  if (!sizes.length) return true;
+  const s = screenSize(p);
+  if (s === null) return true;
+  return sizes.some((x) => sameSize(x, s));
+};
+
 interface Args {
   step: KitStep;
   products: Product[];
@@ -43,6 +86,11 @@ interface Args {
   brandsCount: number;
   /** Диагональ выбранной магнитолы — под неё подбираем рамку */
   size?: number | null;
+  /**
+   * Диагонали, под которые есть рамки на выбранную машину.
+   * Ограничивают выбор магнитол на ведущем шаге.
+   */
+  availableSizes?: number[];
 }
 
 /**
@@ -55,8 +103,16 @@ export const kitStepList = ({
   vehicle,
   brandsCount,
   size,
+  availableSizes,
 }: Args): Product[] => {
   let out = products.filter((p) => p.category === step.category);
+
+  // Ведущий шаг — магнитола. Показываем только те диагонали, под которые
+  // на эту машину есть рамка: иначе покупатель выберет экран, который
+  // потом некуда поставить, и упрётся в пустой шаг с рамками
+  if (step.leading && availableSizes?.length) {
+    out = out.filter((p) => fitsAvailableSizes(p, availableSizes));
+  }
 
   if (vehicle) {
     // Рамки и проводка — только точное совпадение по машине.

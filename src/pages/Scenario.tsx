@@ -14,7 +14,7 @@ import {
   matchesPartial,
   splitByFit,
 } from "@/data/catalog";
-import { screenSize } from "@/lib/kit-filter";
+import { availableScreenSizes, screenSize } from "@/lib/kit-filter";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -127,6 +127,16 @@ const ScenarioPage = () => {
   const leadSize = useMemo(
     () => (leadProduct ? screenSize(leadProduct) : null),
     [leadProduct],
+  );
+
+  /**
+   * Какие экраны реально влезут в эту машину — по типоразмерам рамок,
+   * которые на неё есть. Пока авто не выбрано, список пуст и ничего
+   * не ограничиваем.
+   */
+  const availableSizes = useMemo(
+    () => availableScreenSizes(products, vehicle),
+    [products, vehicle],
   );
   /** Первый незаполненный обязательный шаг — туда и возвращаем покупателя */
   const scrollToLead = () => {
@@ -548,6 +558,7 @@ const ScenarioPage = () => {
             picks={picks}
             skipped={skipped}
             leadSize={leadSize}
+            availableSizes={availableSizes}
             stepId={stepId}
             stepLocked={stepLocked}
             onPick={pickAndAdvance}

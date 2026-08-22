@@ -14,6 +14,11 @@ interface Props {
 
   /** Диагональ ведущей магнитолы — по ней фильтруем рамки */
   leadSize: number | null;
+  /**
+   * Диагонали, под которые есть рамки на выбранную машину.
+   * По ним сужаем выбор магнитол на первом шаге.
+   */
+  availableSizes: number[];
 
   stepId: (i: number) => string;
   stepLocked: (i: number) => boolean;
@@ -37,6 +42,7 @@ const ScenarioKit = ({
   picks,
   skipped,
   leadSize,
+  availableSizes,
   stepId,
   stepLocked,
   onPick,
@@ -61,6 +67,7 @@ const ScenarioKit = ({
           helpOffer={step.helpOffer}
           locked={stepLocked(i)}
           size={step.matchScreen ? leadSize : null}
+          availableSizes={availableSizes}
           vehicleLabel={
             vehicle
               ? `${vehicle.brand} ${vehicle.model} ${vehicle.year} г.`
