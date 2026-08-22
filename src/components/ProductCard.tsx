@@ -225,18 +225,27 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           вплотную к кнопке заказа */}
       <div className="flex flex-1 flex-col p-2.5 sm:p-3">
         {/* Название в две строки: третья почти всегда оставалась пустой
-            и растягивала все карточки ряда по самой длинной */}
-        <h3 className="font-bold leading-snug tracking-tight text-foreground">
+            и растягивала все карточки ряда по самой длинной.
+
+            Набрано Rubik — тем же шрифтом, что заголовки разделов и кнопки.
+            Раньше это был единственный Inter в карточке, и название читалось
+            как первая строка таблицы характеристик, а не как заголовок.
+            Заглавными не делаем: названия длинные, капслоком их не прочесть. */}
+        <h3 className="font-head font-bold leading-snug tracking-tight text-foreground">
           <Link
             to={`/product/${product.id}`}
-            className="line-clamp-2 text-[0.88rem] transition-colors hover:text-primary"
+            className="line-clamp-2 text-[0.9rem] transition-colors hover:text-primary"
           >
             {product.name}
           </Link>
         </h3>
 
+        {/* Характеристики уведены в серый и лишены жирности: раньше их
+            значения были такими же тёмными и плотными, как название, и
+            весь верх карточки выглядел одним куском текста. Теперь
+            название — единственный тёмный акцент, а это фон под ним */}
         {specRows.length > 0 && (
-          <dl className="mt-1.5 space-y-0.5 text-[0.72rem] leading-snug">
+          <dl className="mt-2.5 space-y-0.5 text-[0.72rem] leading-snug">
             {/* Значение не сжималось из-за flex-none и вылезало за карточку.
                 Даём обеим колонкам ужиматься и обрезаем длинный текст */}
             {specRows.map((r) => (
@@ -248,7 +257,7 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
                 <dt className="min-w-0 max-w-[55%] flex-none truncate text-muted-foreground">
                   {r.label}
                 </dt>
-                <dd className="min-w-0 flex-1 truncate text-right font-medium text-foreground">
+                <dd className="min-w-0 flex-1 truncate text-right text-muted-foreground">
                   {r.value}
                 </dd>
               </div>
