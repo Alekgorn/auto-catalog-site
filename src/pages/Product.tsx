@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
 import FitsCheck from "@/components/FitsCheck";
-import ProductCard from "@/components/ProductCard";
+import ProductRelated from "@/components/ProductRelated";
 import RequestDialog from "@/components/RequestDialog";
 import ProductTabs, { ProductTab } from "@/components/ProductTabs";
 import {
@@ -17,6 +17,7 @@ import {
   productSku,
   productSpecs,
   productsByCategory,
+  productsWithThis,
 } from "@/data/catalog";
 import { VEHICLE_EVENT, loadVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -171,7 +172,9 @@ const Product = () => {
     if (!has("артикул")) extra.push(["Артикул", productSku(product)]);
     return [...base, ...extra];
   })();
-  const related = productsByCategory(product, products);
+  /* Берём с запасом: в блоке видно 4, остальное раскрывается кнопкой */
+  const related = productsByCategory(product, products, 24);
+  const withThis = productsWithThis(product, products, 24);
   const productGuides = guides.filter((g) => g.products?.includes(product.id));
 
   return (
@@ -318,22 +321,23 @@ const Product = () => {
           </div>
         </section>
 
-        {related.length > 0 && (
-          <section className="section-pad">
-            <div className="rule" />
-            <div className="py-10">
-              <div className="eyebrow">Из этой же категории</div>
-              <h2 className="mt-3 font-head text-2xl font-bold uppercase leading-tight tracking-[-0.02em] sm:text-3xl">
-                Похожее оборудование
-              </h2>
-            </div>
-            <div className="grid grid-cols-2 gap-3 pb-16 sm:gap-6 lg:grid-cols-3">
-              {related.map((p) => (
-                <ProductCard key={p.id} product={p} vehicle={vehicle} />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Похожее — тот же раздел и те же машины. Нет подходящего —
+            блока не будет вовсе, пустой заголовок только мешает */}
+        <ProductRelated
+          eyebrow="Из этой же категории"
+          title="Похожее оборудование"
+          items={related}
+          vehicle={vehicle}
+        />
+
+        {/* Что берут вместе: рамка и проводка к магнитоле — из других
+            разделов, но на те же марки и модели */}
+        <ProductRelated
+          eyebrow="Подходит к этой же машине"
+          title="С этим товаром покупают"
+          items={withThis}
+          vehicle={vehicle}
+        />
       </main>
       <Footer />
       <RequestDialog

@@ -384,11 +384,99 @@ export const productKit = (p: Product): string[] =>
         'Гарантийный талон',
       ];
 
+/**
+ * Похожее оборудование: тот же раздел плюс совпадение по сути товара.
+ *
+ * Раньше брались первые попавшиеся позиции раздела, и к рамке на Honda
+ * предлагались рамки на Audi и BMW — формально та же категория, а купить
+ * нечего. Теперь сначала идут те, что встают на те же машины, потом —
+ * близкие по цене, и только затем остальные из раздела.
+ *
+ * Отдельно требуем пересечение по авто, если оно у товара задано: для
+ * рамок и переходников марка решает всё. Универсальные позиции (без
+ * списка машин) считаем подходящими всем.
+ */
 export const productsByCategory = (
   p: Product,
   all: Product[] = PRODUCTS,
   limit = 3,
-): Product[] => all.filter((x) => x.category === p.category && x.id !== p.id).slice(0, limit);
+): Product[] => {
+  const own = Object.entries(p.fits ?? {});
+  const ownKeys = new Set(
+    own.flatMap(([b, ms]) => ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`)),
+  );
+
+  /** Сколько машин у товара общих с исходным */
+  const shared = (x: Product): number => {
+    if (!ownKeys.size) return 0;
+    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) =>
+      ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`),
+    );
+    if (!keys.length) return 0;
+    return keys.filter((k) => ownKeys.has(k)).length;
+  };
+
+  const near = (x: Product): number =>
+    p.price > 0 ? Math.abs(x.price - p.price) / p.price : 0;
+
+  return all
+    .filter((x) => x.category === p.category && x.id !== p.id)
+    .map((x) => ({ x, common: shared(x), gap: near(x) }))
+    // Товар привязан к машинам — предлагаем только то, что встаёт на те же
+    .filter((r) => !ownKeys.size || r.common > 0 || !Object.keys(r.x.fits ?? {}).length)
+    .sort((a, b) => b.common - a.common || a.gap - b.gap)
+    .slice(0, limit)
+    .map((r) => r.x);
+};
+
+/**
+ * «С этим товаром покупают»: позиции из ДРУГИХ разделов, которые встают
+ * на ту же машину. К магнитоле это рамка и проводка — то, без чего
+ * покупка не поедет, а не ещё одна магнитола.
+ */
+export const productsWithThis = (
+  p: Product,
+  all: Product[] = PRODUCTS,
+  limit = 8,
+): Product[] => {
+  const own = Object.entries(p.fits ?? {});
+  const ownKeys = new Set(
+    own.flatMap(([b, ms]) => ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`)),
+  );
+  if (!ownKeys.size) return [];
+
+  const shared = (x: Product): number => {
+    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) =>
+      ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`),
+    );
+    return keys.filter((k) => ownKeys.has(k)).length;
+  };
+
+  const byCategory = new Map<string, Product[]>();
+  all
+    .filter((x) => x.category !== p.category && x.id !== p.id)
+    .map((x) => ({ x, common: shared(x) }))
+    .filter((r) => r.common > 0)
+    .sort((a, b) => b.common - a.common || a.x.price - b.x.price)
+    .forEach((r) => {
+      const list = byCategory.get(r.x.category) ?? [];
+      list.push(r.x);
+      byCategory.set(r.x.category, list);
+    });
+
+  /* Берём по кругу из каждого раздела: иначе весь блок займут рамки,
+     которых в каталоге на порядок больше, чем всего остального */
+  const out: Product[] = [];
+  const lists = [...byCategory.values()];
+  for (let i = 0; out.length < limit; i += 1) {
+    const before = out.length;
+    lists.forEach((l) => {
+      if (l[i] && out.length < limit) out.push(l[i]);
+    });
+    if (out.length === before) break;
+  }
+  return out;
+};
 
 export interface Vehicle {
   brand: string;
