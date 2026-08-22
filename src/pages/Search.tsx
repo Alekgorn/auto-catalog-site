@@ -13,9 +13,13 @@ import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
-import { describeQuery, parseQuery, smartSearch } from "@/lib/smart-search";
+import { describeQuery, parseQuery, smartSearch, SearchHit } from "@/lib/smart-search";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import YearPrompt from "@/components/YearPrompt";
+import CategorySection, {
+  CATEGORY_FIRST,
+  CATEGORY_STEP,
+} from "@/components/scenario/CategorySection";
 
 type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
 
@@ -38,6 +42,8 @@ const SearchPage = () => {
   const [category, setCategory] = useState("");
   const [shown, setShown] = useState(PAGE_SIZE);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  /** Раздел → сколько его товаров раскрыто */
+  const [sectionShown, setSectionShown] = useState<Record<string, number>>({});
 
   useEffect(() => setInput(query), [query]);
   /* Машину могли сменить или сбросить плашкой в шапке — следим за этим */
@@ -50,6 +56,7 @@ const SearchPage = () => {
   useEffect(() => {
     setShown(PAGE_SIZE);
     setCategory("");
+    setSectionShown({});
   }, [query]);
 
   const found = useMemo(
@@ -180,6 +187,46 @@ const SearchPage = () => {
     [fit.exact, fit.universal],
   );
   const visible = ordered.slice(0, shown);
+
+  /**
+   * Найденное разложено по разделам — так же, как в каталоге.
+   * Сплошной лентой выдача читалась плохо: по запросу «магнитола Honda»
+   * вперемешку шли рамки, переходники и сами магнитолы, и покупатель не
+   * понимал, чего именно сколько нашлось.
+   *
+   * Разделы сортируем по силе совпадения с запросом, а не по размеру.
+   * По «магнитола Honda» рамок находится сотня, а самих магнитол восемь —
+   * по количеству рамки встали бы первыми, хотя спрашивали не о них.
+   * Берём лучший результат раздела, при равенстве — что крупнее.
+   */
+  const sections = useMemo(() => {
+    const map = new Map<string, { exact: SearchHit[]; universal: SearchHit[] }>();
+    const put = (h: SearchHit, key: "exact" | "universal") => {
+      const name = h.product.category || "Прочее";
+      if (!map.has(name)) map.set(name, { exact: [], universal: [] });
+      map.get(name)![key].push(h);
+    };
+    fit.exact.forEach((h) => put(h, "exact"));
+    fit.universal.forEach((h) => put(h, "universal"));
+    return [...map.entries()]
+      .map(([title, g]) => {
+        const items = [...g.exact, ...g.universal];
+        return {
+          title,
+          items,
+          exactCount: g.exact.length,
+          top: Math.max(...items.map((h) => h.score)),
+        };
+      })
+      .sort((a, b) => b.top - a.top || b.items.length - a.items.length);
+  }, [fit.exact, fit.universal]);
+
+  /**
+   * Выбран один раздел — показывать разбивку не по чему, выдаём сеткой.
+   * Разделов меньше двух — то же самое: заголовок над единственной группой
+   * только добавил бы шума.
+   */
+  const grouped = !category && sections.length > 1;
 
   return (
     <div className="min-h-screen bg-background">
@@ -366,29 +413,57 @@ const SearchPage = () => {
               </div>
             )}
 
-            <div
-              id="catalog-top"
-              className="grid grid-cols-2 gap-3 pb-10 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-            >
-              {visible.map((h, i) => (
-                <Fragment key={h.product.id}>
-                  {i === fit.exact.length && fit.universal.length > 0 && (
-                    <UniversalDivider count={fit.universal.length} />
-                  )}
-                  <ProductCard product={h.product} vehicle={vehicle} />
-                </Fragment>
-              ))}
-            </div>
-
-            {shown < ordered.length && (
-              <div className="pb-14 text-center">
-                <button
-                  onClick={() => setShown((s) => s + PAGE_SIZE)}
-                  className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
-                >
-                  Показать ещё
-                </button>
+            {grouped ? (
+              /* Найденное по разделам: видно, чего и сколько нашлось,
+                 и разворачивается только нужная группа */
+              <div id="catalog-top" className="pb-6">
+                {sections.map((s) => (
+                  <CategorySection
+                    key={s.title}
+                    title={s.title}
+                    items={s.items}
+                    shown={sectionShown[s.title] ?? CATEGORY_FIRST}
+                    exactCount={s.exactCount}
+                    vehicle={vehicle}
+                    onShowMore={() =>
+                      setSectionShown((m) => ({
+                        ...m,
+                        [s.title]: (m[s.title] ?? CATEGORY_FIRST) + CATEGORY_STEP,
+                      }))
+                    }
+                    onCollapse={() =>
+                      setSectionShown((m) => ({ ...m, [s.title]: CATEGORY_FIRST }))
+                    }
+                  />
+                ))}
               </div>
+            ) : (
+              <>
+                <div
+                  id="catalog-top"
+                  className="grid grid-cols-2 gap-3 pb-10 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                >
+                  {visible.map((h, i) => (
+                    <Fragment key={h.product.id}>
+                      {i === fit.exact.length && fit.universal.length > 0 && (
+                        <UniversalDivider count={fit.universal.length} />
+                      )}
+                      <ProductCard product={h.product} vehicle={vehicle} />
+                    </Fragment>
+                  ))}
+                </div>
+
+                {shown < ordered.length && (
+                  <div className="pb-14 text-center">
+                    <button
+                      onClick={() => setShown((s) => s + PAGE_SIZE)}
+                      className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+                    >
+                      Показать ещё
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
