@@ -38,7 +38,7 @@ const StepVehicleFilter = ({
   const model = value?.model ?? "";
   const year = value?.year ? String(value.year) : "";
 
-  const { popular, brandCounts, models, modelCounts } = useBrandPicker(brand);
+  const { brandCounts, models, modelCounts } = useBrandPicker(brand);
 
   /** Подсказка под фильтром: что уже учтено и что стоит уточнить дальше */
   const hint = () => {
@@ -100,7 +100,7 @@ const StepVehicleFilter = ({
             options={BRANDS.map((b) => b.name)}
             placeholder="Выберите марку"
             alphabet
-            popular={popular}
+            carIcon
             counts={brandCounts}
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => onChange(b ? { brand: b } : null)}
@@ -115,6 +115,7 @@ const StepVehicleFilter = ({
             options={models}
             placeholder={brand ? "Выберите модель" : "Сначала марка"}
             alphabet
+            carIcon
             counts={modelCounts}
             emptyText="Сначала выберите марку"
             onChange={(m) => brand && onChange({ brand, model: m || undefined })}

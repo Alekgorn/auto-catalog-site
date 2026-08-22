@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { useIsMobile } from '@/hooks/use-mobile';
 import OptionList, { PickOption } from '@/components/pick/OptionList';
-import PopularGrid from '@/components/pick/PopularGrid';
 import { matchRank, searchKeys } from '@/lib/pick-search';
 
 /**
@@ -15,8 +14,7 @@ import { matchRank, searchKeys } from '@/lib/pick-search';
  *    (раньше поиск жил в шторке на 256px, и его пришлось убрать);
  *  • на компьютере выпадающая панель шире поля и разложена в 2–3 колонки,
  *    так все марки видны почти без прокрутки;
- *  • сверху — часто выбираемые марки, ниже общий список с «липкими» буквами
- *    вместо прежней полоски A–Z, в которую было не попасть пальцем.
+ *  • порядок всегда алфавитный — привычнее всего искать глазами.
  */
 interface Props {
   id: string;
@@ -27,24 +25,18 @@ interface Props {
   emptyText?: string;
   disabled?: boolean;
   /**
-   * Длинный список: включает поиск, буквы-разделители и колонки.
+   * Длинный список: включает поиск и раскладку в колонки.
    * Для года не нужен — там всё умещается сразу.
    */
   alphabet?: boolean;
-  /** Марки, которые показываем плитками сверху */
-  popular?: string[];
+  /** Значок автомобиля у каждой строки — помогает узнать список марок */
+  carIcon?: boolean;
   /** Значение → сколько товаров под него */
   counts?: Record<string, number>;
   /** Поле стоит на тёмной плашке — светлый текст вместо чёрного */
   onDark?: boolean;
   onChange: (value: string) => void;
 }
-
-/** Первая буква названия: цифры и прочее сводим в «#». */
-const firstLetter = (value: string): string => {
-  const ch = value.trim().charAt(0).toUpperCase();
-  return /[A-ZА-ЯЁ]/.test(ch) ? ch : '#';
-};
 
 const SearchSelect = ({
   id,
@@ -55,7 +47,7 @@ const SearchSelect = ({
   emptyText = 'Ничего не найдено',
   disabled = false,
   alphabet = false,
-  popular = [],
+  carIcon = false,
   counts,
   onDark = false,
   onChange,
@@ -113,40 +105,6 @@ const SearchSelect = ({
   const items: PickOption[] = useMemo(
     () => filtered.map((o) => ({ value: o, count: counts?.[o] })),
     [filtered, counts],
-  );
-
-  /**
-   * Буквы-разделители нужны только алфавитному списку. Модели идут по числу
-   * товаров (у Toyota их 95, и ходовые должны быть сверху), при поиске —
-   * по точности совпадения. Там буквы шли бы вразнобой и мешали.
-   */
-  const alphabetical = useMemo(() => {
-    if (!alphabet || query.trim()) return false;
-    for (let i = 1; i < filtered.length; i += 1) {
-      if (firstLetter(filtered[i - 1]) > firstLetter(filtered[i])) return false;
-    }
-    return true;
-  }, [filtered, alphabet, query]);
-
-  /** Перед какими позициями рисуем букву-разделитель */
-  const letterAt = useMemo(() => {
-    if (!alphabetical) return {};
-    const map: Record<number, string> = {};
-    let prev = '';
-    filtered.forEach((o, i) => {
-      const l = firstLetter(o);
-      if (l !== prev) {
-        map[i] = l;
-        prev = l;
-      }
-    });
-    return map;
-  }, [filtered, alphabetical]);
-
-  /** Плитки популярных прячем, как только начали искать */
-  const popularShown = useMemo(
-    () => (query.trim() ? [] : popular.filter((p) => options.includes(p))),
-    [popular, options, query],
   );
 
   // При открытии подсвечиваем текущее значение
@@ -238,23 +196,13 @@ const SearchSelect = ({
         </div>
       )}
 
-      {popularShown.length > 0 && (
-        <PopularGrid items={popularShown} value={value} onPick={pick} />
-      )}
-
       <OptionList
         id={`${id}-list`}
         options={items}
         value={value}
         highlight={highlight}
-        letterAt={letterAt}
         showCount={showCount}
-        note={
-          /* Порядок не алфавитный — объясняем, почему список идёт так */
-          !alphabetical && !query.trim() && showCount && alphabet
-            ? 'Сверху — модели, под которые больше всего оборудования'
-            : undefined
-        }
+        carIcon={carIcon}
         emptyText={query.trim() ? `Ничего не нашлось по «${query.trim()}»` : emptyText}
         columns={alphabet && !isMobile}
         listRef={listRef}

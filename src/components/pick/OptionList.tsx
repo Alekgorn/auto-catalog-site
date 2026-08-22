@@ -1,4 +1,4 @@
-import { Fragment, RefObject } from 'react';
+import { RefObject } from 'react';
 import Icon from '@/components/ui/icon';
 
 export interface PickOption {
@@ -12,12 +12,10 @@ interface Props {
   options: PickOption[];
   value: string;
   highlight: number;
-  /** Буква перед элементом — рисуем «липкий» заголовок раздела */
-  letterAt: Record<number, string>;
   /** Показывать число товаров рядом с названием */
   showCount: boolean;
-  /** Подпись над списком — например, что сверху идут ходовые модели */
-  note?: string;
+  /** Значок автомобиля слева от названия */
+  carIcon?: boolean;
   emptyText: string;
   columns: boolean;
   listRef: RefObject<HTMLDivElement>;
@@ -26,20 +24,19 @@ interface Props {
 }
 
 /**
- * Список вариантов с «липкими» буквами.
+ * Ровный алфавитный список вариантов.
  *
- * Буква держится у верхнего края, пока идёт её раздел — так на длинном
- * списке всегда понятно, где находишься. Это заменяет прежнюю полоску
- * букв сбоку: в неё было не попасть пальцем на телефоне.
+ * Без заголовков-букв и групп: сплошной перечень по алфавиту привычнее —
+ * глаз сам находит нужное место. Разделители только дробили список, особенно
+ * там, где на букву приходится одна-единственная марка.
  */
 const OptionList = ({
   id,
   options,
   value,
   highlight,
-  letterAt,
   showCount,
-  note,
+  carIcon = false,
   emptyText,
   columns,
   listRef,
@@ -56,55 +53,54 @@ const OptionList = ({
         : 'flex-1 overflow-y-auto overscroll-contain'
     }
   >
-    {note && options.length > 0 && (
-      <div className="col-span-full border-b border-border px-4 py-1.5 text-[0.74rem] text-muted-foreground">
-        {note}
-      </div>
-    )}
     {options.length === 0 ? (
       <div className="col-span-full px-4 py-6 text-[0.9rem] text-muted-foreground">
         {emptyText}
       </div>
     ) : (
       options.map((o, i) => (
-        <Fragment key={o.value}>
-          {letterAt[i] && (
-            <div
-              className="sticky top-0 z-10 col-span-full border-b border-border bg-surface px-4 py-1.5 font-head text-[0.72rem] font-bold uppercase tracking-[0.14em] text-muted-foreground"
-              aria-hidden
-            >
-              {letterAt[i]}
-            </div>
+        <button
+          key={o.value}
+          type="button"
+          role="option"
+          aria-selected={o.value === value}
+          data-index={i}
+          onMouseEnter={() => onHighlight(i)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onPick(o.value);
+          }}
+          className={`flex w-full items-center gap-2.5 px-4 py-3.5 text-left text-[0.95rem] transition-colors ${
+            i === highlight
+              ? 'bg-primary text-primary-foreground'
+              : 'text-foreground hover:bg-muted'
+          }`}
+        >
+          {carIcon && (
+            <Icon
+              name="Car"
+              size={16}
+              className={`flex-none ${
+                i === highlight
+                  ? 'text-primary-foreground/80'
+                  : 'text-muted-foreground'
+              }`}
+            />
           )}
-          <button
-            type="button"
-            role="option"
-            aria-selected={o.value === value}
-            data-index={i}
-            onMouseEnter={() => onHighlight(i)}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              onPick(o.value);
-            }}
-            className={`flex w-full items-center justify-between gap-2 px-4 py-3.5 text-left text-[0.95rem] transition-colors ${
-              i === highlight
-                ? 'bg-primary text-primary-foreground'
-                : 'text-foreground hover:bg-muted'
-            }`}
-          >
-            <span className="min-w-0 flex-1 truncate">{o.value}</span>
-            {showCount && !!o.count && (
-              <span
-                className={`flex-none text-[0.78rem] tabular-nums ${
-                  i === highlight ? 'text-primary-foreground/80' : 'text-muted-foreground'
-                }`}
-              >
-                {o.count}
-              </span>
-            )}
-            {o.value === value && <Icon name="Check" size={15} className="flex-none" />}
-          </button>
-        </Fragment>
+          <span className="min-w-0 flex-1 truncate">{o.value}</span>
+          {showCount && !!o.count && (
+            <span
+              className={`flex-none text-[0.78rem] tabular-nums ${
+                i === highlight
+                  ? 'text-primary-foreground/80'
+                  : 'text-muted-foreground'
+              }`}
+            >
+              {o.count}
+            </span>
+          )}
+          {o.value === value && <Icon name="Check" size={15} className="flex-none" />}
+        </button>
       ))
     )}
   </div>

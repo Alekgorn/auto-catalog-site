@@ -30,7 +30,7 @@ const VehicleSelector = ({
   onDark = false,
 }: Props) => {
   const { brands: BRANDS } = useCatalog();
-  const { popular, brandCounts, models, modelCounts } = useBrandPicker(brand);
+  const { brandCounts, models, modelCounts } = useBrandPicker(brand);
 
   /** Пока машина не названа целиком, подбирать нечего */
   const ready = Boolean(brand && model && year);
@@ -56,7 +56,7 @@ const VehicleSelector = ({
           options={BRANDS.map((b) => b.name)}
           placeholder="Выберите марку"
           alphabet
-          popular={popular}
+          carIcon
           counts={brandCounts}
           emptyText="Такой марки нет — напишите нам"
           onDark={onDark}
@@ -76,6 +76,7 @@ const VehicleSelector = ({
           options={models}
           placeholder={brand ? 'Выберите модель' : 'Сначала марка'}
           alphabet
+          carIcon
           counts={modelCounts}
           emptyText="Сначала выберите марку"
           onDark={onDark}
