@@ -313,7 +313,6 @@ const SearchPage = () => {
                 activeCount={category ? 1 : 0}
                 resultCount={list.length}
                 hideOn={category}
-                storageKey={`search:${query}`}
                 scrollTargetId="catalog-top"
               >
                 <div className="flex flex-col gap-2">

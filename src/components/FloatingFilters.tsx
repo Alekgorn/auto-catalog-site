@@ -14,90 +14,61 @@ interface Props {
    * и панель убегала бы из-под пальца.
    */
   hideOn?: string;
-  /**
-   * Своё имя страницы. По нему запоминаем, что панель здесь уже
-   * показывали — второй раз она сама не выедет.
-   */
-  storageKey?: string;
   /** Куда прокрутить после выбора — начало списка товаров */
   scrollTargetId?: string;
 }
 
-/** Сколько панель висит открытой при заходе на страницу */
-const SHOW_MS = 3000;
 /** Длительность отъезда за край — столько же держим панель в разметке */
 const SLIDE_MS = 400;
-/**
- * Сколько помним, что панель уже показывали. Полчаса: за это время
- * человек успевает походить по каталогу и не устать от подсказки,
- * а вернувшись позже — снова увидит, где лежат фильтры.
- */
-const SEEN_MS = 30 * 60 * 1000;
-const SEEN_KEY = 'shtatno.filters-seen';
 
-/** Показывали ли панель на этой странице недавно */
-const wasSeen = (key: string): boolean => {
-  if (typeof window === 'undefined' || !key) return false;
-  try {
-    const raw = sessionStorage.getItem(SEEN_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    const at = map?.[key];
-    return typeof at === 'number' && Date.now() - at < SEEN_MS;
-  } catch {
-    return false;
-  }
-};
-
-const markSeen = (key: string) => {
-  if (typeof window === 'undefined' || !key) return;
-  try {
-    const raw = sessionStorage.getItem(SEEN_KEY);
-    const map = raw ? JSON.parse(raw) : {};
-    map[key] = Date.now();
-    sessionStorage.setItem(SEEN_KEY, JSON.stringify(map));
-  } catch {
-    /* приватный режим — просто не запоминаем */
-  }
-};
+/** Насколько нужно проскроллить, чтобы вкладка спряталась или вернулась */
+const SCROLL_STEP = 60;
 
 /**
  * Фильтры плавающей панелью поверх каталога.
  *
  * Раньше фильтры занимали четверть ширины постоянной колонкой — на товары
  * оставалось меньше места, а на телефоне они и вовсе раздвигали список.
- * Теперь панель показывается при первом заходе на пару секунд, уезжает за
- * правый край в узкую вкладку «Фильтр» и возвращается по нажатию. Каталог
- * при этом занимает всю ширину.
+ * Теперь это узкая вкладка «Фильтр» у левого края, панель открывается по
+ * нажатию, а каталог занимает всю ширину.
+ *
+ * Сама панель при заходе не выезжает: она перекрывала выбор авто как раз
+ * в тот момент, когда человек только пришёл на страницу. На телефоне
+ * вкладка вдобавок прячется, пока листают вниз, и возвращается при
+ * движении вверх — иначе она висит поверх цен и названий товаров.
  */
 const FloatingFilters = ({
   children,
   activeCount = 0,
   resultCount,
   hideOn,
-  storageKey = '',
   scrollTargetId,
 }: Props) => {
-  /* Заходили сюда недавно — панель не выкатываем, сразу прячем во вкладку */
-  const [open, setOpen] = useState(() => !wasSeen(storageKey));
+  /* Панель открывается только по нажатию — сама не выезжает */
+  const [open, setOpen] = useState(false);
   /** Панель ещё в разметке, пока доигрывает анимация отъезда */
-  const [mounted, setMounted] = useState(true);
-  /** Первый показ — тот, что сам прячется; дальше закрывает только человек */
-  const auto = useRef(true);
+  const [mounted, setMounted] = useState(false);
+  /** Вкладка спрятана: листают вниз, читают товары */
+  const [tabHidden, setTabHidden] = useState(false);
 
-  /* Показали при заходе и убрали — дальше панель ждёт нажатия на вкладку */
+  /**
+   * Листают вниз — убираем вкладку с глаз: она висит поверх карточек и
+   * закрывает цену с названием. Повели вверх — возвращаем. На широком
+   * экране прятать незачем, там места хватает.
+   */
   useEffect(() => {
-    if (!open) {
-      auto.current = false;
-      return;
-    }
-    markSeen(storageKey);
-    const t = setTimeout(() => {
-      auto.current = false;
-      setOpen(false);
-    }, SHOW_MS);
-    return () => clearTimeout(t);
-    // Только на первом заходе: дальше панелью управляет человек
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(max-width: 767px)').matches) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (Math.abs(y - last) < SCROLL_STEP) return;
+      // У самого верха страницы вкладка нужна всегда
+      setTabHidden(y > last && y > 200);
+      last = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   /* Уехавшую панель убираем из разметки — она не должна ловить нажатия */
@@ -114,19 +85,13 @@ const FloatingFilters = ({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        auto.current = false;
-        setOpen(false);
-      }
+      if (e.key === 'Escape') setOpen(false);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const close = () => {
-    auto.current = false;
-    setOpen(false);
-  };
+  const close = () => setOpen(false);
 
   /**
    * Выбрали категорию — прячем панель и поднимаем к началу списка.
@@ -139,7 +104,6 @@ const FloatingFilters = ({
       firstHide.current = false;
       return;
     }
-    auto.current = false;
     setOpen(false);
 
     if (!scrollTargetId) return;
@@ -155,15 +119,16 @@ const FloatingFilters = ({
 
   return (
     <>
-      {/* Вкладка у правого края — вернуть панель. Прячем, пока она открыта */}
+      {/*
+        Вкладка у левого края. На телефоне сидит ниже середины: там она не
+        попадает ни на панель подбора авто сверху, ни на нижние панели
+        сборки и сравнения. Прячется, пока панель открыта или листают вниз.
+      */}
       <button
-        onClick={() => {
-          auto.current = false;
-          setOpen(true);
-        }}
+        onClick={() => setOpen(true)}
         aria-label="Открыть фильтры"
-        className={`fixed left-0 top-1/2 z-[55] flex -translate-y-1/2 flex-col items-center gap-2 rounded-r-2xl border-2 border-l-0 border-primary-foreground/30 bg-primary px-2.5 py-5 text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300 hover:px-3.5 ${
-          open
+        className={`fixed left-0 top-[72%] z-[55] flex -translate-y-1/2 flex-col items-center gap-2 rounded-r-2xl border-2 border-l-0 border-primary-foreground/30 bg-primary px-2.5 py-5 text-primary-foreground shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-all duration-300 hover:px-3.5 md:top-1/2 ${
+          open || tabHidden
             ? 'pointer-events-none -translate-x-full opacity-0'
             : 'translate-x-0 opacity-100'
         }`}

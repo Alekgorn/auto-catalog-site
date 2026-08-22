@@ -293,7 +293,6 @@ const CategoryPage = () => {
         activeCount={activeCount}
         resultCount={list.length}
         hideOn={filters.categories.join('|')}
-        storageKey={`category:${category}`}
         scrollTargetId="catalog-top"
       >
         {filtersNode}
