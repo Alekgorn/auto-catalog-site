@@ -17,6 +17,15 @@ interface Props {
   onToggleActive: (product: AdminProduct) => void;
   onEdit: (product: AdminProduct) => void;
   onRemove: (product: AdminProduct) => void;
+  /** Создать заготовку нового товара на основе этого */
+  onDuplicate: (product: AdminProduct) => void;
+  /** Выбранная категория; пустая строка — показаны все товары */
+  category: string;
+  onCategoryChange: (value: string) => void;
+  /** Сколько товаров в каждой категории — цифры на кнопках */
+  categoryCounts: Record<string, number>;
+  /** Сколько товаров всего — цифра на кнопке «Все» */
+  totalCount: number;
   categories: string[];
   bulkBusy: boolean;
   onBulkMove: (category: string) => void;
@@ -40,6 +49,11 @@ const AdminProductsTab = ({
   onToggleActive,
   onEdit,
   onRemove,
+  onDuplicate,
+  category,
+  onCategoryChange,
+  categoryCounts,
+  totalCount,
   categories,
   bulkBusy,
   onBulkMove,
@@ -63,6 +77,42 @@ const AdminProductsTab = ({
         Добавить товар
       </button>
     </div>
+
+    {/*
+      Раньше все товары лежали одним списком — среди тысячи позиций нужную
+      искали только поиском. Теперь сверху раскладка по каталогам: видно,
+      сколько товаров в каждом, и можно работать с одним разделом.
+    */}
+    {categories.length > 0 && (
+      <div className="mb-5 flex flex-wrap gap-2 border-b border-border pb-5">
+        <button
+          onClick={() => onCategoryChange("")}
+          className={`px-3.5 py-2 text-[0.75rem] uppercase tracking-[0.08em] transition-colors ${
+            category === ""
+              ? "bg-foreground text-background"
+              : "border border-border text-muted-foreground hover:border-primary hover:text-primary"
+          }`}
+        >
+          Все
+          <span className="ml-2 opacity-60">{totalCount}</span>
+        </button>
+
+        {categories.map((c) => (
+          <button
+            key={c}
+            onClick={() => onCategoryChange(c)}
+            className={`px-3.5 py-2 text-[0.75rem] uppercase tracking-[0.08em] transition-colors ${
+              category === c
+                ? "bg-foreground text-background"
+                : "border border-border text-muted-foreground hover:border-primary hover:text-primary"
+            }`}
+          >
+            {c}
+            <span className="ml-2 opacity-60">{categoryCounts[c] ?? 0}</span>
+          </button>
+        ))}
+      </div>
+    )}
 
     {loading ? (
       <div className="py-20 text-center text-muted-foreground">
@@ -133,6 +183,14 @@ const AdminProductsTab = ({
               className="border border-foreground px-4 py-2 text-[0.75rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
             >
               Изменить
+            </button>
+            <button
+              onClick={() => onDuplicate(p)}
+              title="Создать копию — заготовку для похожего товара"
+              aria-label={`Копировать ${p.name}`}
+              className="border border-border px-3 py-2 text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <Icon name="Copy" size={16} />
             </button>
             <button
               onClick={() => onRemove(p)}

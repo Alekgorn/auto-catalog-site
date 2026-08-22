@@ -36,6 +36,8 @@ const Admin = () => {
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [tab, setTab] = useState<AdminTab>("orders");
   const [search, setSearch] = useState("");
+  /** Выбранная категория в списке товаров; пустая строка — показываем все */
+  const [category, setCategory] = useState("");
   const [newOrders, setNewOrders] = useState(0);
   const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
   const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>(
@@ -208,6 +210,28 @@ const Admin = () => {
     await save({ ...product, isActive: !product.isActive });
   };
 
+  /**
+   * Копия товара — заготовка для похожей позиции.
+   *
+   * Ничего не сохраняем сразу: открываем редактор с заполненными полями,
+   * чтобы человек поправил название и цену и сам решил, сохранять ли.
+   * Артикул и адрес не переносим — они должны быть свои, сервер выдаст
+   * новые. Копия создаётся скрытой: пока её не доделали, ей нечего
+   * делать на сайте.
+   */
+  const duplicate = (product: AdminProduct) => {
+    const { id: _id, slug: _slug, sku: _sku, ...rest } = product;
+    setEditing({
+      ...rest,
+      name: `${product.name} — копия`,
+      isActive: false,
+    });
+    toast({
+      title: "Копия готова",
+      description: "Поменяйте название и цену, затем сохраните",
+    });
+  };
+
   const saveBrands = async (next: AdminBrand[]) => {
     const res = await adminFetch("?action=brands", {
       method: "PUT",
@@ -223,18 +247,28 @@ const Admin = () => {
 
   const filtered = useMemo(
     () =>
-      products.filter((p) =>
-        `${p.name} ${p.category} ${p.sku ?? ""}`
+      products.filter((p) => {
+        if (category && p.category !== category) return false;
+        return `${p.name} ${p.category} ${p.sku ?? ""}`
           .toLowerCase()
-          .includes(search.toLowerCase()),
-      ),
-    [products, search],
+          .includes(search.toLowerCase());
+      }),
+    [products, search, category],
   );
 
-  // Сменили вкладку или поиск — выделение больше не относится к тому, что на экране
+  /** Сколько товаров в каждой категории — цифры на кнопках отбора */
+  const categoryCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    products.forEach((p) => {
+      if (p.category) map[p.category] = (map[p.category] ?? 0) + 1;
+    });
+    return map;
+  }, [products]);
+
+  // Сменили вкладку, поиск или категорию — выделение больше не относится к тому, что на экране
   useEffect(() => {
     setSelected([]);
-  }, [tab, search]);
+  }, [tab, search, category]);
 
   const visibleIds = filtered
     .map((p) => p.id)
@@ -391,6 +425,11 @@ const Admin = () => {
             onToggleActive={toggleActive}
             onEdit={setEditing}
             onRemove={remove}
+            onDuplicate={duplicate}
+            category={category}
+            onCategoryChange={setCategory}
+            categoryCounts={categoryCounts}
+            totalCount={products.length}
             categories={categories}
             bulkBusy={bulkBusy}
             onBulkMove={(category) =>
