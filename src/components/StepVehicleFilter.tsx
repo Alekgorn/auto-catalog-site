@@ -100,7 +100,7 @@ const StepVehicleFilter = ({
             options={BRANDS.map((b) => b.name)}
             placeholder="Выберите марку"
             alphabet
-            carIcon
+            brandMark
             emptyText="Такой марки нет — напишите нам"
             onChange={(b) => onChange(b ? { brand: b } : null)}
           />
@@ -114,7 +114,6 @@ const StepVehicleFilter = ({
             options={models}
             placeholder={brand ? "Выберите модель" : "Сначала марка"}
             alphabet
-            carIcon
             emptyText="Сначала выберите марку"
             onChange={(m) => brand && onChange({ brand, model: m || undefined })}
           />

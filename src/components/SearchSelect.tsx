@@ -29,10 +29,8 @@ interface Props {
    * Для года не нужен — там всё умещается сразу.
    */
   alphabet?: boolean;
-  /** Значок автомобиля у каждой строки — помогает узнать список марок */
-  carIcon?: boolean;
-  /** Значение → сколько товаров под него */
-  counts?: Record<string, number>;
+  /** Цветной значок марки у каждой строки — помогает найти нужную глазом */
+  brandMark?: boolean;
   /** Поле стоит на тёмной плашке — светлый текст вместо чёрного */
   onDark?: boolean;
   onChange: (value: string) => void;
@@ -47,8 +45,7 @@ const SearchSelect = ({
   emptyText = 'Ничего не найдено',
   disabled = false,
   alphabet = false,
-  carIcon = false,
-  counts,
+  brandMark = false,
   onDark = false,
   onChange,
 }: Props) => {
@@ -103,8 +100,8 @@ const SearchSelect = ({
   }, [options, query]);
 
   const items: PickOption[] = useMemo(
-    () => filtered.map((o) => ({ value: o, count: counts?.[o] })),
-    [filtered, counts],
+    () => filtered.map((o) => ({ value: o })),
+    [filtered],
   );
 
   // При открытии подсвечиваем текущее значение
@@ -149,8 +146,6 @@ const SearchSelect = ({
       setOpen(false);
     }
   };
-
-  const showCount = !!counts;
 
   const panel = (
     <>
@@ -201,8 +196,7 @@ const SearchSelect = ({
         options={items}
         value={value}
         highlight={highlight}
-        showCount={showCount}
-        carIcon={carIcon}
+        brandMark={brandMark}
         emptyText={query.trim() ? `Ничего не нашлось по «${query.trim()}»` : emptyText}
         columns={alphabet && !isMobile}
         listRef={listRef}
