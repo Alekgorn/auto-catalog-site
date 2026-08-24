@@ -27,7 +27,7 @@ const CompareBar = () => {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <span className="flex flex-none items-center gap-2 font-head text-[0.78rem] font-bold uppercase tracking-[0.08em]">
-              <Icon name="GitCompare" size={16} className="text-primary" />
+              <Icon name="Scale" size={16} className="text-primary" />
               <span className="hidden sm:inline">Сравнение</span>
             </span>
 

@@ -111,7 +111,7 @@ const ComparePage = () => {
         {picked.length === 0 ? (
           <div className="py-16 text-center">
             <Icon
-              name="GitCompare"
+              name="Scale"
               size={40}
               className="mx-auto text-muted-foreground"
             />
@@ -119,7 +119,7 @@ const ComparePage = () => {
               Пока нечего сравнивать
             </div>
             <p className="mx-auto mt-3 max-w-[34em] text-[0.9rem] leading-relaxed text-muted-foreground">
-              Отметьте значком весов пару товаров в каталоге — покажем их
+              Нажмите «Сравнить» на паре товаров в каталоге — покажем их
               характеристики рядом. Сравнивать можно модели одного раздела:
               у магнитолы и регистратора нет общих параметров.
             </p>
