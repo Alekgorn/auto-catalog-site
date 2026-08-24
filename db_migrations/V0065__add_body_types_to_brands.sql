@@ -1,0 +1,1 @@
+ALTER TABLE brands ADD COLUMN IF NOT EXISTS model_bodies jsonb NOT NULL DEFAULT '{}'::jsonb;
