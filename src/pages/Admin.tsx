@@ -23,6 +23,7 @@ import AdminTabs, { AdminTab } from "@/components/admin/AdminTabs";
 import AdminGuidesTab from "@/components/admin/AdminGuidesTab";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
 import FitsCheckPanel from "@/components/admin/FitsCheckPanel";
+import MissingFitPanel from "@/components/admin/MissingFitPanel";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -40,6 +41,8 @@ const Admin = () => {
   /** Выбранная категория в списке товаров; пустая строка — показываем все */
   const [category, setCategory] = useState("");
   const [newOrders, setNewOrders] = useState(0);
+  /** Машины, под которые не собрался комплект — счётчик на вкладке */
+  const [missingFits, setMissingFits] = useState(0);
   const [catalogCategories, setCatalogCategories] = useState<string[]>([]);
   const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>(
     {},
@@ -73,6 +76,7 @@ const Admin = () => {
       setProducts(data.products ?? []);
       setBrands(data.brands ?? []);
       setNewOrders(data.newOrders ?? 0);
+      setMissingFits(data.missingFits ?? 0);
       await loadGuides();
       await adminFetch("?action=categories")
         .then((r) => r.json())
@@ -385,6 +389,7 @@ const Admin = () => {
           brandsCount={brands.length}
           categoriesCount={categories.length}
           fitsIssues={fitsIssues}
+          missingFits={missingFits}
         />
 
         {tab === "orders" && <OrdersPanel />}
@@ -413,6 +418,10 @@ const Admin = () => {
             brands={brands}
             onEdit={setEditing}
           />
+        )}
+
+        {tab === "missing-fit" && (
+          <MissingFitPanel onCount={setMissingFits} />
         )}
 
         {tab === "site" && <SitePanel onSaved={load} />}

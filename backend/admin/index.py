@@ -1378,6 +1378,46 @@ def handler(event: dict, context) -> dict:
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
 
+        if action == 'missing-fit':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT id, brand, model, year, scenario, contact, hits, "
+                    f"created_at, updated_at FROM {schema()}.missing_fit_requests "
+                    f"ORDER BY updated_at DESC LIMIT 500"
+                )
+                items = [
+                    {
+                        'id': r['id'],
+                        'brand': r['brand'],
+                        'model': r['model'],
+                        'year': r['year'],
+                        'scenario': r['scenario'],
+                        'contact': r['contact'],
+                        'hits': r['hits'],
+                        'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
+                        'updatedAt': r['updated_at'].isoformat() if r['updated_at'] else None,
+                    }
+                    for r in cur.fetchall()
+                ]
+                cur.close()
+                return resp(200, {'items': items})
+
+            if method == 'DELETE':
+                rid = params.get('id', '')
+                if not str(rid).isdigit():
+                    cur.close()
+                    return resp(400, {'error': 'Не указана запись'})
+                cur.execute(
+                    f"DELETE FROM {schema()}.missing_fit_requests WHERE id = {int(rid)}"
+                )
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
+
         if action == 'dealers':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -1735,8 +1775,17 @@ def handler(event: dict, context) -> dict:
                 f"SELECT COUNT(*) AS c FROM {schema()}.orders WHERE status = 'new'"
             )
             new_orders = cur.fetchone()['c']
+            cur.execute(
+                f"SELECT COUNT(*) AS c FROM {schema()}.missing_fit_requests"
+            )
+            missing_fits = cur.fetchone()['c']
             cur.close()
-            return resp(200, {'products': products, 'brands': brands, 'newOrders': new_orders})
+            return resp(200, {
+                'products': products,
+                'brands': brands,
+                'newOrders': new_orders,
+                'missingFits': missing_fits,
+            })
 
         if method == 'DELETE':
             pid = params.get('id', '')

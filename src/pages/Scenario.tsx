@@ -593,6 +593,7 @@ const ScenarioPage = () => {
         ) : scenario.kit ? (
           <ScenarioKit
             kit={scenario.kit}
+            scenarioSlug={scenario.slug}
             products={products}
             vehicle={vehicle}
             brandsCount={brands.length}

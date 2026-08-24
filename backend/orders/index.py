@@ -35,6 +35,57 @@ def handler(event: dict, context) -> dict:
     except json.JSONDecodeError:
         body = {}
 
+    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+
+    # Машина, под которую не собрался комплект.
+    # Пишем каждый показ заглушки, даже без контакта: владельцу магазина
+    # важно видеть, какие авто вообще ищут, а не только оставленные заявки.
+    if str(body.get('kind', '')) == 'missing-fit':
+        brand = str(body.get('brand', '')).strip()[:64]
+        model = str(body.get('model', '')).strip()[:96]
+        if not brand or not model:
+            return {
+                'statusCode': 400,
+                'headers': CORS,
+                'body': json.dumps({'error': 'Не указана машина'}, ensure_ascii=False),
+            }
+        try:
+            year = int(body.get('year') or 0)
+        except (TypeError, ValueError):
+            year = 0
+        contact = str(body.get('contact', '')).strip()[:128]
+        scenario = str(body.get('scenario', '')).strip()[:96]
+
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                f"INSERT INTO {schema}.missing_fit_requests "
+                f"(brand, model, year, scenario, contact) "
+                f"VALUES ({q(brand)}, {q(model)}, {year}, {q(scenario)}, {q(contact)}) "
+                f"ON CONFLICT (brand, model, year) DO UPDATE SET "
+                f"hits = {schema}.missing_fit_requests.hits + 1, "
+                # Контакт не затираем пустым: заход без заявки не должен
+                # стирать оставленный ранее телефон
+                f"contact = CASE WHEN {q(contact)} = '' "
+                f"THEN {schema}.missing_fit_requests.contact ELSE {q(contact)} END, "
+                f"scenario = CASE WHEN {q(scenario)} = '' "
+                f"THEN {schema}.missing_fit_requests.scenario ELSE {q(scenario)} END, "
+                f"updated_at = NOW() RETURNING id"
+            )
+            row_id = cur.fetchone()[0]
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
+
+        return {
+            'statusCode': 200,
+            'headers': CORS,
+            'isBase64Encoded': False,
+            'body': json.dumps({'ok': True, 'id': row_id}, ensure_ascii=False),
+        }
+
     name = str(body.get('name', '')).strip()
     phone = str(body.get('phone', '')).strip()
     if len(name) < 2:
@@ -61,7 +112,6 @@ def handler(event: dict, context) -> dict:
         total += price * qty
 
     kind = 'cart' if len(items) > 1 else 'single'
-    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
 
     conn = psycopg2.connect(os.environ['DATABASE_URL'])
     try:

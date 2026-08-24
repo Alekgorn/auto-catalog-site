@@ -8,6 +8,8 @@ import { FRAMES_CATEGORY, hasFramesForVehicle } from "@/lib/kit-filter";
 interface Props {
   /** Шаги сборки комплекта — есть не у каждого сценария */
   kit: NonNullable<Scenario["kit"]>;
+  /** Адрес сценария — попадёт в отчёт по машинам без решения */
+  scenarioSlug?: string;
   products: Product[];
   vehicle: Vehicle | null;
   brandsCount: number;
@@ -38,6 +40,7 @@ interface Props {
  */
 const ScenarioKit = ({
   kit,
+  scenarioSlug,
   products,
   vehicle,
   brandsCount,
@@ -70,7 +73,7 @@ const ScenarioKit = ({
   if (blocked && vehicle) {
     return (
       <div className="relative py-6">
-        <KitNoFrames vehicle={vehicle} />
+        <KitNoFrames vehicle={vehicle} scenario={scenarioSlug} />
 
         {/* Шаги остаются под заглушкой — видно, что именно недоступно */}
         <div
