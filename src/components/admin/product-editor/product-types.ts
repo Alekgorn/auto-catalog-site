@@ -1,4 +1,4 @@
-import { GuideBlock } from '@/data/catalog';
+import { GuideBlock, FitMode } from '@/data/catalog';
 import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
 
 export interface AdminProduct {
@@ -30,6 +30,11 @@ export interface AdminProduct {
   /** Заголовок дополнительного раздела — пустой прячет весь раздел */
   extraTitle: string;
   fits: Record<string, string[]>;
+  /**
+   * Как подбирается: 'vehicle' — по машине, 'universal' — подходит любой.
+   * Пусто — берём умолчание категории.
+   */
+  fitMode?: '' | FitMode;
   /** Сколько штук на складе. 0 — только под заказ */
   stock?: number;
   /** Что писать покупателю, когда склад пуст */
@@ -63,6 +68,7 @@ export const emptyProduct = (): AdminProduct => ({
   extra: [],
   extraTitle: '',
   fits: {},
+  fitMode: '',
   sortOrder: 100,
   isActive: true,
 });

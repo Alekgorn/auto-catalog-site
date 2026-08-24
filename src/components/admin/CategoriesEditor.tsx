@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { FitMode } from '@/data/catalog';
 
 interface Row {
   name: string;
@@ -10,6 +11,8 @@ interface Row {
   products: number;
   /** Характеристики, общие для товаров этой категории */
   specFields: string[];
+  /** Как по умолчанию подбираются товары этой категории */
+  fitMode: FitMode;
 }
 
 interface Props {
@@ -30,6 +33,7 @@ const CategoriesEditor = ({ onSaved }: Props) => {
           name: string;
           products: number;
           specFields?: string[];
+          fitMode?: FitMode;
         }[];
         setRows(
           list.map((c) => ({
@@ -37,6 +41,7 @@ const CategoriesEditor = ({ onSaved }: Props) => {
             oldName: c.name,
             products: c.products,
             specFields: c.specFields ?? [],
+            fitMode: c.fitMode ?? 'universal',
           })),
         );
       })
@@ -97,6 +102,7 @@ const CategoriesEditor = ({ onSaved }: Props) => {
           name: r.name.trim(),
           oldName: r.oldName,
           specFields: r.specFields.filter((f) => f.trim()),
+          fitMode: r.fitMode,
         })),
       }),
     });
@@ -132,7 +138,13 @@ const CategoriesEditor = ({ onSaved }: Props) => {
             onClick={() =>
               setRows((l) => [
                 ...l,
-                { name: '', oldName: '', products: 0, specFields: [] },
+                {
+                  name: '',
+                  oldName: '',
+                  products: 0,
+                  specFields: [],
+                  fitMode: 'universal',
+                },
               ])
             }
             className="mt-6 flex items-center gap-2 border border-foreground px-5 py-3 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
@@ -187,6 +199,35 @@ const CategoriesEditor = ({ onSaved }: Props) => {
                     <Icon name="Trash2" size={15} />
                   </button>
                 </div>
+                </div>
+
+                <div className="ml-10 mt-3 flex flex-wrap items-center gap-2">
+                  <span className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
+                    Подбор
+                  </span>
+                  {(
+                    [
+                      ['vehicle', 'По машине'],
+                      ['universal', 'Любой машине'],
+                    ] as [FitMode, string][]
+                  ).map(([m, label]) => (
+                    <button
+                      key={m}
+                      onClick={() => setAt(i, { fitMode: m })}
+                      title={
+                        m === 'vehicle'
+                          ? 'Товары делаются под конкретную марку, модель и год'
+                          : 'Товары подходят любой машине, модели отмечать не нужно'
+                      }
+                      className={`border px-3 py-1.5 text-[0.78rem] transition-colors ${
+                        r.fitMode === m
+                          ? 'border-primary bg-primary text-primary-foreground'
+                          : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
 
                 <div className="ml-10 mt-2">
