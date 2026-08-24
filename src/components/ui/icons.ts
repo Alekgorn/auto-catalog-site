@@ -92,6 +92,7 @@ import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Save from 'lucide-react/dist/esm/icons/save';
 import Search from 'lucide-react/dist/esm/icons/search';
 import GitCompare from 'lucide-react/dist/esm/icons/git-compare';
+import Scale from 'lucide-react/dist/esm/icons/scale';
 import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
 import Send from 'lucide-react/dist/esm/icons/send';
 import Settings from 'lucide-react/dist/esm/icons/settings';
@@ -208,6 +209,7 @@ export const ICONS: Record<string, FC<LucideProps>> = {
   Save,
   Search,
   GitCompare,
+  Scale,
   Maximize2,
   Send,
   Settings,

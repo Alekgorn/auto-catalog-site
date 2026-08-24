@@ -56,9 +56,17 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const chosen = onPick ? !!picked : inCart(product.id);
 
   /* Сравнение: отмечаем товар, чтобы потом свести характеристики в таблицу */
-  const { toggle: toggleCompare, has: inCompare, canAdd } = useCompare();
+  const {
+    toggle: toggleCompare,
+    has: inCompare,
+    canAdd,
+    category: compareCategory,
+    ids: compareIds,
+  } = useCompare();
   const comparing = inCompare(product.id);
   const compareBlocked = !canAdd(product);
+  // Список переполнен — это другая причина отказа, и объяснять её надо иначе
+  const compareFull = compareBlocked && compareCategory === product.category;
 
   /**
    * Характеристики под названием — то, ради чего покупатель раньше заходил
@@ -155,8 +163,12 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           </span>
         )}
 
-        {/* Сравнение — значком в углу фото: кнопкой внизу карточки он
-            конкурировал бы с «В заказ», а нужен заметно реже */}
+        {/* Сравнение — плашкой с подписью в углу фото.
+            Раньше стоял голый значок 32×32: покупатель его просто не замечал,
+            а по картинке нельзя догадаться, что она делает. Слово решает
+            больше любого размера иконки, поэтому текст рядом со значком.
+            Кнопкой внизу карточки сравнение конкурировало бы с «В корзину»,
+            а нужно оно заметно реже */}
         <span
           role="button"
           tabIndex={0}
@@ -165,10 +177,12 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           }
           title={
             compareBlocked
-              ? 'Сравнивать можно товары одного раздела'
+              ? compareFull
+                ? `Уже отложено ${compareIds.length} — больше не помещается`
+                : `Сейчас сравниваются другие товары: ${compareCategory}`
               : comparing
-                ? 'В сравнении'
-                : 'Добавить к сравнению'
+                ? 'Убрать из сравнения'
+                : 'Отложить для сравнения характеристик'
           }
           onClick={(e) => {
             e.stopPropagation();
@@ -180,15 +194,16 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             e.stopPropagation();
             if (!compareBlocked) toggleCompare(product);
           }}
-          className={`absolute left-2 top-2 flex h-8 w-8 items-center justify-center border transition-colors sm:top-3 ${
+          className={`absolute left-2 top-2 flex items-center gap-1.5 border px-2 py-1.5 text-[0.68rem] font-bold uppercase leading-none tracking-[0.04em] transition-colors sm:top-3 sm:text-[0.72rem] ${
             comparing
               ? 'border-primary bg-primary text-primary-foreground'
               : compareBlocked
                 ? 'cursor-not-allowed border-border bg-background/80 text-muted-foreground/50'
-                : 'border-border bg-background/85 text-foreground hover:border-primary hover:text-primary'
+                : 'border-border bg-background/90 text-foreground hover:border-primary hover:bg-primary hover:text-primary-foreground'
           }`}
         >
-          <Icon name={comparing ? "Check" : "GitCompare"} size={15} />
+          <Icon name={comparing ? 'Check' : 'Scale'} size={14} />
+          {comparing ? 'В сравнении' : 'Сравнить'}
         </span>
 
         {/* На фото — только ответ про ВАШУ машину. «Для всех авто» и
