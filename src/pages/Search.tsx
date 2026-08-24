@@ -446,7 +446,7 @@ const SearchPage = () => {
                   {visible.map((h, i) => (
                     <Fragment key={h.product.id}>
                       {i === fit.exact.length && fit.universal.length > 0 && (
-                        <UniversalDivider count={fit.universal.length} />
+                        <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
                       )}
                       <ProductCard product={h.product} vehicle={vehicle} />
                     </Fragment>

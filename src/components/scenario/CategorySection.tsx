@@ -72,7 +72,7 @@ const CategorySection = ({
           <Fragment key={h.product.id}>
             {/* Граница между «точно встанет» и «подойдёт почти всем» */}
             {i === exactCount && exactCount < visible.length && (
-              <UniversalDivider count={items.length - exactCount} />
+              <UniversalDivider count={items.length - exactCount} vehicle={vehicle} />
             )}
             <ProductCard product={h.product} vehicle={vehicle} />
           </Fragment>
