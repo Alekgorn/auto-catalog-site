@@ -2,6 +2,8 @@ import KitSection from "@/components/kit/KitSection";
 import KitRecommend from "@/components/kit/KitRecommend";
 import { Product, Vehicle } from "@/data/catalog";
 import { Scenario } from "@/data/scenarios";
+import KitNoFrames from "@/components/kit/KitNoFrames";
+import { FRAMES_CATEGORY, hasFramesForVehicle } from "@/lib/kit-filter";
 
 interface Props {
   /** Шаги сборки комплекта — есть не у каждого сценария */
@@ -50,7 +52,50 @@ const ScenarioKit = ({
   onNeedVehicle,
   onNeedLead,
   onSkip,
-}: Props) => (
+}: Props) => {
+  /*
+   * Комплект держится на переходной рамке: без неё магнитоле некуда встать.
+   * Если под выбранную машину рамок нет, выбирать нечего ни на одном шаге —
+   * гасим сборку целиком и объясняем, что делать дальше.
+   *
+   * Проверяем только сценарии, где рамка обязательна (шаг strictFit).
+   * Для «шумоизоляции» или «регистратора» рамка ни при чём.
+   */
+  const needsFrame = kit.some(
+    (s) => s.strictFit && s.category === FRAMES_CATEGORY,
+  );
+  const blocked =
+    !!vehicle && needsFrame && !hasFramesForVehicle(products, vehicle);
+
+  if (blocked && vehicle) {
+    return (
+      <div className="relative py-6">
+        <KitNoFrames vehicle={vehicle} />
+
+        {/* Шаги остаются под заглушкой — видно, что именно недоступно */}
+        <div
+          aria-hidden
+          className="pointer-events-none mt-6 select-none opacity-30 blur-[2px] saturate-0"
+        >
+          {kit.slice(0, 2).map((step) => (
+            <div
+              key={step.category}
+              className="border-t border-border py-6 first:border-t-0"
+            >
+              <div className="font-head text-lg font-bold uppercase tracking-tight">
+                {step.title}
+              </div>
+              <p className="mt-1 text-[0.85rem] text-muted-foreground">
+                {step.text}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
   <>
     {kit.map((step, i) => (
       <div key={step.category}>
@@ -89,6 +134,7 @@ const ScenarioKit = ({
       exclude={kit.map((s) => s.category)}
     />
   </>
-);
+  );
+};
 
 export default ScenarioKit;
