@@ -205,7 +205,7 @@ const ScenarioCatalog = ({
               <Fragment key={h.product.id}>
                 {/* Граница между «точно встанет» и «подойдёт почти всем» */}
                 {i === fit.exact.length && fit.universal.length > 0 && (
-                  <UniversalDivider count={fit.universal.length} />
+                  <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
                 )}
                 <ProductCard product={h.product} vehicle={vehicle} />
               </Fragment>

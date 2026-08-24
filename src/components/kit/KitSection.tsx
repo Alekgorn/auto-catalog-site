@@ -476,7 +476,7 @@ const KitSection = ({
                 {!collapsed &&
                   i === exactCount &&
                   exactCount < list.length && (
-                    <UniversalDivider count={list.length - exactCount} />
+                    <UniversalDivider count={list.length - exactCount} vehicle={vehicle} />
                   )}
                 <ProductCard
                   product={p}
