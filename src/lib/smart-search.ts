@@ -740,6 +740,34 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
     }
   }
 
+  /*
+   * --- 4б. Год выпуска ---
+   *
+   * Год разбирался из запроса, но никак не влиял на выдачу: по «солярис
+   * 2018» первой шла рамка для 2010-2016, которая физически не встанет.
+   *
+   * Отсеиваем только когда названа марка или модель: без машины год —
+   * это чаще про что-то другое («магнитола 2 din 2020 года выпуска»),
+   * и резать по нему всю выдачу неправильно.
+   */
+  if (q.year && (q.models.length || q.brands.length)) {
+    const [from, to] = item.product.years ?? [];
+    if (Number.isFinite(from) && Number.isFinite(to)) {
+      /* В каталоге попадаются опечатки в годах («2017-219»). Чиним на лету,
+         иначе товар молча пропадёт из выдачи */
+      const lo = from < 1900 ? from * 10 : from;
+      const hi = to < 1900 ? to * 10 : to;
+      if (q.year < lo || q.year > hi) {
+        // Универсальную позицию не выбрасываем — просто отправляем ниже
+        if (item.universal) score -= 120;
+        else return null;
+      } else {
+        score += 160;
+        reasons.push(`Подходит для ${q.year} года`);
+      }
+    }
+  }
+
   /* --- 5. Семантика: смысл запроса --- */
   if (q.concepts.length) {
     let semantic = 0;
