@@ -6,6 +6,7 @@ export type AdminTab =
   | "brands"
   | "categories"
   | "fits"
+  | "missing-fit"
   | "site"
   | "settings";
 
@@ -19,6 +20,8 @@ interface Props {
   categoriesCount: number;
   /** Сколько товаров с ошибками совместимости — счётчик у вкладки */
   fitsIssues: number;
+  /** Машины, под которые не собрался комплект */
+  missingFits: number;
 }
 
 /** Панель вкладок админки со счётчиками заявок, товаров, инструкций и т.д. */
@@ -31,6 +34,7 @@ const AdminTabs = ({
   brandsCount,
   categoriesCount,
   fitsIssues,
+  missingFits,
 }: Props) => (
   <div className="flex flex-wrap gap-8 border-b border-border py-5">
     {(
@@ -46,6 +50,10 @@ const AdminTabs = ({
             ? `Совместимость (${fitsIssues})`
             : "Совместимость",
         ],
+        [
+          "missing-fit",
+          missingFits > 0 ? `Нет решения (${missingFits})` : "Нет решения",
+        ],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],
         ["settings", "Настройки"],
@@ -57,8 +65,10 @@ const AdminTabs = ({
         className={`border-b-2 pb-2 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
           tab === key
             ? "border-primary text-primary"
-            : key === "fits" && fitsIssues > 0
-              ? // Ошибки совместимости прячут товары от покупателя — видно сразу
+            : (key === "fits" && fitsIssues > 0) ||
+                (key === "missing-fit" && missingFits > 0)
+              ? // Ошибки совместимости прячут товары от покупателя, а машины
+                // без решения — это упущенный спрос. И то и другое видно сразу
                 "border-transparent text-primary hover:text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
         }`}
