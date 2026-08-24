@@ -2,6 +2,7 @@ import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from './product-types';
 import { findFitModels, hasFitModel } from '@/lib/fits-match';
+import { FitMode } from '@/data/catalog';
 
 interface Props {
   form: AdminProduct;
@@ -9,10 +10,24 @@ interface Props {
   allSelected: boolean;
   selectedCount: number;
   totalModels: number;
+  /** Что стоит у категории — показываем как подпись «как в категории» */
+  categoryMode?: FitMode;
+  onFitMode: (mode: '' | FitMode) => void;
   toggleAll: () => void;
   toggleBrand: (brand: AdminBrand) => void;
   toggleModel: (brand: string, model: string) => void;
 }
+
+const MODE_LABEL: Record<FitMode, string> = {
+  vehicle: 'Подбирается по машине',
+  universal: 'Подходит любой машине',
+};
+
+const MODE_HINT: Record<FitMode, string> = {
+  vehicle: 'Рамки, переходники, разъёмы. Покажем только тем, у кого подходящая машина.',
+  universal:
+    'Регистраторы, камеры, шумоизоляция, магнитолы. Отмечать модели не нужно.',
+};
 
 /** Вкладка «Совместимость»: отметки марок и моделей, к которым подходит товар. */
 const ProductFitsTab = ({
@@ -21,11 +36,61 @@ const ProductFitsTab = ({
   allSelected,
   selectedCount,
   totalModels,
+  categoryMode = 'universal',
+  onFitMode,
   toggleAll,
   toggleBrand,
   toggleModel,
-}: Props) => (
+}: Props) => {
+  // Пустое поле у товара — берём то, что стоит у категории
+  const mode: FitMode = form.fitMode || categoryMode;
+  const inherited = !form.fitMode;
+
+  return (
   <div className="space-y-6">
+    <div className="border border-border p-5">
+      <span className="eyebrow mb-3 block">Как подбирается</span>
+      <div className="flex flex-wrap gap-3">
+        {(['vehicle', 'universal'] as FitMode[]).map((m) => (
+          <button
+            key={m}
+            onClick={() => onFitMode(m)}
+            className={`border px-4 py-2.5 text-left text-[0.85rem] transition-colors ${
+              mode === m
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
+            }`}
+          >
+            {MODE_LABEL[m]}
+          </button>
+        ))}
+        {!inherited && (
+          <button
+            onClick={() => onFitMode('')}
+            title="Вернуть значение категории"
+            className="flex items-center gap-2 px-3 py-2.5 text-[0.78rem] text-muted-foreground transition-colors hover:text-primary"
+          >
+            <Icon name="RotateCcw" size={14} />
+            Как в категории
+          </button>
+        )}
+      </div>
+      <p className="mt-3 text-[0.8rem] leading-relaxed text-muted-foreground">
+        {MODE_HINT[mode]}
+        {inherited && (
+          <span className="ml-1 opacity-70">
+            Взято из категории — меняется вместе с ней.
+          </span>
+        )}
+      </p>
+    </div>
+
+    {mode === 'universal' ? (
+      <p className="text-[0.85rem] text-muted-foreground">
+        Товар подходит любой машине — отмечать марки и модели не нужно.
+      </p>
+    ) : (
+    <>
     <p className="text-[0.85rem] text-muted-foreground">
       Отметьте модели, к которым подходит товар. Годы выпуска задаются на вкладке
       «Основное».
@@ -90,7 +155,10 @@ const ProductFitsTab = ({
         </div>
       );
     })}
+    </>
+    )}
   </div>
-);
+  );
+};
 
 export default ProductFitsTab;

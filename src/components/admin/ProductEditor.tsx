@@ -9,6 +9,7 @@ import ProductContentTab from '@/components/admin/product-editor/ProductContentT
 import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
 import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
 import { findFitKey, hasFitModel, sameFit } from '@/lib/fits-match';
+import { FitMode } from '@/data/catalog';
 
 export type { AdminProduct };
 export { emptyProduct };
@@ -17,6 +18,8 @@ interface Props {
   product: AdminProduct;
   categories: string[];
   categorySpecs?: Record<string, string[]>;
+  /** Умолчание «как подбирается» у каждой категории */
+  categoryFitModes?: Record<string, FitMode>;
   brands: AdminBrand[];
   onClose: () => void;
   onSave: (p: AdminProduct) => void;
@@ -26,6 +29,7 @@ const ProductEditor = ({
   product,
   categories,
   categorySpecs = {},
+  categoryFitModes = {},
   brands,
   onClose,
   onSave,
@@ -277,6 +281,8 @@ const ProductEditor = ({
               allSelected={allSelected}
               selectedCount={selectedCount}
               totalModels={totalModels}
+              categoryMode={categoryFitModes[form.category] ?? 'universal'}
+              onFitMode={(m) => setForm((f) => ({ ...f, fitMode: m }))}
               toggleAll={toggleAll}
               toggleBrand={toggleBrand}
               toggleModel={toggleModel}

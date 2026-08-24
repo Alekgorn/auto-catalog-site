@@ -3,10 +3,14 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { compareNames } from '@/lib/slug';
+import BrandBodiesEditor from '@/components/admin/BrandBodiesEditor';
+import { BodyType } from '@/data/catalog';
 
 export interface AdminBrand {
   name: string;
   models: string[];
+  /** Тип кузова каждой модели: { "Rio": ["sedan", "hatchback"] } */
+  modelBodies?: Record<string, BodyType[]>;
 }
 
 interface Props {
@@ -19,6 +23,8 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
   const { toast } = useToast();
   const [list, setList] = useState<AdminBrand[]>(brands);
   const [busy, setBusy] = useState(false);
+  /** У какой марки раскрыт список кузовов */
+  const [openBodies, setOpenBodies] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -165,6 +171,44 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
                 <Icon name="Trash2" size={18} />
               </button>
             </div>
+
+            <div className="md:col-span-12">
+              <button
+                onClick={() => setOpenBodies(openBodies === i ? null : i)}
+                className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Icon
+                  name={openBodies === i ? 'ChevronDown' : 'ChevronRight'}
+                  size={13}
+                />
+                Типы кузова
+                {(() => {
+                  const done = b.models.filter(
+                    (m) => b.modelBodies?.[m]?.length,
+                  ).length;
+                  if (!b.models.length) return null;
+                  return done === b.models.length ? (
+                    <span className="normal-case tracking-normal opacity-70">
+                      · все {done}
+                    </span>
+                  ) : (
+                    <span className="normal-case tracking-normal text-primary">
+                      · {done} из {b.models.length}
+                    </span>
+                  );
+                })()}
+              </button>
+
+              {openBodies === i && (
+                <div className="mt-3 border-l-2 border-border pl-4">
+                  <BrandBodiesEditor
+                    models={b.models.filter(Boolean)}
+                    bodies={b.modelBodies ?? {}}
+                    onChange={(next) => update(i, { ...b, modelBodies: next })}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
@@ -200,13 +244,20 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
               // Сохраняем сразу по алфавиту — так работает прокрутка по буквам
               list
                 .filter((b) => b.name.trim())
-                .map((b) => ({
-                  name: b.name.trim(),
-                  models: b.models
+                .map((b) => {
+                  const models = b.models
                     .map((m) => m.trim())
                     .filter(Boolean)
-                    .sort(compareNames),
-                }))
+                    .sort(compareNames);
+                  // Кузова держим только у оставшихся моделей: иначе после
+                  // удаления модели в справочнике копился мусор
+                  const bodies: Record<string, BodyType[]> = {};
+                  models.forEach((m) => {
+                    const kinds = b.modelBodies?.[m];
+                    if (kinds?.length) bodies[m] = kinds;
+                  });
+                  return { name: b.name.trim(), models, modelBodies: bodies };
+                })
                 .sort((a, b) => compareNames(a.name, b.name)),
             )
           }

@@ -2,6 +2,39 @@ import { findFitModels, hasFitModel } from '@/lib/fits-match';
 
 export type Category = string;
 
+/** Как товар подбирают покупателю */
+export type FitMode = 'vehicle' | 'universal';
+
+/** Тип кузова автомобиля */
+export type BodyType =
+  | 'sedan'
+  | 'hatchback'
+  | 'liftback'
+  | 'wagon'
+  | 'suv'
+  | 'pickup'
+  | 'minivan'
+  | 'van'
+  | 'coupe'
+  | 'cabrio';
+
+/** Названия кузовов для покупателя и админки */
+export const BODY_TYPES: { id: BodyType; label: string }[] = [
+  { id: 'sedan', label: 'Седан' },
+  { id: 'hatchback', label: 'Хэтчбек' },
+  { id: 'liftback', label: 'Лифтбек' },
+  { id: 'wagon', label: 'Универсал' },
+  { id: 'suv', label: 'Внедорожник' },
+  { id: 'pickup', label: 'Пикап' },
+  { id: 'minivan', label: 'Минивэн' },
+  { id: 'van', label: 'Фургон' },
+  { id: 'coupe', label: 'Купе' },
+  { id: 'cabrio', label: 'Кабриолет' },
+];
+
+export const bodyTypeLabel = (id: string): string =>
+  BODY_TYPES.find((b) => b.id === id)?.label ?? id;
+
 export interface Product {
   id: string;
   sku?: string;
@@ -27,6 +60,13 @@ export interface Product {
   install: string;
   warranty: string;
   fits: Record<string, string[]>; // марка -> модели
+  /**
+   * Как товар подбирают покупателю:
+   *  'vehicle'   — делается под конкретную машину, решают марка, модель и год;
+   *  'universal' — подойдёт любой машине, список моделей ему не нужен.
+   * Приходит с сервера уже с учётом умолчания категории.
+   */
+  fitMode?: FitMode;
   years: [number, number];
   badge?: string;
   images?: string[];
@@ -67,7 +107,19 @@ export interface Guide {
 export interface Brand {
   name: string;
   models: string[];
+  /** Тип кузова каждой модели: { "Rio": ["sedan", "hatchback"] } */
+  modelBodies?: Record<string, BodyType[]>;
 }
+
+/** Какие кузова бывают у этой модели */
+export const modelBodyTypes = (
+  brands: Brand[],
+  brand: string,
+  model: string,
+): BodyType[] => {
+  const b = brands.find((x) => x.name === brand);
+  return b?.modelBodies?.[model] ?? [];
+};
 
 export const BRANDS: Brand[] = [
   { name: "Lada", models: ["Vesta SW Cross", "Granta", "Niva Travel", "Largus", "XRAY"] },
@@ -532,11 +584,17 @@ export const isCompatible = (product: Product, v: Vehicle | null): boolean => {
 };
 
 /**
- * Универсальный товар — подходит почти любой машине (расходники, кабели,
- * шумоизоляция). Такие не отсеиваем при подборе по авто: даже если конкретной
- * модели нет в списке, товар всё равно подойдёт.
+ * Универсальный товар — подходит любой машине: регистраторы, камеры,
+ * шумоизоляция, расходка, магнитолы. При подборе по авто такие не
+ * отбрасываем, но показываем ниже профильных.
+ *
+ * Раньше это вычислялось догадкой «марок не указано или указано больше 80%
+ * всех». Порог был взят с потолка: товар на 43 марки считался универсальным,
+ * на 42 — уже нет. Теперь у товара есть явное поле, а 80% остались лишь
+ * запасным вариантом на случай старых данных без него.
  */
 export const isUniversal = (product: Product, totalBrands: number): boolean => {
+  if (product.fitMode) return product.fitMode === 'universal';
   const brands = Object.keys(product.fits ?? {}).length;
   if (!brands) return true;
   if (!totalBrands) return false;

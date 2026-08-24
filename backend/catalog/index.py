@@ -30,9 +30,12 @@ def handler(event: dict, context) -> dict:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
-            f"SELECT slug, sku, name, category, subcategory, price, old_price, pro_price, ozon_url, wb_url, install, warranty, "
-            f"year_from, year_to, badge, images, description, specs, kit, fits, popularity, created_at, notes, extra, extra_title, stock_qty, stock_note "
-            f"FROM {schema}.products WHERE is_active = TRUE ORDER BY sort_order, id"
+            f"SELECT p.slug, p.sku, p.name, p.category, p.subcategory, p.price, p.old_price, p.pro_price, p.ozon_url, p.wb_url, p.install, p.warranty, "
+            f"p.year_from, p.year_to, p.badge, p.images, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
+            # Тип подбора: своё значение товара важнее умолчания категории
+            f"COALESCE(NULLIF(p.fit_mode, ''), c.fit_mode, 'universal') AS fit_mode "
+            f"FROM {schema}.products p LEFT JOIN {schema}.categories c ON c.name = p.category "
+            f"WHERE p.is_active = TRUE ORDER BY p.sort_order, p.id"
         )
         rows = cur.fetchall()
         products = [
@@ -59,6 +62,7 @@ def handler(event: dict, context) -> dict:
                 'extra': r['extra'] or [],
                 'extraTitle': r['extra_title'] or '',
                 'fits': r['fits'],
+                'fitMode': r['fit_mode'],
                 'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
                 'popularity': r['popularity'],
                 'stock': r['stock_qty'],
@@ -67,8 +71,18 @@ def handler(event: dict, context) -> dict:
             for r in rows
         ]
 
-        cur.execute(f"SELECT name, models FROM {schema}.brands ORDER BY sort_order, id")
-        brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+        cur.execute(
+            f"SELECT name, models, model_bodies FROM {schema}.brands ORDER BY sort_order, id"
+        )
+        brands = [
+            {
+                'name': b['name'],
+                'models': b['models'],
+                # Тип кузова каждой модели: седан, хэтчбек, внедорожник и т.д.
+                'modelBodies': b['model_bodies'] or {},
+            }
+            for b in cur.fetchall()
+        ]
 
         cur.execute(
             f"SELECT id, slug, title, excerpt, cover, duration, difficulty, tools, blocks "

@@ -23,6 +23,16 @@ CORS = {
 SESSION_DAYS = 7
 XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
+# Типы кузова автомобиля. Одна модель может выпускаться в нескольких —
+# Rio бывает и седаном, и хэтчбеком, поэтому храним список.
+BODY_TYPES = (
+    'sedan', 'hatchback', 'liftback', 'wagon', 'suv',
+    'pickup', 'minivan', 'van', 'coupe', 'cabrio',
+)
+
+# Как товар подбирается покупателю
+FIT_MODES = ('vehicle', 'universal')
+
 
 """
 Каталог перерос лимит ответа функции (4 МБ), поэтому большие ответы
@@ -296,6 +306,8 @@ def row_to_product(r: dict) -> dict:
         'extra': r.get('extra') or [],
         'extraTitle': r.get('extra_title') or '',
         'fits': r['fits'],
+        # Пусто — значит товар наследует умолчание своей категории
+        'fitMode': r.get('fit_mode') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -795,6 +807,18 @@ def parse_brands_xlsx(data: bytes) -> list:
 
 
 def replace_brands(conn, brands: list) -> int:
+    """
+    Заменяет справочник марок целиком (загрузка из Excel).
+
+    Типы кузова в таблицу не попадают, поэтому запоминаем их до удаления
+    и возвращаем тем моделям, что остались. Иначе загрузка обновлённого
+    списка марок молча стирала бы всю разметку кузовов.
+    """
+    cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+    cur.execute(f"SELECT name, model_bodies FROM {schema()}.brands")
+    kept = {r['name']: (r['model_bodies'] or {}) for r in cur.fetchall()}
+    cur.close()
+
     cur = conn.cursor()
     cur.execute(f"DELETE FROM {schema()}.brands")
     saved = 0
@@ -803,11 +827,13 @@ def replace_brands(conn, brands: list) -> int:
         if not name:
             continue
         models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
+        old = kept.get(name) or {}
+        bodies = {m: old[m] for m in models if old.get(m)}
         cur.execute(
-            f"INSERT INTO {schema()}.brands (name, models, sort_order) "
-            f"VALUES ({q(name)}, {qjson(models)}, {(i + 1) * 10}) "
+            f"INSERT INTO {schema()}.brands (name, models, model_bodies, sort_order) "
+            f"VALUES ({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10}) "
             f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models, "
-            f"sort_order = EXCLUDED.sort_order"
+            f"model_bodies = EXCLUDED.model_bodies, sort_order = EXCLUDED.sort_order"
         )
         saved += 1
     conn.commit()
@@ -901,6 +927,8 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'extra': qjson(p.get('extra') or []),
             'extra_title': q(str(p.get('extraTitle') or '')[:160]),
             'fits': qjson(p.get('fits') or {}),
+            # Пусто — берётся умолчание категории
+            'fit_mode': q(p.get('fitMode') if p.get('fitMode') in FIT_MODES else ''),
             'sort_order': qint(p.get('sortOrder'), (i + 1) * 10),
             'popularity': qint(p.get('popularity'), 0),
             'stock_qty': qint(p.get('stock'), 0),
@@ -919,6 +947,7 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
                 'warranty': 'warranty', 'yearFrom': 'year_from', 'yearTo': 'year_to',
                 'badge': 'badge', 'images': 'images', 'description': 'description',
                 'specs': 'specs', 'kit': 'kit', 'fits': 'fits',
+                'fitMode': 'fit_mode',
                 'sortOrder': 'sort_order', 'popularity': 'popularity',
                 'stock': 'stock_qty', 'stockNote': 'stock_note',
                 'isActive': 'is_active',
@@ -1278,7 +1307,7 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if method == 'GET':
                 cur.execute(
-                    f"SELECT c.name, c.sort_order, c.is_active, c.spec_fields, "
+                    f"SELECT c.name, c.sort_order, c.is_active, c.spec_fields, c.fit_mode, "
                     f"(SELECT COUNT(*) FROM {schema()}.products p WHERE p.category = c.name) AS products "
                     f"FROM {schema()}.categories c WHERE c.is_active "
                     f"ORDER BY c.sort_order, c.name"
@@ -1289,6 +1318,7 @@ def handler(event: dict, context) -> dict:
                         'sortOrder': r['sort_order'],
                         'products': int(r['products']),
                         'specFields': r['spec_fields'] or [],
+                        'fitMode': r['fit_mode'] or 'universal',
                     }
                     for r in cur.fetchall()
                 ]
@@ -1310,6 +1340,8 @@ def handler(event: dict, context) -> dict:
                         for f in (item.get('specFields') or [])
                         if str(f).strip()
                     ]
+                    mode = item.get('fitMode')
+                    mode = q(mode if mode in FIT_MODES else 'universal')
                     if old and old != name:
                         # Переименование — тянем за собой товары
                         cur.execute(
@@ -1319,7 +1351,8 @@ def handler(event: dict, context) -> dict:
                         cur.execute(
                             f"UPDATE {schema()}.categories SET name = {q(name)}, "
                             f"sort_order = {order}, is_active = TRUE, "
-                            f"spec_fields = {qjson(fields)} WHERE name = {q(old)}"
+                            f"spec_fields = {qjson(fields)}, fit_mode = {mode} "
+                            f"WHERE name = {q(old)}"
                         )
                         continue
                     cur.execute(
@@ -1328,15 +1361,15 @@ def handler(event: dict, context) -> dict:
                     if cur.fetchone():
                         cur.execute(
                             f"UPDATE {schema()}.categories SET sort_order = {order}, "
-                            f"is_active = TRUE, spec_fields = {qjson(fields)} "
-                            f"WHERE name = {q(name)}"
+                            f"is_active = TRUE, spec_fields = {qjson(fields)}, "
+                            f"fit_mode = {mode} WHERE name = {q(name)}"
                         )
                     else:
                         slug = 'cat-' + uuid.uuid4().hex[:8]
                         cur.execute(
                             f"INSERT INTO {schema()}.categories "
-                            f"(slug, name, sort_order, spec_fields) "
-                            f"VALUES ({q(slug)}, {q(name)}, {order}, {qjson(fields)})"
+                            f"(slug, name, sort_order, spec_fields, fit_mode) "
+                            f"VALUES ({q(slug)}, {q(name)}, {order}, {qjson(fields)}, {mode})"
                         )
                 conn.commit()
                 cur.close()
@@ -1420,9 +1453,26 @@ def handler(event: dict, context) -> dict:
                 if not name:
                     continue
                 models = [str(m).strip() for m in b.get('models', []) if str(m).strip()]
+                # Типы кузова по моделям: {"Rio": ["sedan", "hatchback"]}.
+                # Держим только те модели, что реально есть в списке марки.
+                raw_bodies = b.get('modelBodies') or {}
+                bodies = {}
+                if isinstance(raw_bodies, dict):
+                    known = set(models)
+                    for model, kinds in raw_bodies.items():
+                        model = str(model).strip()
+                        if model not in known or not isinstance(kinds, list):
+                            continue
+                        clean = [
+                            str(k).strip()
+                            for k in kinds
+                            if str(k).strip() in BODY_TYPES
+                        ]
+                        if clean:
+                            bodies[model] = clean
                 cur.execute(
-                    f"INSERT INTO {schema()}.brands (name, models, sort_order) "
-                    f"VALUES ({q(name)}, {qjson(models)}, {(i + 1) * 10})"
+                    f"INSERT INTO {schema()}.brands (name, models, model_bodies, sort_order) "
+                    f"VALUES ({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10})"
                 )
             conn.commit()
             cur.close()
@@ -1670,8 +1720,17 @@ def handler(event: dict, context) -> dict:
                 f"SELECT * FROM {schema()}.products ORDER BY sort_order, id"
             )
             products = [row_to_product(r) for r in cur.fetchall()]
-            cur.execute(f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id")
-            brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+            cur.execute(
+                f"SELECT name, models, model_bodies FROM {schema()}.brands ORDER BY sort_order, id"
+            )
+            brands = [
+                {
+                    'name': b['name'],
+                    'models': b['models'],
+                    'modelBodies': b['model_bodies'] or {},
+                }
+                for b in cur.fetchall()
+            ]
             cur.execute(
                 f"SELECT COUNT(*) AS c FROM {schema()}.orders WHERE status = 'new'"
             )
@@ -1723,6 +1782,10 @@ def handler(event: dict, context) -> dict:
                 'extra': qjson(body.get('extra') or []),
                 'extra_title': q(str(body.get('extraTitle') or '')[:160]),
                 'fits': qjson(body.get('fits') or {}),
+                # Пусто — значит берём умолчание категории
+                'fit_mode': q(
+                    body.get('fitMode') if body.get('fitMode') in FIT_MODES else ''
+                ),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

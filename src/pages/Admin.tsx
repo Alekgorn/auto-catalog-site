@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_URL, adminFetch, setAdminToken, getAdminToken } from "@/lib/api";
 import { clearSiteCache } from "@/lib/cache";
+import { FitMode } from "@/data/catalog";
 import ProductEditor, {
   AdminProduct,
   emptyProduct,
@@ -43,6 +44,10 @@ const Admin = () => {
   const [categorySpecs, setCategorySpecs] = useState<Record<string, string[]>>(
     {},
   );
+  /** Умолчание «как подбирается» у каждой категории */
+  const [categoryFitModes, setCategoryFitModes] = useState<
+    Record<string, FitMode>
+  >({});
   const [selected, setSelected] = useState<number[]>([]);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
@@ -75,6 +80,7 @@ const Admin = () => {
           const list = (d.categories ?? []) as {
             name: string;
             specFields?: string[];
+            fitMode?: FitMode;
           }[];
           setCatalogCategories(list.map((c) => c.name));
           setCategorySpecs(
@@ -82,6 +88,11 @@ const Admin = () => {
               list
                 .filter((c) => c.specFields?.length)
                 .map((c) => [c.name, c.specFields!]),
+            ),
+          );
+          setCategoryFitModes(
+            Object.fromEntries(
+              list.map((c) => [c.name, c.fitMode ?? 'universal']),
             ),
           );
         })
@@ -452,6 +463,7 @@ const Admin = () => {
           product={editing}
           categories={categories}
           categorySpecs={categorySpecs}
+          categoryFitModes={categoryFitModes}
           brands={brands}
           onClose={() => setEditing(null)}
           onSave={save}
