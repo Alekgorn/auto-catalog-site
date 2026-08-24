@@ -61,7 +61,7 @@ export const screenSize = (p: Product): number | null => {
 const sameSize = (a: number, b: number): boolean => Math.abs(a - b) <= 0.5;
 
 /** Раздел каталога с переходными рамками — источник доступных размеров */
-const FRAMES_CATEGORY = 'Переходные рамки для магнитол';
+export const FRAMES_CATEGORY = 'Переходные рамки для магнитол';
 
 /**
  * Какие диагонали реально встанут в выбранную машину.
@@ -89,6 +89,26 @@ export const availableScreenSizes = (
     if (s) sizes.add(s);
   });
   return [...sizes].sort((a, b) => a - b);
+};
+
+/**
+ * Есть ли под эту машину хоть одна переходная рамка.
+ *
+ * Без рамки комплект не собрать: магнитоле некуда встать. Предлагать в
+ * таком случае выбор магнитол бессмысленно — человек потратит время и
+ * упрётся в пустой шаг. Лучше сразу честно сказать и увести в переписку.
+ *
+ * Считаем только точные совпадения по авто: универсальная позиция ничего
+ * не говорит о посадочном месте конкретной панели.
+ */
+export const hasFramesForVehicle = (
+  products: Product[],
+  vehicle: Vehicle | null,
+): boolean => {
+  if (!vehicle) return true;
+  return products.some(
+    (p) => p.category === FRAMES_CATEGORY && isCompatible(p, vehicle),
+  );
 };
 
 /**
