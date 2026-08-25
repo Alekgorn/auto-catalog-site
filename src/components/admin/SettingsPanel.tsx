@@ -14,6 +14,11 @@ const SettingsPanel = ({ onImported }: Props) => {
   const [fields, setFields] = useState<string[]>([]);
   const [mode, setMode] = useState<'merge' | 'skip'>('merge');
   const [busy, setBusy] = useState(false);
+  /** Ход загрузки каталога: файл уходит частями, показываем сколько сделано */
+  const [progress, setProgress] = useState<{
+    processed: number;
+    total: number;
+  } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const xlsRef = useRef<HTMLInputElement>(null);
 
@@ -79,17 +84,61 @@ const SettingsPanel = ({ onImported }: Props) => {
         reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
         reader.readAsDataURL(file);
       });
-      const res = await adminFetch('?action=import-xlsx', {
-        method: 'POST',
-        body: JSON.stringify({ mode, file: base64 }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: 'Ошибка', description: data.error ?? 'Не удалось загрузить' });
-        return;
+      /*
+       * Каталог грузим порциями. За один вызов функция успевает обработать
+       * ограниченное число строк — на большом файле она обрывалась по
+       * таймауту, и приходилось жать «Загрузить» по нескольку раз.
+       * Теперь браузер сам шлёт отрезки подряд, пока файл не кончится.
+       */
+      // Файл разбирается заново на каждом вызове (~1 с), поэтому на сами
+      // товары остаётся немного времени — берём порцию с запасом
+      const STEP = 150;
+      let offset = 0;
+      let created = 0;
+      let updated = 0;
+      let skipped = 0;
+      let categories = 0;
+      let external = 0;
+      let problems: string[] = [];
+      let data: Record<string, unknown> = {};
+
+      for (let guard = 0; guard < 200; guard += 1) {
+        const res = await adminFetch('?action=import-xlsx', {
+          method: 'POST',
+          body: JSON.stringify({ mode, file: base64, offset, limit: STEP }),
+        });
+        data = await res.json();
+        if (!res.ok) {
+          toast({
+            title: 'Ошибка',
+            description: (data.error as string) ?? 'Не удалось загрузить',
+          });
+          return;
+        }
+        created += Number(data.created ?? 0);
+        updated += Number(data.updated ?? 0);
+        skipped += Number(data.skipped ?? 0);
+        categories += Number(data.categories ?? 0);
+        external += Number(data.external_images ?? 0);
+        problems = problems.concat((data.problems as string[]) ?? []);
+
+        const total = Number(data.total ?? 0);
+        const processed = Number(data.processed ?? 0);
+        setProgress(total > 0 && !data.done ? { processed, total } : null);
+        if (data.done || processed <= offset) break;
+        offset = processed;
       }
+      setProgress(null);
+      data = {
+        created,
+        updated,
+        skipped,
+        categories,
+        external_images: external,
+        problems,
+      };
       // Фото с чужих сайтов лучше перенести к нам — подсказываем сразу
-      const external = data.external_images
+      const externalNote = data.external_images
         ? ` Фото с других сайтов: ${data.external_images} — перенесите их к нам в разделе «Сайт».`
         : '';
       toast({
@@ -99,13 +148,14 @@ const SettingsPanel = ({ onImported }: Props) => {
             ? `Добавлено: ${data.created}, обновлено: ${data.updated}. Пропущено строк: ${data.skipped} — проверьте их в файле.`
             : `Добавлено: ${data.created}, обновлено: ${data.updated}${
                 data.categories ? `, категорий: ${data.categories}` : ''
-              }`) + external,
+              }`) + externalNote,
       });
       onImported();
     } catch {
       toast({ title: 'Ошибка', description: 'Файл не читается' });
     } finally {
       setBusy(false);
+      setProgress(null);
       if (xlsRef.current) xlsRef.current.value = '';
     }
   };
@@ -253,7 +303,11 @@ const SettingsPanel = ({ onImported }: Props) => {
             </button>
             <label className="flex w-fit cursor-pointer items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary">
               <Icon name={busy ? 'Loader' : 'Upload'} size={16} />
-              {busy ? 'Обрабатываем…' : 'Загрузить Excel'}
+              {progress
+                ? `Загружаем ${progress.processed} из ${progress.total}…`
+                : busy
+                  ? 'Обрабатываем…'
+                  : 'Загрузить Excel'}
               <input
                 ref={xlsRef}
                 type="file"
@@ -266,6 +320,24 @@ const SettingsPanel = ({ onImported }: Props) => {
               />
             </label>
           </div>
+
+          {progress && (
+            <div className="mt-3">
+              <div className="h-1.5 w-full max-w-[24em] bg-border">
+                <div
+                  className="h-full bg-primary transition-[width] duration-300"
+                  style={{
+                    width: `${Math.round(
+                      (progress.processed / Math.max(1, progress.total)) * 100,
+                    )}%`,
+                  }}
+                />
+              </div>
+              <p className="mt-1.5 text-[0.78rem] text-muted-foreground">
+                Большой файл грузится частями — не закрывайте страницу.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 border-t border-border pt-6">
