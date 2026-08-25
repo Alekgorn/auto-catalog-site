@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
 import ProductTrust from "@/components/ProductTrust";
+import FitsList from "@/components/FitsList";
 import FitsCheck from "@/components/FitsCheck";
 import ProductRelated from "@/components/ProductRelated";
 import RequestDialog from "@/components/RequestDialog";
@@ -31,7 +32,6 @@ import {
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
-import { useKit } from "@/context/KitContext";
 import { useCart } from "@/context/CartContext";
 import PriceBlock from "@/components/PriceBlock";
 import StockLine from "@/components/StockLine";
@@ -61,13 +61,8 @@ const Product = () => {
    * к шагу — выбирать позицию в комплект логично там, где виден весь
    * комплект и его цена.
    */
-  const { steps: kitSteps, slug: kitSlug } = useKit();
   const { add: addToCart, has: inCart, setOpen: openCart } = useCart();
   const chosen = inCart(product?.id ?? '');
-  /** Идёт сборка, и этот товар — как раз для одного из её шагов */
-  const kitHint =
-    !!kitSlug &&
-    kitSteps.some((s) => s.category === product?.category);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -292,36 +287,15 @@ const Product = () => {
                 </button>
               </div>
 
-              {/* Идёт сборка комплекта, и товар подходит её шагу — зовём
-                  обратно, где видно весь комплект и общую цену */}
-              {kitHint && (
-                <Link
-                  to={`/scenario/${kitSlug}`}
-                  className="mt-3 flex items-center gap-2 border border-primary bg-primary/5 px-4 py-3 text-[0.85rem] transition-colors hover:bg-primary hover:text-primary-foreground"
-                >
-                  <Icon name="Layers" fallback="Package" size={16} className="flex-none" />
-                  <span className="min-w-0 flex-1">
-                    Вы собираете комплект — выбрать эту позицию в него
-                  </span>
-                  <Icon name="ArrowRight" size={15} className="flex-none" />
-                </Link>
-              )}
-
-              <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={() => openRequest(product)}
-                  className="flex flex-1 items-center justify-center gap-2 border border-foreground px-6 py-4 font-head text-[0.9rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
-                >
-                  Купить в 1 клик
-                </button>
-                <a
-                  href={telHref(contacts.phone)}
-                  className="flex items-center justify-center gap-2 border border-foreground px-6 py-4 font-head text-[0.9rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
-                >
-                  <Icon name="Phone" size={16} />
-                  Позвонить
-                </a>
-              </div>
+              {/* Одна кнопка вместо трёх: «В корзину» выше — основное
+                  действие, звонок — запасной путь для сомневающихся */}
+              <a
+                href={telHref(contacts.phone)}
+                className="mt-3 flex items-center justify-center gap-2 border border-foreground px-6 py-4 font-head text-[0.9rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
+              >
+                <Icon name="Phone" size={16} />
+                Позвонить
+              </a>
 
               <MarketButtons product={product} />
 
@@ -399,6 +373,36 @@ const Product = () => {
                   </div>
                 ))}
               </dl>
+
+              {/*
+                Полный список совместимых моделей — здесь, а не рядом с
+                ценой: наверху он спорил за внимание с кнопкой покупки,
+                а нужен тем, кто уже вчитывается в подробности
+              */}
+              {brands.length > 0 && (
+                <div className="mt-8 border-t border-foreground pt-6">
+                  <div className="eyebrow">Совместимость</div>
+                  <h3 className="mt-3 font-head text-xl font-bold uppercase leading-tight tracking-tight">
+                    Подходит к {modelCount}{' '}
+                    {modelCount % 10 === 1 && modelCount % 100 !== 11
+                      ? 'модели'
+                      : 'моделям'}
+                  </h3>
+                  <div className="mt-5">
+                    <FitsList brands={brands} vehicle={vehicle} />
+                  </div>
+                  <p className="mt-5 text-[0.85rem] text-muted-foreground">
+                    Вашей модели нет в списке?{' '}
+                    <button
+                      onClick={() => openRequest(product)}
+                      className="underline underline-offset-2 transition-colors hover:text-primary"
+                    >
+                      Проверим по VIN
+                    </button>{' '}
+                    и предложим аналог.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </section>
