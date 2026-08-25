@@ -821,7 +821,11 @@ def replace_brands(conn, brands: list) -> int:
 
     cur = conn.cursor()
     cur.execute(f"DELETE FROM {schema()}.brands")
-    saved = 0
+
+    # Все марки одной вставкой: раньше на каждую шёл отдельный запрос,
+    # и на полном справочнике (60+ марок) сохранение не укладывалось
+    # в отведённое время — админка отвечала ошибкой
+    values = []
     for i, b in enumerate(brands):
         name = str(b.get('name', '')).strip()[:64]
         if not name:
@@ -829,16 +833,19 @@ def replace_brands(conn, brands: list) -> int:
         models = [str(m).strip() for m in (b.get('models') or []) if str(m).strip()]
         old = kept.get(name) or {}
         bodies = {m: old[m] for m in models if old.get(m)}
+        values.append(
+            f"({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10})"
+        )
+    if values:
         cur.execute(
             f"INSERT INTO {schema()}.brands (name, models, model_bodies, sort_order) "
-            f"VALUES ({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10}) "
+            f"VALUES {', '.join(values)} "
             f"ON CONFLICT (name) DO UPDATE SET models = EXCLUDED.models, "
             f"model_bodies = EXCLUDED.model_bodies, sort_order = EXCLUDED.sort_order"
         )
-        saved += 1
     conn.commit()
     cur.close()
-    return saved
+    return len(values)
 
 
 def make_slug(name: str, taken: set) -> str:
@@ -1488,6 +1495,9 @@ def handler(event: dict, context) -> dict:
             brands = body.get('brands', [])
             cur = conn.cursor()
             cur.execute(f"DELETE FROM {schema()}.brands")
+            # Копим строки и вставляем разом: по одному запросу на марку
+            # сохранение справочника упиралось в таймаут и падало с ошибкой
+            values = []
             for i, b in enumerate(brands):
                 name = str(b.get('name', '')).strip()
                 if not name:
@@ -1510,9 +1520,14 @@ def handler(event: dict, context) -> dict:
                         ]
                         if clean:
                             bodies[model] = clean
+                values.append(
+                    f"({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10})"
+                )
+            if values:
                 cur.execute(
-                    f"INSERT INTO {schema()}.brands (name, models, model_bodies, sort_order) "
-                    f"VALUES ({q(name)}, {qjson(models)}, {qjson(bodies)}, {(i + 1) * 10})"
+                    f"INSERT INTO {schema()}.brands "
+                    f"(name, models, model_bodies, sort_order) "
+                    f"VALUES {', '.join(values)}"
                 )
             conn.commit()
             cur.close()
@@ -1622,8 +1637,50 @@ def handler(event: dict, context) -> dict:
                 return resp(400, {'error': 'Это не таблица Excel или структура изменена'})
             if not in_products and not in_brands and not in_categories:
                 return resp(400, {'error': 'В таблице не нашлось строк с товарами'})
-            stats = import_rows(conn, in_products, in_brands, str(body.get('mode', 'merge')))
-            saved_cats = import_categories(conn, in_categories)
+
+            # Большой каталог грузим порциями: за один вызов функция успевает
+            # обработать лишь часть строк, а на 1400 товарах упиралась в
+            # таймаут — админка показывала ошибку, хотя часть уже сохранилась.
+            # Браузер шлёт файл несколько раз, каждый раз со своим отрезком.
+            total = len(in_products)
+            try:
+                offset = max(0, int(body.get('offset') or 0))
+            except (TypeError, ValueError):
+                offset = 0
+            try:
+                limit = int(body.get('limit') or 0)
+            except (TypeError, ValueError):
+                limit = 0
+            chunk = in_products[offset:offset + limit] if limit > 0 else in_products
+            done = offset + len(chunk) >= total
+
+            # Марки и категории трогаем один раз — на первом отрезке
+            stats = import_rows(
+                conn,
+                chunk,
+                in_brands if offset == 0 else [],
+                str(body.get('mode', 'merge')),
+            )
+            saved_cats = import_categories(conn, in_categories) if offset == 0 else 0
+
+            if limit > 0:
+                external = sum(
+                    len([u for u in (p.get('images') or []) if _is_external_image(u)])
+                    for p in chunk
+                )
+                return resp(
+                    200,
+                    {
+                        'ok': True,
+                        'total': total,
+                        'processed': offset + len(chunk),
+                        'done': done,
+                        'brands': len(in_brands) if offset == 0 else 0,
+                        'categories': saved_cats,
+                        'external_images': external,
+                        **stats,
+                    },
+                )
             # Сколько фото указано ссылками на чужие сайты — их можно перенести к нам
             external = sum(
                 len([u for u in (p.get('images') or []) if _is_external_image(u)])
