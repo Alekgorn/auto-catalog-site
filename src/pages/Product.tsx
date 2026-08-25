@@ -4,6 +4,7 @@ import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
+import ProductTrust from "@/components/ProductTrust";
 import FitsCheck from "@/components/FitsCheck";
 import ProductRelated from "@/components/ProductRelated";
 import RequestDialog from "@/components/RequestDialog";
@@ -49,16 +50,24 @@ const Product = () => {
   );
 
   /*
-   * Сборка комплекта — особый режим: товар отмечается на своём шаге,
-   * а не уходит в корзину. Но только если сборка реально начата.
-   * Без этой проверки кнопка на обычной странице товара молча клала
-   * позицию в сборку, которую нигде не видно, — покупатель жал
-   * «Добавить в заказ», и как будто ничего не происходило.
+   * На странице товара кнопка ВСЕГДА кладёт в корзину.
+   *
+   * Раньше она отмечала позицию в сборке комплекта, а панель сборки на
+   * этой странице не показывается — человек жал кнопку, и внешне не
+   * происходило ничего. Сборка живёт сутки, поэтому эффект догонял и
+   * через день: на обычной рамке появлялось «Выбрать в комплект».
+   *
+   * Если сборка идёт, вместо подмены кнопки показываем ссылку обратно
+   * к шагу — выбирать позицию в комплект логично там, где виден весь
+   * комплект и его цена.
    */
-  const { pick: pickKit, has: inKit, steps: kitSteps } = useKit();
+  const { steps: kitSteps, slug: kitSlug } = useKit();
   const { add: addToCart, has: inCart, setOpen: openCart } = useCart();
-  const kitMode = kitSteps.some((s) => s.category === product?.category);
-  const chosen = kitMode ? inKit(product?.id ?? '') : inCart(product?.id ?? '');
+  const chosen = inCart(product?.id ?? '');
+  /** Идёт сборка, и этот товар — как раз для одного из её шагов */
+  const kitHint =
+    !!kitSlug &&
+    kitSteps.some((s) => s.category === product?.category);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -211,6 +220,7 @@ const Product = () => {
                 images={productImages(product)}
                 alt={product.name}
               />
+              <ProductTrust product={product} />
             </div>
 
             <div className="lg:col-span-6 lg:col-start-7">
@@ -249,13 +259,7 @@ const Product = () => {
               />
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                {/* В сборке количество не выбирают: на шаг встаёт одна
-                    позиция, счётчик там только путал бы */}
-                <div
-                  className={`items-center border border-foreground ${
-                    kitMode ? "hidden" : "flex"
-                  }`}
-                >
+                <div className="flex items-center border border-foreground">
                   <button
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     aria-label="Меньше"
@@ -276,10 +280,6 @@ const Product = () => {
                 </div>
                 <button
                   onClick={() => {
-                    if (kitMode) {
-                      pickKit(product);
-                      return;
-                    }
                     // Кладём выбранное количество и сразу открываем корзину:
                     // иначе непонятно, куда делся товар
                     addToCart(product, qty);
@@ -287,16 +287,25 @@ const Product = () => {
                   }}
                   className="flex flex-1 items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
-                  {kitMode
-                    ? chosen
-                      ? "Выбрано в комплект"
-                      : "Выбрать в комплект"
-                    : chosen
-                      ? "В корзине — открыть"
-                      : "В корзину"}
+                  {chosen ? "В корзине — открыть" : "В корзину"}
                   <Icon name={chosen ? "Check" : "Plus"} size={18} />
                 </button>
               </div>
+
+              {/* Идёт сборка комплекта, и товар подходит её шагу — зовём
+                  обратно, где видно весь комплект и общую цену */}
+              {kitHint && (
+                <Link
+                  to={`/scenario/${kitSlug}`}
+                  className="mt-3 flex items-center gap-2 border border-primary bg-primary/5 px-4 py-3 text-[0.85rem] transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Icon name="Layers" fallback="Package" size={16} className="flex-none" />
+                  <span className="min-w-0 flex-1">
+                    Вы собираете комплект — выбрать эту позицию в него
+                  </span>
+                  <Icon name="ArrowRight" size={15} className="flex-none" />
+                </Link>
+              )}
 
               <div className="mt-3 flex flex-col gap-3 sm:flex-row">
                 <button
