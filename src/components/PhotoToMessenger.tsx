@@ -12,6 +12,11 @@ interface Props {
   inline?: boolean;
   /** Ссылка одной строкой — открывает то же окно выбора мессенджера */
   asLink?: boolean;
+  /**
+   * Широкая кнопка во всю ширину — для блока гарантий под фото товара.
+   * Свой текст: там речь о конкретном товаре, а не о подборе вообще.
+   */
+  asCard?: boolean;
   /** Кнопки стоят на тёмной плашке подбора */
   onDark?: boolean;
 }
@@ -21,7 +26,14 @@ interface Props {
  * комплектацию машины и подбирает оборудование вручную — точнее,
  * чем любой автоматический подбор по марке и году.
  */
-const PhotoToMessenger = ({ compact, hideHint, inline, asLink, onDark }: Props) => {
+const PhotoToMessenger = ({
+  compact,
+  hideHint,
+  inline,
+  asLink,
+  asCard,
+  onDark,
+}: Props) => {
   const { contacts } = useCatalog();
   /* Окно выбора мессенджера — для тесной кнопки «Фото нам» */
   const [open, setOpen] = useState(false);
@@ -118,6 +130,24 @@ const PhotoToMessenger = ({ compact, hideHint, inline, asLink, onDark }: Props) 
    * Нужна там, где рядом уже есть главное действие — например
    * в шаге подбора, чтобы не спорить с ним за внимание.
    */
+  if (asCard) {
+    return (
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-4 flex w-full items-center gap-2 border border-border px-3.5 py-3 text-left text-[0.83rem] transition-colors hover:border-primary hover:text-primary"
+        >
+          <Icon name="Camera" size={16} className="flex-none text-primary" />
+          <span className="min-w-0 flex-1 leading-snug">
+            Не уверены, что подойдёт? Пришлите фото панели — подберём
+          </span>
+          <Icon name="ArrowRight" size={14} className="flex-none" />
+        </button>
+        {dialog}
+      </>
+    );
+  }
+
   if (asLink) {
     return (
       <>
