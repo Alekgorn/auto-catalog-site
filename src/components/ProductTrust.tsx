@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import { Product } from '@/data/catalog';
+import PhotoToMessenger from '@/components/PhotoToMessenger';
 
 interface Props {
   product: Product;
@@ -58,18 +58,10 @@ const ProductTrust = ({ product }: Props) => {
       {/*
         Подбор по фото — ответ на «хочу посмотреть вживую». Прислать
         снимок панели надёжнее, чем разглядывать коробку в магазине:
-        решает не внешний вид, а совместимость с конкретной машиной
+        решает не внешний вид, а совместимость с конкретной машиной.
+        Кнопка открывает выбор мессенджера — Telegram или MAX.
       */}
-      <Link
-        to="/#contacts"
-        className="mt-4 flex items-center gap-2 border border-border px-3.5 py-3 text-[0.83rem] transition-colors hover:border-primary hover:text-primary"
-      >
-        <Icon name="Camera" size={16} className="flex-none text-primary" />
-        <span className="min-w-0 flex-1 leading-snug">
-          Не уверены, что подойдёт? Пришлите фото панели — подберём
-        </span>
-        <Icon name="ArrowRight" size={14} className="flex-none" />
-      </Link>
+      <PhotoToMessenger asCard />
     </div>
   );
 };
