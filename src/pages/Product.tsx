@@ -31,6 +31,7 @@ import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useKit } from "@/context/KitContext";
+import { useCart } from "@/context/CartContext";
 import PriceBlock from "@/components/PriceBlock";
 import StockLine from "@/components/StockLine";
 import MarketButtons from "@/components/MarketButtons";
@@ -47,8 +48,17 @@ const Product = () => {
     [id, allProducts],
   );
 
-  /** Идёт сборка — товар кладём в панель комплекта, а не в корзину */
-  const { pick: pickKit, has: inKit } = useKit();
+  /*
+   * Сборка комплекта — особый режим: товар отмечается на своём шаге,
+   * а не уходит в корзину. Но только если сборка реально начата.
+   * Без этой проверки кнопка на обычной странице товара молча клала
+   * позицию в сборку, которую нигде не видно, — покупатель жал
+   * «Добавить в заказ», и как будто ничего не происходило.
+   */
+  const { pick: pickKit, has: inKit, steps: kitSteps } = useKit();
+  const { add: addToCart, has: inCart, setOpen: openCart } = useCart();
+  const kitMode = kitSteps.some((s) => s.category === product?.category);
+  const chosen = kitMode ? inKit(product?.id ?? '') : inCart(product?.id ?? '');
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [qty, setQty] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -239,7 +249,13 @@ const Product = () => {
               />
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <div className="flex items-center border border-foreground">
+                {/* В сборке количество не выбирают: на шаг встаёт одна
+                    позиция, счётчик там только путал бы */}
+                <div
+                  className={`items-center border border-foreground ${
+                    kitMode ? "hidden" : "flex"
+                  }`}
+                >
                   <button
                     onClick={() => setQty((q) => Math.max(1, q - 1))}
                     aria-label="Меньше"
@@ -259,14 +275,26 @@ const Product = () => {
                   </button>
                 </div>
                 <button
-                  onClick={() => pickKit(product)}
+                  onClick={() => {
+                    if (kitMode) {
+                      pickKit(product);
+                      return;
+                    }
+                    // Кладём выбранное количество и сразу открываем корзину:
+                    // иначе непонятно, куда делся товар
+                    addToCart(product, qty);
+                    openCart(true);
+                  }}
                   className="flex flex-1 items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
                 >
-                  {inKit(product.id) ? "В заказе" : "Добавить в заказ"}
-                  <Icon
-                    name={inKit(product.id) ? "Check" : "Plus"}
-                    size={18}
-                  />
+                  {kitMode
+                    ? chosen
+                      ? "Выбрано в комплект"
+                      : "Выбрать в комплект"
+                    : chosen
+                      ? "В корзине — открыть"
+                      : "В корзину"}
+                  <Icon name={chosen ? "Check" : "Plus"} size={18} />
                 </button>
               </div>
 
