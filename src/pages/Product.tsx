@@ -11,6 +11,7 @@ import ProductTabs, { ProductTab } from "@/components/ProductTabs";
 import {
   Product as ProductType,
   Vehicle,
+  formatPrice,
   productDescription,
   productImages,
   productKit,
@@ -20,6 +21,12 @@ import {
   productsWithThis,
 } from "@/data/catalog";
 import { VEHICLE_EVENT, loadVehicle } from "@/lib/vehicle";
+import { telHref } from "@/lib/site-settings";
+import {
+  DELIVERY_FROM,
+  FREE_ALL_FROM,
+  FREE_FROM,
+} from "@/lib/delivery";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
@@ -34,7 +41,7 @@ const Product = () => {
   const { id } = useParams();
   // Сам товар ищем в полном каталоге: по прямой ссылке страница должна
   // открыться, даже если дилер включил фильтр наличия
-  const { products, allProducts, guides, loading } = useCatalog();
+  const { products, allProducts, guides, contacts, loading } = useCatalog();
   const product = useMemo(
     () => allProducts.find((p) => p.id === id) ?? null,
     [id, allProducts],
@@ -271,7 +278,7 @@ const Product = () => {
                   Купить в 1 клик
                 </button>
                 <a
-                  href="tel:+78003334455"
+                  href={telHref(contacts.phone)}
                   className="flex items-center justify-center gap-2 border border-foreground px-6 py-4 font-head text-[0.9rem] font-medium uppercase tracking-[0.02em] transition-colors hover:border-primary hover:text-primary"
                 >
                   <Icon name="Phone" size={16} />
@@ -280,6 +287,42 @@ const Product = () => {
               </div>
 
               <MarketButtons product={product} />
+
+              {/*
+                Точную стоимость доставки заранее не знаем — город и способ
+                выбираются позже. Но неопределённость пугает сильнее цифры,
+                поэтому показываем правило: порог и нижнюю границу
+              */}
+              <div className="mt-5 border border-border bg-surface p-4">
+                <div className="flex items-start gap-2.5">
+                  <Icon
+                    name="Truck"
+                    size={17}
+                    className="mt-0.5 flex-none text-primary"
+                  />
+                  <div className="min-w-0 text-[0.85rem] leading-relaxed">
+                    <span className="font-medium">
+                      Доставка бесплатно от {formatPrice(FREE_FROM)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {' '}— в пункт выдачи Ozon, WB или Яндекс.Маркета. Курьером
+                      по СПб и через СДЭК — бесплатно от {formatPrice(FREE_ALL_FROM)},
+                      с оплатой при получении.
+                    </span>
+                    <div className="mt-1.5 text-[0.78rem] text-muted-foreground">
+                      Заказ меньше — доставка от {formatPrice(DELIVERY_FROM)},
+                      точную сумму назовём при подтверждении.
+                    </div>
+                    <Link
+                      to="/#delivery"
+                      className="mt-2 inline-flex items-center gap-1.5 text-[0.8rem] font-medium underline-offset-4 hover:text-primary hover:underline"
+                    >
+                      Все способы доставки
+                      <Icon name="ArrowRight" size={13} />
+                    </Link>
+                  </div>
+                </div>
+              </div>
 
             </div>
           </div>

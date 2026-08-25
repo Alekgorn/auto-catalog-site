@@ -8,6 +8,7 @@ import { usePrice } from '@/hooks/use-price';
 import { formatPrice, isCompatible, productImages } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
 import { sendOrder } from '@/lib/api';
+import { FREE_ALL_FROM, FREE_FROM, untilFree } from '@/lib/delivery';
 
 const CartDrawer = () => {
   const { items, count, open, setOpen, remove, setQty, clear } = useCart();
@@ -18,6 +19,8 @@ const CartDrawer = () => {
   /** Розничная стоимость набора и выгода дилера с перепродажи */
   const retail = items.reduce((a, i) => a + i.product.price * i.qty, 0);
   const profit = items.reduce((a, i) => a + profitOf(i.product) * i.qty, 0);
+  /** Сколько добрать до бесплатной доставки — 0 значит уже бесплатно */
+  const left = untilFree(total);
   const { toast } = useToast();
   const vehicle = loadVehicle();
 
@@ -220,8 +223,38 @@ const CartDrawer = () => {
                   {formatPrice(total)}
                 </span>
               </div>
+              {/*
+                Подсказка о пороге: доставка ощущается пустой тратой, а
+                товар за те же деньги — приобретением. Поэтому «добавьте
+                на 900 ₽» поднимает средний чек лучше скидки
+              */}
+              {left > 0 ? (
+                <div className="mt-3 border border-border bg-surface px-4 py-3">
+                  <div className="flex items-center gap-2 text-[0.85rem] font-medium">
+                    <Icon name="Truck" size={16} className="flex-none text-primary" />
+                    До бесплатной доставки — {formatPrice(left)}
+                  </div>
+                  <div className="mt-2 h-1.5 w-full bg-border">
+                    <div
+                      className="h-full bg-primary transition-[width] duration-300"
+                      style={{
+                        width: `${Math.min(100, Math.round((total / FREE_FROM) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 flex items-center gap-2 border border-success bg-success/10 px-4 py-3 text-[0.85rem] font-medium text-success">
+                  <Icon name="Truck" size={16} className="flex-none" />
+                  {total >= FREE_ALL_FROM
+                    ? 'Доставка бесплатно — любым способом'
+                    : 'Доставка в пункт выдачи — бесплатно'}
+                </div>
+              )}
+
               <p className="mt-2 text-[0.78rem] text-muted-foreground">
-                Стоимость установки рассчитаем при подтверждении заказа.
+                Стоимость доставки и установки назовём при подтверждении
+                заказа. Курьером по СПб и через СДЭК — оплата при получении.
               </p>
               <button
                 onClick={() => setStep('form')}
