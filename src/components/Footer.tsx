@@ -6,23 +6,37 @@ import { slugify } from "@/lib/slug";
 
 const COLS: {
   title: string;
-  links: string[];
+  /** Ссылка ведёт на свой якорь: раньше вся колонка вела в одно место */
+  links: { label: string; target?: string; route?: string }[];
   target?: string;
   route?: string;
 }[] = [
   {
     title: "Покупателю",
-    links: ["Подбор по авто", "Доставка", "Оплата", "Возврат", "Гарантия"],
+    links: [
+      { label: "Подбор по авто", target: "select" },
+      { label: "Доставка", target: "delivery" },
+      { label: "Оплата", target: "delivery" },
+      { label: "Возврат", target: "delivery" },
+      { label: "Гарантия", target: "faq" },
+    ],
     target: "select",
   },
   {
     title: "Инструкции",
-    links: ["Подключение с фото", "Все инструкции"],
+    links: [
+      { label: "Подключение с фото", route: "/guides" },
+      { label: "Все инструкции", route: "/guides" },
+    ],
     route: "/guides",
   },
   {
     title: "Компания",
-    links: ["О складе", "Контакты", "Для установщиков"],
+    links: [
+      { label: "О складе", target: "delivery" },
+      { label: "Контакты", target: "contacts" },
+      { label: "Для установщиков", target: "contacts" },
+    ],
     target: "contacts",
   },
 ];
@@ -77,20 +91,20 @@ const Footer = () => {
             <div className="eyebrow">{col.title}</div>
             <ul className="mt-4 space-y-2 text-[0.9rem]">
               {col.links.map((l) => (
-                <li key={l}>
+                <li key={l.label}>
                   <Link
-                    to={hrefFor(col)}
+                    to={hrefFor(l)}
                     onClick={(e) => {
-                      if (!col.route && window.location.pathname === "/") {
+                      if (!l.route && window.location.pathname === "/") {
                         e.preventDefault();
-                        if (col.target) scrollTo(col.target);
-                      } else if (col.route) {
+                        if (l.target) scrollTo(l.target);
+                      } else if (l.route) {
                         window.scrollTo({ top: 0 });
                       }
                     }}
                     className="text-muted-foreground transition-colors hover:text-primary"
                   >
-                    {l}
+                    {l.label}
                   </Link>
                 </li>
               ))}
