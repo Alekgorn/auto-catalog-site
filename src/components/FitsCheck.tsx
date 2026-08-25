@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import SearchSelect from '@/components/SearchSelect';
-import FitsList from '@/components/FitsList';
 import {
   Product,
   Vehicle,
@@ -26,13 +25,12 @@ interface Props {
  */
 const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
   const { brands: BRANDS } = useCatalog();
-  const [open, setOpen] = useState(false);
+  /** Форма подбора свёрнута: разворачиваем только по просьбе */
+  const [picker, setPicker] = useState(false);
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
   const [year, setYear] = useState('');
 
-  const entries = Object.entries(product.fits ?? {}) as [string, string[]][];
-  const modelCount = entries.reduce((n, [, m]) => n + m.length, 0);
   const fits = isCompatible(product, vehicle);
   /** Товар действительно подходит любой машине по своим данным */
   const universal = isUniversal(product, BRANDS.length);
@@ -134,15 +132,27 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
             </div>
           )}
 
-          <div
-            className={`flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground ${
+          {/*
+            Три списка марок разом занимали четверть экрана и спорили за
+            внимание с ценой и кнопкой. Разворачиваем по клику: тому, кто
+            уже выбрал машину в шапке, форма вообще не нужна.
+          */}
+          <button
+            onClick={() => setPicker((v) => !v)}
+            className={`flex w-full items-center gap-2 text-left text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-primary ${
               universal ? 'mt-3' : ''
             }`}
           >
-            <Icon name="Car" size={15} />
-            Проверьте свою машину
-          </div>
+            <Icon name="Car" size={15} className="flex-none" />
+            <span className="min-w-0 flex-1">Проверьте свою машину</span>
+            <Icon
+              name={picker ? 'ChevronUp' : 'ChevronDown'}
+              size={15}
+              className="flex-none"
+            />
+          </button>
 
+          {picker && (
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
             <SearchSelect
               id="fits-brand"
@@ -178,7 +188,9 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
               onChange={setYear}
             />
           </div>
+          )}
 
+          {picker && (
           <button
             onClick={check}
             disabled={!brand || !model || !year}
@@ -187,37 +199,12 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
             Проверить совместимость
             <Icon name="ArrowRight" size={15} />
           </button>
+          )}
         </div>
       )}
 
-      {/* Список марок пуст — раскрывать нечего */}
-      <button
-        onClick={() => setOpen((v) => !v)}
-        hidden={modelCount === 0}
-        className="flex w-full items-center justify-between gap-3 border-t border-border px-5 py-3.5 text-left transition-colors hover:text-primary"
-      >
-        <span className="flex items-center gap-2.5 text-[0.85rem]">
-          <Icon name="List" size={16} />
-          Весь список — {modelCount} моделей
-        </span>
-        <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={16} />
-      </button>
-
-      {open && modelCount > 0 && (
-        <div className="border-t border-border px-5 pb-5 pt-1">
-          <FitsList brands={entries} vehicle={vehicle} />
-          <p className="mt-5 text-[0.85rem] text-muted-foreground">
-            Вашей модели нет в списке?{' '}
-            <button
-              onClick={onRequest}
-              className="underline underline-offset-2 transition-colors hover:text-primary"
-            >
-              Проверим по VIN
-            </button>{' '}
-            и предложим аналог.
-          </p>
-        </div>
-      )}
+      {/* Полный список моделей переехал вниз, к характеристикам:
+          рядом с ценой он спорил за внимание с кнопкой покупки */}
     </div>
   );
 };
