@@ -9,13 +9,31 @@ import { useDealer } from '@/context/DealerContext';
  * клиент. Повторное нажатие возвращает их обратно.
  */
 const DealerToggle = () => {
-  const { loggedIn, hidden, toggleHidden } = useDealer();
+  const { loggedIn, hidden, toggleHidden, onlyInStock, toggleOnlyInStock } =
+    useDealer();
   const [hint, setHint] = useState(false);
 
   if (!loggedIn) return null;
 
   return (
     <div className="fixed bottom-5 right-5 z-[60] flex flex-col items-end gap-2">
+      {/*
+        Фильтр наличия прячет часть каталога. Легко забыть, что он включён,
+        и решить, будто товар кончился — поэтому напоминаем об этом плашкой
+        и даём выключить в одно нажатие
+      */}
+      {onlyInStock && (
+        <button
+          onClick={toggleOnlyInStock}
+          title="Показать весь каталог"
+          className="flex items-center gap-2 border-2 border-primary bg-background px-3 py-2 text-[0.75rem] font-bold uppercase tracking-[0.06em] shadow-card-hover transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          <Icon name="PackageCheck" size={15} />
+          Только в наличии
+          <Icon name="X" size={14} />
+        </button>
+      )}
+
       {hint && (
         <div className="max-w-[220px] border border-foreground bg-surface px-3 py-2 text-[0.78rem] leading-snug shadow-card-hover">
           {hidden

@@ -11,6 +11,8 @@ interface Props {
   /** Адрес сценария — попадёт в отчёт по машинам без решения */
   scenarioSlug?: string;
   products: Product[];
+  /** Полный каталог — по нему решаем, существует ли решение под машину */
+  allProducts: Product[];
   vehicle: Vehicle | null;
   brandsCount: number;
   picks: Record<string, string>;
@@ -42,6 +44,7 @@ const ScenarioKit = ({
   kit,
   scenarioSlug,
   products,
+  allProducts,
   vehicle,
   brandsCount,
   picks,
@@ -67,8 +70,13 @@ const ScenarioKit = ({
   const needsFrame = kit.some(
     (s) => s.strictFit && s.category === FRAMES_CATEGORY,
   );
+  /*
+   * Наличие рамок проверяем по ПОЛНОМУ каталогу: дилерский фильтр
+   * «только в наличии» временно прячет позиции, но это не значит, что
+   * решения под машину не существует — иначе заглушка врала бы.
+   */
   const blocked =
-    !!vehicle && needsFrame && !hasFramesForVehicle(products, vehicle);
+    !!vehicle && needsFrame && !hasFramesForVehicle(allProducts, vehicle);
 
   if (blocked && vehicle) {
     return (

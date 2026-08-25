@@ -7,6 +7,7 @@ import {
   Product,
 } from '@/data/catalog';
 import { CATALOG_URL } from '@/lib/api';
+import { useDealer } from '@/context/DealerContext';
 import { compareNames } from '@/lib/slug';
 import {
   DEFAULT_CONTACTS,
@@ -39,7 +40,17 @@ export interface PrerenderData {
 }
 
 interface CatalogValue {
+  /**
+   * Товары для показа. В дилерском режиме с фильтром «только в наличии»
+   * здесь остаются лишь позиции с остатком — списки, поиск и подбор
+   * сразу работают по доступному товару.
+   */
   products: Product[];
+  /**
+   * Полный каталог без фильтра наличия. Нужен там, где товар ищут по
+   * ссылке: страница товара должна открыться, даже если склад пуст.
+   */
+  allProducts: Product[];
   brands: Brand[];
   guides: Guide[];
   categories: string[];
@@ -162,6 +173,7 @@ export const CatalogProvider = ({
    */
   const cached = initialData ? null : cachedData();
   const built = initialData ?? bootData();
+  const { onlyInStock } = useDealer();
   const builtAt = initialData ? Date.now() : bootTime();
   const useCache = !!cached && cached.at > builtAt;
 
@@ -298,17 +310,28 @@ export const CatalogProvider = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick, isPrerender]);
 
+  /*
+   * Дилер включил «только в наличии» — убираем всё, чего нет на складе.
+   * Фильтруем в одном месте, чтобы каталог, поиск, подбор комплекта и
+   * рекомендации разом показывали только то, что можно отгрузить.
+   */
+  const visibleProducts = useMemo(
+    () => (onlyInStock ? products.filter((p) => (p.stock ?? 0) > 0) : products),
+    [products, onlyInStock],
+  );
+
   // Порядок категорий задаётся в админке; товары без категории тоже показываем
   const categories = useMemo(() => {
     const set = [...catalogCategories];
-    products.forEach((p) => {
+    visibleProducts.forEach((p) => {
       if (p.category && !set.includes(p.category)) set.push(p.category);
     });
     return set;
-  }, [products, catalogCategories]);
+  }, [visibleProducts, catalogCategories]);
 
   const value: CatalogValue = {
-    products,
+    products: visibleProducts,
+    allProducts: products,
     brands,
     guides,
     categories,

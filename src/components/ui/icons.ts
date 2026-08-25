@@ -93,6 +93,7 @@ import Save from 'lucide-react/dist/esm/icons/save';
 import Search from 'lucide-react/dist/esm/icons/search';
 import GitCompare from 'lucide-react/dist/esm/icons/git-compare';
 import Scale from 'lucide-react/dist/esm/icons/scale';
+import PackageCheck from 'lucide-react/dist/esm/icons/package-check';
 import Maximize2 from 'lucide-react/dist/esm/icons/maximize-2';
 import Send from 'lucide-react/dist/esm/icons/send';
 import Settings from 'lucide-react/dist/esm/icons/settings';
@@ -210,6 +211,7 @@ export const ICONS: Record<string, FC<LucideProps>> = {
   Search,
   GitCompare,
   Scale,
+  PackageCheck,
   Maximize2,
   Send,
   Settings,

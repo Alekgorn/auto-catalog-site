@@ -25,12 +25,70 @@ const formatPhone = (raw: string): string => {
 
 const digitsOf = (value: string) => value.replace(/\D/g, '');
 
+interface SwitchProps {
+  on: boolean;
+  onToggle: () => void;
+  icon: string;
+  title: string;
+  hint: string;
+}
+
+/** Тумблер складской настройки: заголовок, пояснение и переключатель */
+const StockSwitch = ({ on, onToggle, icon, title, hint }: SwitchProps) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    onClick={onToggle}
+    className={`mb-2 flex w-full items-center gap-3 border p-3 text-left transition-colors ${
+      on
+        ? 'border-primary bg-primary/5'
+        : 'border-border hover:border-foreground'
+    }`}
+  >
+    <Icon
+      name={icon}
+      fallback="Package"
+      size={18}
+      className={`flex-none ${on ? 'text-primary' : 'text-muted-foreground'}`}
+    />
+    <span className="min-w-0 flex-1">
+      <span className="block text-[0.85rem] font-medium leading-tight">
+        {title}
+      </span>
+      <span className="mt-0.5 block text-[0.75rem] leading-snug text-muted-foreground">
+        {hint}
+      </span>
+    </span>
+    <span
+      className={`relative h-5 w-9 flex-none rounded-full transition-colors ${
+        on ? 'bg-primary' : 'bg-border'
+      }`}
+    >
+      <span
+        className={`absolute top-0.5 h-4 w-4 rounded-full bg-background transition-[left] ${
+          on ? 'left-[1.15rem]' : 'left-0.5'
+        }`}
+      />
+    </span>
+  </button>
+);
+
 /**
  * Вход для дилеров: оставляем номер телефона.
  * Заявку обрабатывает менеджер — после подтверждения дилер видит свои цены.
  */
 const DealerDialog = ({ open, onOpenChange }: Props) => {
-  const { active, dealer, login, logout } = useDealer();
+  const {
+    active,
+    dealer,
+    login,
+    logout,
+    showStock,
+    toggleShowStock,
+    onlyInStock,
+    toggleOnlyInStock,
+  } = useDealer();
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -104,6 +162,29 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
               {dealer?.name ? `${dealer.name}. ` : ''}Во всём каталоге показаны
               дилерские цены.
             </p>
+
+            {/* Складские настройки — только для дилера: покупателю остатки
+                не показываем, а дилеру они нужны, чтобы понимать отгрузку */}
+            <div className="mt-6 border-t border-border pt-5 text-left">
+              <div className="eyebrow mb-3">Склад</div>
+
+              <StockSwitch
+                on={showStock}
+                onToggle={toggleShowStock}
+                icon="Boxes"
+                title="Показывать остатки"
+                hint="В карточках будет видно, сколько штук на складе"
+              />
+
+              <StockSwitch
+                on={onlyInStock}
+                onToggle={toggleOnlyInStock}
+                icon="PackageCheck"
+                title="Только товары в наличии"
+                hint="Скроем всё, чего нет на складе — везде на сайте"
+              />
+            </div>
+
             <button
               onClick={() => onOpenChange(false)}
               className="mt-6 w-full bg-foreground py-3.5 font-head text-[0.8rem] font-bold uppercase tracking-[0.1em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"

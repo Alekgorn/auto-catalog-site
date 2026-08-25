@@ -1,5 +1,6 @@
 import Icon from '@/components/ui/icon';
 import { Product } from '@/data/catalog';
+import { useDealer } from '@/context/DealerContext';
 
 /** Что писать, если склад пуст, а своего текста у товара нет */
 export const DEFAULT_STOCK_NOTE = 'Под заказ - Отправка 1–3 дня';
@@ -16,13 +17,29 @@ interface Props {
  * до того, как положит товар в корзину.
  */
 const StockLine = ({ product, large = false }: Props) => {
-  const inStock = (product.stock ?? 0) > 0;
-  /* В карточке каталога места мало — там текст короче, без потери смысла */
-  const text = inStock
-    ? large
-      ? 'На складе – отправка сегодня'
-      : 'На складе'
-    : product.stockNote || DEFAULT_STOCK_NOTE;
+  const { showStock } = useDealer();
+  const qty = product.stock ?? 0;
+  const inStock = qty > 0;
+
+  /*
+   * Дилеру с включёнными остатками показываем точное число: ему важно
+   * знать, сколько штук можно забрать прямо сейчас. Покупателю такие
+   * подробности ни к чему — он видит обычный текст про сроки.
+   */
+  const text = showStock
+    ? inStock
+      ? `На складе ${qty} шт.`
+      : /* В узкой карточке длинная строка обрезалась на полуслове —
+           срок доставки там показываем только в крупном варианте */
+        large
+        ? `Нет в наличии — ${product.stockNote || DEFAULT_STOCK_NOTE}`
+        : 'Нет в наличии'
+    : inStock
+      ? /* В карточке каталога места мало — текст короче, без потери смысла */
+        large
+        ? 'На складе – отправка сегодня'
+        : 'На складе'
+      : product.stockNote || DEFAULT_STOCK_NOTE;
 
   return (
     <div

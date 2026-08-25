@@ -44,7 +44,13 @@ const ScenarioPage = () => {
 
   /** Марка из ссылки — «популярные марки» в футере ведут сюда */
   const brandFilter = params.get("brand") ?? "";
-  const { products, brands, categories: allCategories, loading } = useCatalog();
+  const {
+    products,
+    allProducts,
+    brands,
+    categories: allCategories,
+    loading,
+  } = useCatalog();
   const scenario = findScenario(slug);
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -595,6 +601,7 @@ const ScenarioPage = () => {
             kit={scenario.kit}
             scenarioSlug={scenario.slug}
             products={products}
+            allProducts={allProducts}
             vehicle={vehicle}
             brandsCount={brands.length}
             picks={picks}

@@ -32,10 +32,12 @@ import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const Product = () => {
   const { id } = useParams();
-  const { products, guides, loading } = useCatalog();
+  // Сам товар ищем в полном каталоге: по прямой ссылке страница должна
+  // открыться, даже если дилер включил фильтр наличия
+  const { products, allProducts, guides, loading } = useCatalog();
   const product = useMemo(
-    () => products.find((p) => p.id === id) ?? null,
-    [id, products],
+    () => allProducts.find((p) => p.id === id) ?? null,
+    [id, allProducts],
   );
 
   /** Идёт сборка — товар кладём в панель комплекта, а не в корзину */
