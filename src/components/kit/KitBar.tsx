@@ -25,7 +25,9 @@ const plural = (n: number) => {
 const KitBar = () => {
   const { picks, qty, setQty, steps, skipped, slug, drop, reset, finish } =
     useKit();
-  const { products } = useCatalog();
+  // Уже выбранное показываем всегда: фильтр наличия не должен вытирать
+  // позиции из собранного комплекта
+  const { allProducts: products } = useCatalog();
   const { add, setOpen } = useCart();
   const navigate = useNavigate();
   const { pathname } = useLocation();

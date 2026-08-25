@@ -23,6 +23,16 @@ interface DealerState {
   hidden: boolean;
   /** Переключает показ дилерских цен */
   toggleHidden: () => void;
+  /**
+   * Показывать точное количество на складе.
+   * Покупателю остатки не нужны, а дилеру важно знать, сколько штук
+   * можно забрать прямо сейчас.
+   */
+  showStock: boolean;
+  toggleShowStock: () => void;
+  /** Прятать всё, чего нет на складе — в каталоге только доступное */
+  onlyInStock: boolean;
+  toggleOnlyInStock: () => void;
   /** Проверяет номер в базе. Возвращает текст ошибки или null при успехе */
   login: (phone: string) => Promise<string | null>;
   logout: () => void;
@@ -31,6 +41,9 @@ interface DealerState {
 const KEY = 'shtatno.dealer';
 /** Запоминаем, что дилер скрыл свои цены */
 const HIDE_KEY = 'shtatno.dealer.hidden';
+/** Показ остатков и фильтр наличия — тоже помним между заходами */
+const STOCK_KEY = 'shtatno.dealer.stock';
+const ONLY_KEY = 'shtatno.dealer.only-stock';
 
 /** Сколько помним вход дилера — 7 дней */
 const TTL_DAYS = 7;
@@ -47,6 +60,10 @@ const DealerContext = createContext<DealerState>({
   dealer: null,
   hidden: false,
   toggleHidden: () => {},
+  showStock: false,
+  toggleShowStock: () => {},
+  onlyInStock: false,
+  toggleOnlyInStock: () => {},
   login: async () => 'Недоступно',
   logout: () => {},
 });
@@ -54,6 +71,8 @@ const DealerContext = createContext<DealerState>({
 export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
   const [dealer, setDealer] = useState<Dealer | null>(null);
   const [hidden, setHidden] = useState(false);
+  const [showStock, setShowStock] = useState(false);
+  const [onlyInStock, setOnlyInStock] = useState(false);
 
   // Восстанавливаем вход, если срок ещё не вышел
   useEffect(() => {
@@ -67,6 +86,8 @@ export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
       }
       setDealer({ phone: saved.phone, name: saved.name });
       setHidden(localStorage.getItem(HIDE_KEY) === '1');
+      setShowStock(localStorage.getItem(STOCK_KEY) === '1');
+      setOnlyInStock(localStorage.getItem(ONLY_KEY) === '1');
     } catch {
       localStorage.removeItem(KEY);
     }
@@ -79,6 +100,34 @@ export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         if (next) localStorage.setItem(HIDE_KEY, '1');
         else localStorage.removeItem(HIDE_KEY);
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
+  }, []);
+
+  /** Показ остатков: запоминаем выбор, чтобы не включать каждый раз */
+  const toggleShowStock = useCallback(() => {
+    setShowStock((v) => {
+      const next = !v;
+      try {
+        if (next) localStorage.setItem(STOCK_KEY, '1');
+        else localStorage.removeItem(STOCK_KEY);
+      } catch {
+        /* noop */
+      }
+      return next;
+    });
+  }, []);
+
+  /** Фильтр «только в наличии» — тоже помним между заходами */
+  const toggleOnlyInStock = useCallback(() => {
+    setOnlyInStock((v) => {
+      const next = !v;
+      try {
+        if (next) localStorage.setItem(ONLY_KEY, '1');
+        else localStorage.removeItem(ONLY_KEY);
       } catch {
         /* noop */
       }
@@ -113,7 +162,11 @@ export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
   const logout = useCallback(() => {
     setDealer(null);
     setHidden(false);
+    setShowStock(false);
+    setOnlyInStock(false);
     localStorage.removeItem(HIDE_KEY);
+    localStorage.removeItem(STOCK_KEY);
+    localStorage.removeItem(ONLY_KEY);
     localStorage.removeItem(KEY);
   }, []);
 
@@ -125,10 +178,25 @@ export const DealerProvider = ({ children }: { children: React.ReactNode }) => {
       dealer,
       hidden,
       toggleHidden,
+      // Остатки и фильтр — только для вошедшего дилера
+      showStock: !!dealer && showStock,
+      toggleShowStock,
+      onlyInStock: !!dealer && onlyInStock,
+      toggleOnlyInStock,
       login,
       logout,
     }),
-    [dealer, hidden, toggleHidden, login, logout],
+    [
+      dealer,
+      hidden,
+      toggleHidden,
+      showStock,
+      toggleShowStock,
+      onlyInStock,
+      toggleOnlyInStock,
+      login,
+      logout,
+    ],
   );
 
   return (

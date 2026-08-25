@@ -10,7 +10,8 @@ import { useCompare } from '@/context/CompareContext';
  */
 const CompareBar = () => {
   const { ids, category, remove, clear } = useCompare();
-  const { products } = useCatalog();
+  // Отмеченное к сравнению не пропадает из-за фильтра наличия
+  const { allProducts: products } = useCatalog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
