@@ -1,16 +1,20 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useVehicle } from "@/hooks/use-vehicle";
 import { Link, useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SectionHead from "@/components/SectionHead";
-import ProductCard from "@/components/ProductCard";
+import CategorySection, {
+  CATEGORY_FIRST,
+  CATEGORY_STEP,
+} from "@/components/scenario/CategorySection";
 import NotFound from "@/pages/NotFound";
 import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
 import { findFitModels } from "@/lib/fits-match";
+import { SearchHit } from "@/lib/smart-search";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 /** Оборудование для одной марки авто по собственному адресу. */
@@ -34,13 +38,34 @@ const BrandPage = () => {
     [products, brand],
   );
 
+  /*
+   * Раскладываем по разделам и заворачиваем в SearchHit — в таком виде
+   * товары принимает CategorySection, тот же компонент, что показывает
+   * разделы в подборе по машине. Совместимость здесь уже проверена
+   * фильтром выше, поэтому оценка у всех одинаковая.
+   */
   const byCategory = useMemo(() => {
-    const map = new Map<string, typeof items>();
+    const map = new Map<string, SearchHit[]>();
     items.forEach((p) =>
-      map.set(p.category, [...(map.get(p.category) ?? []), p]),
+      map.set(p.category, [
+        ...(map.get(p.category) ?? []),
+        { product: p, score: 0, reason: "" },
+      ]),
     );
     return [...map.entries()].sort((a, b) => b[1].length - a[1].length);
   }, [items]);
+
+  /*
+   * Сколько товаров раскрыто в каждом разделе. У Toyota больше семисот
+   * позиций — раньше страница весила 1,6 МБ и открывалась пять секунд,
+   * потому что рисовались все сразу.
+   */
+  const [shown, setShown] = useState<Record<string, number>>({});
+
+  /** Сменили марку — сворачиваем разделы обратно к первому ряду */
+  useEffect(() => {
+    setShown({});
+  }, [slug]);
 
   useSeo(
     brand
@@ -117,21 +142,28 @@ const BrandPage = () => {
             </Link>
           </div>
         ) : (
-          byCategory.map(([category, list]) => (
-            <div key={category} className="py-8">
-              <h2 className="font-head text-xl font-bold uppercase tracking-tight">
-                {category}
-                <span className="ml-3 text-[0.8rem] font-normal text-muted-foreground">
-                  {list.length}
-                </span>
-              </h2>
-              <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {list.map((p) => (
-                  <ProductCard key={p.id} product={p} vehicle={vehicle} />
-                ))}
-              </div>
-            </div>
-          ))
+          <div className="pt-8">
+            {byCategory.map(([category, list]) => (
+              <CategorySection
+                key={category}
+                title={category}
+                items={list}
+                shown={shown[category] ?? CATEGORY_FIRST}
+                /* Все товары раздела подходят марке — делить нечего */
+                exactCount={list.length}
+                vehicle={vehicle}
+                onShowMore={() =>
+                  setShown((s) => ({
+                    ...s,
+                    [category]: (s[category] ?? CATEGORY_FIRST) + CATEGORY_STEP,
+                  }))
+                }
+                onCollapse={() =>
+                  setShown((s) => ({ ...s, [category]: CATEGORY_FIRST }))
+                }
+              />
+            ))}
+          </div>
         )}
 
         <div className="rule-hair" />
