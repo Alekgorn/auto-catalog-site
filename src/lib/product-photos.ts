@@ -75,5 +75,11 @@ export const allPhotos = (p: Product | null | undefined): string[] => {
   if (!rest?.length) return cover;
   /* У товара без своих снимков обложка — картинка категории, её не мешаем */
   if (!p.images?.length) return cover;
-  return [...cover, ...rest.map(expand)];
+
+  /*
+   * Свежий каталог из админки приходит целиком, со всеми снимками сразу —
+   * тогда догруженный словарь повторяет то, что уже есть, и в галерее
+   * фото двоились. Оставляем только те кадры, которых ещё нет.
+   */
+  return [...new Set([...cover, ...rest.map(expand)])];
 };

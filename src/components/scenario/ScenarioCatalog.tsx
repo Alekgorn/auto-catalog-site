@@ -1,4 +1,4 @@
-import { Fragment, ReactNode } from "react";
+import { Fragment } from "react";
 import ProductCard from "@/components/ProductCard";
 import UniversalDivider from "@/components/UniversalDivider";
 import CatalogFilters, { FilterState } from "@/components/CatalogFilters";
@@ -56,8 +56,6 @@ interface Props {
   sectionShown: Record<string, number>;
   onSectionMore: (title: string) => void;
   onSectionCollapse: (title: string) => void;
-  /** Подсказка о подборе магнитол по диагонали — над списком товаров */
-  screenNote?: ReactNode;
 }
 
 /**
@@ -90,7 +88,6 @@ const ScenarioCatalog = ({
   sectionShown,
   onSectionMore,
   onSectionCollapse,
-  screenNote,
 }: Props) => (
   <>
     <div
@@ -174,8 +171,6 @@ const ScenarioCatalog = ({
           />
         </FloatingFilters>
       )}
-
-      {screenNote}
 
       {/* Полный каталог разложен по разделам: покупатель сразу видит,
           что вообще есть, и разворачивает только нужный раздел */}

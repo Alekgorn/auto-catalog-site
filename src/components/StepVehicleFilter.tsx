@@ -40,31 +40,42 @@ const StepVehicleFilter = ({
 
   const { models } = useBrandPicker(brand);
 
-  /** Подсказка под фильтром: что уже учтено и что стоит уточнить дальше */
+  /**
+   * Подсказка под фильтром: что уже учтено и что стоит уточнить дальше.
+   *
+   * Тёмной плашкой она становится сразу после выбора марки, а не только
+   * когда заполнены все три поля: каталог сужается уже на первом шаге, и
+   * человек должен это видеть, иначе он не понимает, сработал ли фильтр.
+   * Что уточнить дальше — второй строкой, помельче.
+   */
   const hint = () => {
     if (!brand)
       return {
         icon: "Car",
         text: "Выберите марку — каталог сразу отфильтруется под неё.",
+        next: "",
         done: false,
       };
     if (!model)
       return {
-        icon: "Check",
-        text: `Каталог отфильтрован по марке ${brand}. Выберите модель, чтобы отфильтровать точнее.`,
-        done: false,
+        icon: "CircleCheck",
+        text: `Каталог подобран под ${brand}`,
+        next: "Выберите модель, чтобы подбор стал точнее.",
+        done: true,
       };
     if (!year)
       return {
-        icon: "Check",
-        text: `Марка и модель выбраны: ${brand} ${model}. Осталось выбрать год вашего авто, чтобы получить максимально точные товары.`,
-        done: false,
+        icon: "CircleCheck",
+        text: `Каталог подобран под ${brand} ${model}`,
+        next: "Осталось выбрать год — тогда подбор будет точным.",
+        done: true,
       };
     return {
       icon: "CircleCheck",
       /* Без «измените автомобиль выше»: поля стоят прямо над этой
          строкой, и объяснять дорогу к ним незачем */
       text: `Каталог подобран под ${brand} ${model}, ${year}\u00A0г.`,
+      next: "",
       done: true,
     };
   };
@@ -165,14 +176,23 @@ const StepVehicleFilter = ({
             strokeWidth={h.done ? 2.5 : 2}
             className={`flex-none ${h.done ? "text-background" : ""}`}
           />
-          <span
-            className={
-              h.done
-                ? "font-head text-[0.88rem] font-bold uppercase leading-tight tracking-tight md:text-[0.92rem]"
-                : ""
-            }
-          >
-            {h.text}
+          <span className="min-w-0">
+            <span
+              className={
+                h.done
+                  ? "block font-head text-[0.88rem] font-bold uppercase leading-tight tracking-tight md:text-[0.92rem]"
+                  : ""
+              }
+            >
+              {h.text}
+            </span>
+            {/* Что уточнить дальше — отдельной строкой и приглушённо:
+                главное сообщение «фильтр уже работает», а не инструкция */}
+            {h.next && (
+              <span className="mt-1 block text-[0.78rem] font-normal normal-case leading-snug tracking-normal text-background/70">
+                {h.next}
+              </span>
+            )}
           </span>
         </span>
         {brand && (
