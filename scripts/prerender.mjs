@@ -392,6 +392,15 @@ const main = async () => {
 
     const source = path.join(ROOT, 'index.html');
     let root = resetShell(await fs.readFile(source, 'utf-8'));
+    /* Код подтверждения Вебмастера: главную собираем из исходного файла,
+       а не из шаблона, поэтому тег нужно вшить сюда отдельно — иначе
+       на самой важной странице его как раз и не окажется */
+    if (verification) {
+      root = root.replace(
+        '</head>',
+        `  <meta name="yandex-verification" content="${escapeAttr(verification)}"/>\n</head>`,
+      );
+    }
     root = applySeoToHtml(root, homeSeo, '/');
     root = root.replace(
       EMPTY_ROOT,
