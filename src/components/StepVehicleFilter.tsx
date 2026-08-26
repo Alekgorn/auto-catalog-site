@@ -62,7 +62,9 @@ const StepVehicleFilter = ({
       };
     return {
       icon: "CircleCheck",
-      text: `Каталог отфильтрован по ${brand} ${model}, ${year}. Если нужно, измените автомобиль выше в фильтре.`,
+      /* Без «измените автомобиль выше»: поля стоят прямо над этой
+         строкой, и объяснять дорогу к ним незачем */
+      text: `Каталог подобран под ${brand} ${model}, ${year}\u00A0г.`,
       done: true,
     };
   };
@@ -139,21 +141,48 @@ const StepVehicleFilter = ({
         </div>
       </div>
 
+      {/*
+        Машина выбрана — строка становится тёмной плашкой во всю ширину.
+        Раньше она была бледно-розовой с серым текстом и терялась между
+        полями и переключателем: человек не замечал, что каталог уже
+        подобран под его авто, и искал фильтр дальше.
+      */}
       <div
-        className={`flex flex-wrap items-center gap-x-3 gap-y-1 border-t px-4 py-3 text-[0.85rem] md:px-5 ${
+        className={`flex flex-wrap items-center gap-x-3 gap-y-2 border-t px-4 py-3.5 md:px-5 ${
           h.done
-            ? "border-primary bg-primary/10 text-foreground"
-            : "border-border text-muted-foreground"
+            ? "border-foreground bg-foreground text-background"
+            : "border-border text-[0.85rem] text-muted-foreground"
         }`}
       >
-        <Icon
-          name={h.icon}
-          size={16}
-          className={`flex-none ${h.done ? "text-primary" : ""}`}
-        />
-        <span>{h.text}</span>
+        {/* Значок и текст держим одним блоком: на узком экране значок
+            отрывался и висел отдельной строкой над надписью.
+            basis-full — на телефоне счётчик уходит на свою строку, иначе
+            он отжимал надпись в колонку шириной в два слова */}
+        <span className="flex min-w-0 flex-1 basis-full items-center gap-2.5 md:basis-auto">
+          <Icon
+            name={h.icon}
+            size={h.done ? 18 : 16}
+            strokeWidth={h.done ? 2.5 : 2}
+            className={`flex-none ${h.done ? "text-background" : ""}`}
+          />
+          <span
+            className={
+              h.done
+                ? "font-head text-[0.88rem] font-bold uppercase leading-tight tracking-tight md:text-[0.92rem]"
+                : ""
+            }
+          >
+            {h.text}
+          </span>
+        </span>
         {brand && (
-          <span className="ml-auto whitespace-nowrap font-medium text-foreground">
+          <span
+            className={`whitespace-nowrap font-medium ${
+              h.done
+                ? "flex-none bg-background px-2.5 py-1 font-head text-[0.78rem] font-bold uppercase tracking-tight text-foreground"
+                : "ml-auto text-foreground"
+            }`}
+          >
             Подходит товаров: {count}
           </span>
         )}
