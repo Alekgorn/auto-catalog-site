@@ -10,6 +10,8 @@ import CatalogFilters, {
   SortKey,
 } from "@/components/CatalogFilters";
 import FloatingFilters from "@/components/FloatingFilters";
+import ScreenSizeNote from "@/components/ScreenSizeNote";
+import { useScreenFilter } from "@/hooks/use-screen-filter";
 import NotFound from "@/pages/NotFound";
 import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
@@ -141,7 +143,13 @@ const CategoryPage = () => {
     return sorted;
   }, [items, filters, sort]);
 
-  const visible = useMemo(() => list.slice(0, shown), [list, shown]);
+  /* Отбор магнитол по диагонали — тот же, что в сборке комплекта */
+  const screen = useScreenFilter(list);
+
+  const visible = useMemo(
+    () => screen.list.slice(0, shown),
+    [screen.list, shown],
+  );
 
   /*
    * Сменили фильтр, сортировку или перешли в другую категорию — начинаем
@@ -243,7 +251,7 @@ const CategoryPage = () => {
             <div className="flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="text-[0.78rem] uppercase tracking-[0.1em] text-muted-foreground">
-                  Найдено: {list.length}
+                  Найдено: {screen.list.length}
                 </span>
               </div>
 
@@ -262,7 +270,20 @@ const CategoryPage = () => {
 
             <div className="rule-hair" />
 
-            {list.length === 0 ? (
+            <div className="pt-5">
+              <ScreenSizeNote
+                sizes={screen.sizes}
+                hidden={screen.hiddenCount}
+                vehicleLabel={screen.vehicleLabel}
+                filtered={screen.filtered}
+                onToggle={() => {
+                  screen.toggle();
+                  setShown(PAGE_SIZE);
+                }}
+              />
+            </div>
+
+            {screen.list.length === 0 ? (
               <div className="py-24 text-center">
                 <div className="font-head text-2xl font-medium uppercase tracking-tight">
                   {items.length === 0
@@ -289,7 +310,7 @@ const CategoryPage = () => {
               </div>
             )}
 
-            {shown < list.length && (
+            {shown < screen.list.length && (
               <div className="pb-10 text-center">
                 <button
                   onClick={() => setShown((n) => n + PAGE_SIZE)}
@@ -297,7 +318,7 @@ const CategoryPage = () => {
                 >
                   Показать ещё
                   <span className="ml-2 text-muted-foreground">
-                    осталось {list.length - shown}
+                    осталось {screen.list.length - shown}
                   </span>
                 </button>
               </div>
@@ -327,7 +348,7 @@ const CategoryPage = () => {
 
       <FloatingFilters
         activeCount={activeCount}
-        resultCount={list.length}
+        resultCount={screen.list.length}
         hideOn={filters.categories.join('|')}
         scrollTargetId="catalog-top"
       >

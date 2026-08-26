@@ -8,6 +8,8 @@ import VehicleFilterBar from "@/components/VehicleFilterBar";
 import { Vehicle, matchVehicle, splitByFit } from "@/data/catalog";
 import UniversalDivider from "@/components/UniversalDivider";
 import FloatingFilters from "@/components/FloatingFilters";
+import ScreenSizeNote from "@/components/ScreenSizeNote";
+import { useScreenFilter } from "@/hooks/use-screen-filter";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { slugify } from "@/lib/slug";
@@ -127,18 +129,26 @@ const SearchPage = () => {
     return { brand, model };
   }, [vehicle, parsed.year, parsed.brands, parsed.models, brands]);
 
+  /*
+   * Отбор магнитол по диагонали — тот же, что в каталоге и в сборке.
+   *
+   * Стоит до разбивки по разделам: иначе в панели разделов писалось бы
+   * «Android магнитолы — 8», а в самой выдаче их оказывалось три.
+   */
+  const screen = useScreenFilter(hits, (h: SearchHit) => h.product);
+
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
-    hits.forEach((h) => {
+    screen.list.forEach((h) => {
       map[h.product.category] = (map[h.product.category] ?? 0) + 1;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
-  }, [hits]);
+  }, [screen.list]);
 
   const list = useMemo(() => {
     let out = category
-      ? hits.filter((h) => h.product.category === category)
-      : hits;
+      ? screen.list.filter((h) => h.product.category === category)
+      : screen.list;
     if (sort !== "relevance") {
       out = [...out].sort((a, b) => {
         if (sort === "price-asc") return a.product.price - b.product.price;
@@ -147,7 +157,7 @@ const SearchPage = () => {
       });
     }
     return out;
-  }, [hits, category, sort]);
+  }, [screen.list, category, sort]);
 
   useSeo({
     title: query
@@ -297,7 +307,7 @@ const SearchPage = () => {
               vehicle={vehicle}
               onApply={applyVehicle}
               onReset={resetVehicle}
-              count={hits.length}
+              count={screen.list.length}
             />
             {vehicle && found.length > hits.length && (
               <p className="mt-2 text-[0.78rem] text-muted-foreground">
@@ -352,6 +362,17 @@ const SearchPage = () => {
                 </select>
               </label>
             </div>
+
+            <ScreenSizeNote
+              sizes={screen.sizes}
+              hidden={screen.hiddenCount}
+              vehicleLabel={screen.vehicleLabel}
+              filtered={screen.filtered}
+              onToggle={() => {
+                screen.toggle();
+                setShown(PAGE_SIZE);
+              }}
+            />
 
             {/* Разделы найденного — в плавающей панели, как в каталоге:
                 над выдачей они занимали несколько строк и отжимали товары */}
