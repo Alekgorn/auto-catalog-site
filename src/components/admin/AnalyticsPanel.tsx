@@ -34,6 +34,30 @@ const AnalyticsPanel = ({ value, onChange }: Props) => {
         пустыми — тогда счётчик просто не подключится.
       </p>
 
+      {/*
+        Коды попадают на сайт только при сборке. Без публикации Яндекс
+        видит прошлую версию страниц и счётчиков не находит — на этом
+        уже спотыкались, поэтому предупреждение стоит над полями.
+      */}
+      <div className="mt-8 flex gap-3 border-2 border-primary bg-primary/5 px-4 py-3.5">
+        <Icon
+          name="TriangleAlert"
+          fallback="CircleAlert"
+          size={18}
+          className="mt-0.5 flex-none text-primary"
+        />
+        <div className="min-w-0 text-[0.85rem] leading-relaxed">
+          <span className="block font-head text-[0.9rem] font-bold uppercase tracking-tight">
+            После сохранения опубликуйте сайт
+          </span>
+          <span className="mt-1 block text-muted-foreground">
+            Одного сохранения мало: коды попадают на страницы только при
+            публикации. Пока сайт не опубликован, Метрика и Вебмастер
+            счётчиков не увидят.
+          </span>
+        </div>
+      </div>
+
       <div className="mt-8 space-y-8">
         <label className="block">
           <span className="eyebrow">Яндекс.Метрика</span>
@@ -105,9 +129,9 @@ const AnalyticsPanel = ({ value, onChange }: Props) => {
       <div className="mt-8 flex gap-2.5 border border-border px-4 py-3.5 text-[0.85rem] text-muted-foreground">
         <Icon name="Info" size={16} className="mt-0.5 flex-none text-primary" />
         <span>
-          После сохранения подтвердите права в Вебмастере — мета-тег уже
-          будет на сайте. Метрика начнёт собирать данные сразу, первые
-          цифры появятся в течение получаса.
+          Порядок такой: сохранить → опубликовать сайт → нажать «Проверить»
+          в Вебмастере. Метрика начнёт собирать данные сразу после
+          публикации, первые цифры появятся в течение получаса.
         </span>
       </div>
     </div>
