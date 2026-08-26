@@ -114,7 +114,30 @@ const OPTIONAL_TEXT = [
 const OPTIONAL_NUM = ['oldPrice', 'proPrice'];
 const OPTIONAL_LIST = ['notes', 'guides', 'kit'];
 
+/**
+ * Сколько характеристик оставить в общем файле каталога.
+ *
+ * Столько влезает в карточку товара, и первой почти всегда стоит
+ * диагональ — по ней работает подбор комплекта. Остальные читают только
+ * на странице товара, в сравнении и быстром просмотре: они уезжают в
+ * отдельный файл (см. textRest).
+ */
+const CARD_SPECS = 3;
+
 const slimCatalog = (data) => {
+  /*
+   * Какие характеристики показывает карточка в списке — это настройка
+   * категории из админки. Именно их и оставляем в общем файле: обрезка
+   * «первые три подряд» роняла нужное поле, если в таблице перед ним
+   * стояло что-то подробное (у магнитол так пропадала «Память»).
+   */
+  const wanted = new Map(
+    Object.entries(data.categorySpecs ?? {}).map(([cat, fields]) => [
+      cat,
+      new Set((fields ?? []).map((f) => String(f).trim().toLowerCase())),
+    ]),
+  );
+
   const products = (data.products ?? []).map((p) => {
     const out = { ...p };
 
@@ -122,6 +145,39 @@ const slimCatalog = (data) => {
     for (const k of OPTIONAL_NUM) if (!out[k]) delete out[k];
     for (const k of OPTIONAL_LIST) {
       if (Array.isArray(out[k]) && out[k].length === 0) delete out[k];
+    }
+
+    /*
+     * Описания и характеристики в общий файл не кладём.
+     *
+     * Вместе они весят 1,1 МБ из 2,1 — больше половины файла, который
+     * скачивает каждый посетитель и робот на КАЖДОЙ странице. А читают
+     * их в одном месте: карточка товара. Уезжают в textRest и подъезжают,
+     * когда человек открыл товар.
+     *
+     * Поиск по описаниям при этом не ломается: он работает на сервере,
+     * а в браузере ищет по названию, категории, артикулу и совместимости.
+     */
+    delete out.description;
+    delete out.install;
+    /*
+     * Характеристики нужны и в списках: по ним карточка показывает
+     * диагональ, а подбор комплекта — фильтрует. Оставляем те, что
+     * настроены для этой категории, плюс диагональ — она решает в
+     * подборе комплекта. Остальные уезжают вместе с описанием.
+     */
+    if (Array.isArray(out.specs) && out.specs.length > CARD_SPECS) {
+      const need = wanted.get(out.category);
+      const keep = out.specs.filter(([k]) => {
+        const key = String(k).trim().toLowerCase();
+        if (key.startsWith('диагональ') || key.startsWith('типоразмер')) {
+          return true;
+        }
+        return need?.has(key);
+      });
+      // У категории ничего не настроено — берём первые, чтобы карточка
+      // не осталась совсем пустой
+      out.specs = keep.length ? keep.slice(0, CARD_SPECS) : out.specs.slice(0, CARD_SPECS);
     }
 
     if (Array.isArray(out.images)) {
@@ -164,6 +220,28 @@ const photoRest = (data) => {
         ? '~' + u.slice(IMG_PREFIX.length)
         : u,
     );
+  }
+  return out;
+};
+
+/**
+ * Словарь «товар → его описание и полные характеристики».
+ *
+ * Лежит отдельным файлом рядом с фотографиями и грузится по требованию:
+ * на страницу товара, в быстрый просмотр и в сравнение. Это самая
+ * тяжёлая часть каталога — 1,1 МБ из 2,1, — и в списках она не нужна
+ * ни разу.
+ */
+const textRest = (data) => {
+  const out = {};
+  for (const p of data.products ?? []) {
+    const entry = {};
+    if (p.description?.length) entry.description = p.description;
+    if (p.install) entry.install = p.install;
+    // В общий файл ушли первые три — здесь лежат все, чтобы страница
+    // товара показала полную таблицу
+    if ((p.specs ?? []).length > CARD_SPECS) entry.specs = p.specs;
+    if (Object.keys(entry).length) out[p.id] = entry;
   }
   return out;
 };
@@ -250,7 +328,7 @@ const cleanOld = async () => {
   }
   // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
   for (const name of await fs.readdir(PUBLIC)) {
-    if (/^catalog-(data|photos)-\d+\.js$/.test(name)) {
+    if (/^catalog-(data|photos|texts)-\d+\.js$/.test(name)) {
       await fs.rm(path.join(PUBLIC, name), { force: true });
     }
   }
@@ -354,6 +432,7 @@ const main = async () => {
     `window.__CATALOG__=${safeJson(slimCatalog(data))};` +
       `window.__CATALOG_AT__=${builtAt};` +
       `window.__PHOTOS_AT__=${builtAt};` +
+      `window.__TEXTS_AT__=${builtAt};` +
       `window.dispatchEvent(new Event('catalog-ready'))`,
     'utf-8',
   );
@@ -371,6 +450,21 @@ const main = async () => {
   );
   console.log(
     `[prerender] галерея: ${Object.keys(rest).length} товаров с доп. фото`,
+  );
+
+  /*
+   * Описания и полные характеристики — тем же приёмом, что и фото:
+   * отдельный файл с номером сборки, чтобы не смешать с прошлой версией.
+   */
+  const texts = textRest(data);
+  await fs.writeFile(
+    path.join(PUBLIC, `catalog-texts-${builtAt}.js`),
+    `window.__TEXTS__=${safeJson(texts)};` +
+      `window.dispatchEvent(new Event('texts-ready'))`,
+    'utf-8',
+  );
+  console.log(
+    `[prerender] тексты: ${Object.keys(texts).length} товаров с описанием`,
   );
 
   /*
