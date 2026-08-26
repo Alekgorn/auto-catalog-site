@@ -4,19 +4,19 @@ import Icon from '@/components/ui/icon';
 import { Vehicle, formatPrice } from '@/data/catalog';
 import { isVehicle } from '@/lib/vehicle';
 import { shareText } from '@/lib/share-kit';
+import { usePrice } from '@/hooks/use-price';
+import QuoteTab, { QuoteItem } from '@/components/share/QuoteTab';
 
 interface Props {
   open: boolean;
   onClose: () => void;
   /** Готовая ссылка на состав */
   url: string;
-  /** Сколько позиций в комплекте — для подписи к ссылке */
-  count: number;
   /** Итоговая сумма: человек должен понимать, чем делится */
   total: number;
   vehicle: Vehicle | null;
-  /** Названия позиций — короткий список в окне */
-  names: string[];
+  /** Состав комплекта — для списка в окне и для сметы установщика */
+  items: QuoteItem[];
 }
 
 /**
@@ -26,18 +26,16 @@ interface Props {
  * собирать заново: он открывает готовый комплект под ту же машину,
  * может поменять позиции и заказать сам.
  */
-const ShareKitDialog = ({
-  open,
-  onClose,
-  url,
-  count,
-  total,
-  vehicle,
-  names,
-}: Props) => {
+const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) => {
   const [copied, setCopied] = useState(false);
   /** Родное меню телефона есть не везде — кнопку рисуем только там, где есть */
   const [canSystem, setCanSystem] = useState(false);
+  /** Что отправляем: ссылку на сборку или свою смету */
+  const [mode, setMode] = useState<'link' | 'quote'>('link');
+  const { dealer, priceOf } = usePrice();
+
+  const count = items.length;
+  const names = items.map((i) => i.product.name);
 
   useEffect(() => {
     setCanSystem(typeof navigator !== 'undefined' && !!navigator.share);
@@ -46,6 +44,7 @@ const ShareKitDialog = ({
   useEffect(() => {
     if (!open) return;
     setCopied(false);
+    setMode('link');
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       /* Esc закрывает только это окно: корзина под ним ловит ту же
@@ -140,8 +139,8 @@ const ShareKitDialog = ({
         className="fixed inset-0 bg-foreground/50 backdrop-blur-[2px]"
       />
 
-      <div className="relative w-full max-w-md bg-surface shadow-panel">
-        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+      <div className="relative flex max-h-[92vh] w-full max-w-md flex-col bg-surface shadow-panel sm:max-h-[88vh]">
+        <div className="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="min-w-0">
             <div className="eyebrow">Поделиться</div>
             <h2 className="mt-0.5 font-head text-lg font-bold uppercase leading-tight tracking-tight">
@@ -157,7 +156,41 @@ const ShareKitDialog = ({
           </button>
         </div>
 
-        <div className="px-5 py-4">
+        {/* Смета — только для мастеров: обычному покупателю незачем
+            снимать с подборки наше имя, а лишний выбор его путает */}
+        {dealer && (
+          <div className="flex flex-none gap-6 border-b border-border px-5 pt-3">
+            {(
+              [
+                ['link', 'Ссылка'],
+                ['quote', 'Смета клиенту'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setMode(key)}
+                className={`border-b-2 pb-2.5 text-[0.78rem] uppercase tracking-[0.08em] transition-colors ${
+                  mode === key
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        {dealer && mode === 'quote' ? (
+          <QuoteTab
+            items={items}
+            vehicle={vehicle}
+            dealerPriceOf={priceOf}
+            hasDealer={items.some((i) => priceOf(i.product) < i.product.price)}
+          />
+        ) : (
+          <>
           {/* Что именно уедет по ссылке: без этого человек шлёт вслепую */}
           <div className="border border-border bg-surface-muted px-4 py-3">
             {car && (
@@ -257,6 +290,8 @@ const ShareKitDialog = ({
             <Icon name="ClipboardList" size={14} />
             Скопировать с текстом
           </button>
+          </>
+        )}
         </div>
       </div>
     </div>,

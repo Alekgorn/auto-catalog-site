@@ -366,10 +366,9 @@ const CartDrawer = () => {
           lines: items.map((i) => ({ id: i.product.id, qty: i.qty })),
           vehicle,
         })}
-        count={items.length}
         total={total}
         vehicle={vehicle}
-        names={items.map((i) => i.product.name)}
+        items={items}
       />
     </Sheet>
   );
