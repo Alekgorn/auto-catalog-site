@@ -125,15 +125,47 @@ const slimCatalog = (data) => {
     }
 
     if (Array.isArray(out.images)) {
-      out.images = out.images.map((u) =>
-        typeof u === 'string' && u.startsWith(IMG_PREFIX)
-          ? '~' + u.slice(IMG_PREFIX.length)
-          : u,
-      );
+      /*
+       * В общий файл кладём только обложку.
+       *
+       * В списках, корзине и сравнении видно ровно первое фото, а
+       * остальные семь из восьми нужны только в галерее товара. Все
+       * ссылки разом весили 963 КБ — их скачивал каждый посетитель
+       * главной. Остальные уезжают в отдельный файл (см. photoRest)
+       * и подгружаются, когда человек открывает карточку.
+       */
+      out.images = out.images
+        .slice(0, 1)
+        .map((u) =>
+          typeof u === 'string' && u.startsWith(IMG_PREFIX)
+            ? '~' + u.slice(IMG_PREFIX.length)
+            : u,
+        );
     }
     return out;
   });
   return { ...data, products };
+};
+
+/**
+ * Словарь «товар → остальные его фото», кроме обложки.
+ *
+ * Лежит отдельным файлом и грузится по требованию: на страницу товара,
+ * в быстрый просмотр и в сравнение. Товары без второго снимка сюда не
+ * попадают — таких почти сорок.
+ */
+const photoRest = (data) => {
+  const out = {};
+  for (const p of data.products ?? []) {
+    const rest = (p.images ?? []).slice(1);
+    if (!rest.length) continue;
+    out[p.id] = rest.map((u) =>
+      typeof u === 'string' && u.startsWith(IMG_PREFIX)
+        ? '~' + u.slice(IMG_PREFIX.length)
+        : u,
+    );
+  }
+  return out;
 };
 
 const upsertMeta = (head, matcher, tag) =>
@@ -218,7 +250,7 @@ const cleanOld = async () => {
   }
   // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
   for (const name of await fs.readdir(PUBLIC)) {
-    if (/^catalog-data-\d+\.js$/.test(name)) {
+    if (/^catalog-(data|photos)-\d+\.js$/.test(name)) {
       await fs.rm(path.join(PUBLIC, name), { force: true });
     }
   }
@@ -321,8 +353,24 @@ const main = async () => {
     path.join(PUBLIC, catalogFile.slice(1)),
     `window.__CATALOG__=${safeJson(slimCatalog(data))};` +
       `window.__CATALOG_AT__=${builtAt};` +
+      `window.__PHOTOS_AT__=${builtAt};` +
       `window.dispatchEvent(new Event('catalog-ready'))`,
     'utf-8',
+  );
+
+  /*
+   * Остальные фото — отдельным файлом с тем же номером сборки, чтобы
+   * страница не подтянула их от прошлой версии каталога.
+   */
+  const rest = photoRest(data);
+  await fs.writeFile(
+    path.join(PUBLIC, `catalog-photos-${builtAt}.js`),
+    `window.__PHOTOS__=${safeJson(rest)};` +
+      `window.dispatchEvent(new Event('photos-ready'))`,
+    'utf-8',
+  );
+  console.log(
+    `[prerender] галерея: ${Object.keys(rest).length} товаров с доп. фото`,
   );
 
   /*

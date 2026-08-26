@@ -94,12 +94,10 @@ const CompareTable = ({
                     />
                     <span className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-center gap-1.5 bg-foreground/80 py-1.5 text-[0.65rem] font-medium uppercase tracking-[0.08em] text-background">
                       <Icon name="Maximize2" size={12} />
+                      {/* Число снимков не пишем: в каталоге у товара лежит
+                          только обложка, остальные подъезжают уже в самой
+                          галерее — счётчик показывал бы «1» для всех */}
                       Фото
-                      {productImages(p).length > 1 && (
-                        <span className="opacity-80">
-                          ({productImages(p).length})
-                        </span>
-                      )}
                     </span>
                   </button>
 

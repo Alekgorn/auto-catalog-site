@@ -9,11 +9,11 @@ import {
   isCompatible,
   fitsAll,
   isUniversal,
-  productImages,
   productKit,
   productSku,
   productSpecs,
 } from '@/data/catalog';
+import { usePhotos } from '@/hooks/use-photos';
 import { isVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
@@ -37,6 +37,8 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(rawVehicle) ? rawVehicle : null;
   const { brands } = useCatalog();
+  /* Обложка уже нарисована в карточке, остальные снимки подъедут следом */
+  const images = usePhotos(product);
   /**
    * Идёт сборка комплекта — товар отмечается на своём шаге и попадает
    * в плавающую панель внизу. Вне сборки такой панели нет, поэтому
@@ -108,7 +110,6 @@ const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
 
   if (!product) return null;
 
-  const images = productImages(product);
   /** Сколько фото не поместилось в ряд миниатюр */
   const restCount = images.length > 5 ? images.length - 4 : 0;
   const fits = isCompatible(product, vehicle);
