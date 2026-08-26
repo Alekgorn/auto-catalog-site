@@ -5,12 +5,15 @@ import { useToast } from '@/hooks/use-toast';
 import HotspotsEditor from '@/components/admin/HotspotsEditor';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import ExternalImages from '@/components/admin/ExternalImages';
+import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
   DEFAULT_FILTER_BLOCKS,
+  DEFAULT_ANALYTICS,
   DEFAULT_HOTSPOTS,
   HeroHotspot,
+  SiteAnalytics,
   FILTER_BLOCKS,
   FaqItem,
   FilterBlockKey,
@@ -44,6 +47,7 @@ const SitePanel = ({ onSaved }: Props) => {
   const [faq, setFaq] = useState<FaqItem[]>(DEFAULT_FAQ);
   const [blocks, setBlocks] = useState<FilterBlockKey[]>(DEFAULT_FILTER_BLOCKS);
   const [hotspots, setHotspots] = useState<HeroHotspot[]>(DEFAULT_HOTSPOTS);
+  const [analytics, setAnalytics] = useState<SiteAnalytics>(DEFAULT_ANALYTICS);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -55,6 +59,7 @@ const SitePanel = ({ onSaved }: Props) => {
         if (Array.isArray(s.faq) && s.faq.length) setFaq(s.faq);
         if (Array.isArray(s.filter_blocks)) setBlocks(s.filter_blocks);
         if (Array.isArray(s.hotspots) && s.hotspots.length) setHotspots(s.hotspots);
+        if (s.analytics) setAnalytics({ ...DEFAULT_ANALYTICS, ...s.analytics });
       })
       .catch(() => undefined);
   }, []);
@@ -70,6 +75,7 @@ const SitePanel = ({ onSaved }: Props) => {
           faq: clean,
           filter_blocks: blocks,
           hotspots: hotspots.filter((x) => x.label.trim()),
+          analytics,
         },
       }),
     });
@@ -157,6 +163,13 @@ const SitePanel = ({ onSaved }: Props) => {
                 </label>
               ))}
             </div>
+          </div>
+
+          <div className="mt-12 border-t border-foreground pt-10">
+            <AnalyticsPanel
+              value={analytics}
+              onChange={(patch) => setAnalytics((a) => ({ ...a, ...patch }))}
+            />
           </div>
         </div>
 

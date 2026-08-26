@@ -9,6 +9,47 @@ export interface SiteContacts {
   max: string;
 }
 
+/**
+ * Счётчики Яндекса. Номер Метрики и код подтверждения Вебмастера
+ * хранятся в настройках, чтобы их можно было менять без правки кода.
+ */
+export interface SiteAnalytics {
+  /** Номер счётчика Яндекс.Метрики — только цифры */
+  metrika: string;
+  /** Код из мета-тега подтверждения прав в Яндекс.Вебмастере */
+  webmaster: string;
+  /** Вебвизор: запись действий посетителей */
+  webvisor: boolean;
+}
+
+export const DEFAULT_ANALYTICS: SiteAnalytics = {
+  metrika: '',
+  webmaster: '',
+  webvisor: true,
+};
+
+/**
+ * Из вставленного кода вытаскиваем сам номер счётчика: в админку часто
+ * копируют весь скрипт целиком, а не голые цифры.
+ */
+export const metrikaId = (value: string) => {
+  const v = String(value ?? '').trim();
+  if (/^\d+$/.test(v)) return v;
+  const m = v.match(/ym\((\d{5,})/) || v.match(/watch\/(\d{5,})/);
+  return m ? m[1] : '';
+};
+
+/**
+ * Код подтверждения Вебмастера. Принимаем и готовый мета-тег целиком,
+ * и одно значение content — руками его выковыривать не должны.
+ */
+export const webmasterCode = (value: string) => {
+  const v = String(value ?? '').trim();
+  if (!v) return '';
+  const m = v.match(/content=["']([^"']+)["']/i);
+  return (m ? m[1] : v).trim();
+};
+
 export interface FaqItem {
   q: string;
   a: string;

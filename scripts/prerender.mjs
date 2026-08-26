@@ -252,10 +252,13 @@ const resetShell = (html) =>
     .replace(
       /\s*<script type="application\/ld\+json" id="seo-json-ld">[\s\S]*?<\/script>/g,
       '',
-    );
+    )
+    /* Код подтверждения Вебмастера мог смениться в админке — старый
+       тег убираем, свежий вставим ниже из настроек */
+    .replace(/\s*<meta name="yandex-verification"[^>]*>/g, '');
 
 const main = async () => {
-  const template = resetShell(
+  let template = resetShell(
     await fs.readFile(path.join(DIST, 'index.html'), 'utf-8'),
   );
   const { render, takeSeo, clearSeo, scenarioSlugs } = await import(
@@ -321,6 +324,25 @@ const main = async () => {
       `window.dispatchEvent(new Event('catalog-ready'))`,
     'utf-8',
   );
+
+  /*
+   * Подтверждение прав в Яндекс.Вебмастере.
+   *
+   * Робот проверяет мета-тег в исходном HTML и скрипты при этом не
+   * выполняет — поэтому вшиваем код прямо в шаблон, а не добавляем
+   * его на лету из React. Значение приходит из настроек админки.
+   */
+  const verification = String(data.settings?.analytics?.webmaster ?? '')
+    .trim()
+    .replace(/^[\s\S]*content=["']([^"']+)["'][\s\S]*$/i, '$1')
+    .trim();
+  if (verification) {
+    template = template.replace(
+      '</head>',
+      `  <meta name="yandex-verification" content="${escapeAttr(verification)}"/>\n</head>`,
+    );
+    console.log(`[prerender] Вебмастер: код ${verification} вшит в страницы`);
+  }
 
   const bootScript = `<script src="${catalogFile}"></script>`;
 

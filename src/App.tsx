@@ -7,6 +7,7 @@ import AppRoutes from './AppRoutes';
 import { CartProvider } from '@/context/CartContext';
 import { DealerProvider } from '@/context/DealerContext';
 import { CatalogProvider } from '@/context/CatalogContext';
+import SiteAnalyticsTag from '@/components/SiteAnalyticsTag';
 import { KitProvider } from '@/context/KitContext';
 import { CompareProvider } from '@/context/CompareContext';
 import CartDrawer from '@/components/CartDrawer';
@@ -29,6 +30,7 @@ const App = () => (
               <KitProvider>
                 <CompareProvider>
                 <AppRoutes />
+                <SiteAnalyticsTag />
                 <CartDrawer />
                 <QuickViewHost />
                 <DealerToggle />

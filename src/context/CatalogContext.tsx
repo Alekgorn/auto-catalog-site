@@ -14,7 +14,9 @@ import {
   DEFAULT_FAQ,
   DEFAULT_FILTER_BLOCKS,
   DEFAULT_SHORTCUTS,
+  DEFAULT_ANALYTICS,
   DEFAULT_HOTSPOTS,
+  SiteAnalytics,
   HeroShortcut,
   HeroHotspot,
   FaqItem,
@@ -36,6 +38,7 @@ export interface PrerenderData {
     shortcuts?: HeroShortcut[];
     shortcuts_hidden?: boolean;
     hotspots?: HeroHotspot[];
+    analytics?: Partial<SiteAnalytics>;
   };
 }
 
@@ -62,6 +65,7 @@ interface CatalogValue {
   shortcuts: HeroShortcut[];
   shortcutsHidden: boolean;
   hotspots: HeroHotspot[];
+  analytics: SiteAnalytics;
   loading: boolean;
   reload: () => void;
 }
@@ -213,6 +217,10 @@ export const CatalogProvider = ({
   const [hotspots, setHotspots] = useState<HeroHotspot[]>(
     seed?.settings?.hotspots?.length ? seed.settings.hotspots : DEFAULT_HOTSPOTS,
   );
+  const [analytics, setAnalytics] = useState<SiteAnalytics>({
+    ...DEFAULT_ANALYTICS,
+    ...(seed?.settings?.analytics ?? {}),
+  });
   const [catalogCategories, setCatalogCategories] = useState<string[]>(
     seed?.categories ?? [],
   );
@@ -295,6 +303,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.hotspots) && data.settings.hotspots.length) {
           setHotspots(data.settings.hotspots);
         }
+        if (data.settings?.analytics && typeof data.settings.analytics === 'object') {
+          setAnalytics({ ...DEFAULT_ANALYTICS, ...data.settings.analytics });
+        }
         // Запоминаем на время визита — переходы по сайту больше не дёргают функцию
         saveCache(data);
       })
@@ -343,6 +354,7 @@ export const CatalogProvider = ({
     shortcuts,
     shortcutsHidden,
     hotspots,
+    analytics,
     loading,
     reload: () => setTick((t) => t + 1),
   };
