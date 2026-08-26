@@ -15,6 +15,8 @@ import {
   splitByFit,
 } from "@/data/catalog";
 import { availableScreenSizes, screenSize } from "@/lib/kit-filter";
+import ScreenSizeNote from "@/components/ScreenSizeNote";
+import { useScreenFilter } from "@/hooks/use-screen-filter";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -329,6 +331,15 @@ const ScenarioPage = () => {
     return found.filter((h) => fitsAll(h.product)).length;
   }, [found, stepMode, partial]);
 
+  /*
+   * Отбор магнитол по диагонали — тот же, что в каталоге и поиске.
+   *
+   * Стоит до счётчиков разделов: иначе в списке слева писалось бы
+   * «Android магнитолы — 8», а в самой выдаче их оказывалось три.
+   */
+  const screen = useScreenFilter(hits, (h: SearchHit) => h.product);
+  const shownHits = screen.list;
+
   /** По чему группируем кнопки над каталогом: раздел, подраздел или тип */
   const groupOf = (p: Product) => {
     if (scenario?.filterBySpec) {
@@ -341,27 +352,27 @@ const ScenarioPage = () => {
 
   const categories = useMemo(() => {
     const map: Record<string, number> = {};
-    hits.forEach((h) => {
+    shownHits.forEach((h) => {
       const key = groupOf(h.product);
       if (!key) return;
       map[key] = (map[key] ?? 0) + 1;
     });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hits, scenario?.filterBySubcategory, scenario?.filterBySpec]);
+  }, [shownHits, scenario?.filterBySubcategory, scenario?.filterBySpec]);
 
   const catalogCounts = useMemo(() => {
     const map: Record<string, number> = {};
-    hits.forEach((h) => {
+    shownHits.forEach((h) => {
       map[h.product.category] = (map[h.product.category] ?? 0) + 1;
     });
     return map;
-  }, [hits]);
+  }, [shownHits]);
 
   const list = useMemo(() => {
     let out = category
-      ? hits.filter((h) => groupOf(h.product) === category)
-      : hits;
+      ? shownHits.filter((h) => groupOf(h.product) === category)
+      : shownHits;
 
     // Полный каталог — работают развёрнутые фильтры слева
     if (scenario?.fullCatalog) {
@@ -391,7 +402,7 @@ const ScenarioPage = () => {
       });
     }
     return out;
-  }, [hits, category, sort, filters, scenario]);
+  }, [shownHits, category, sort, filters, scenario]);
 
   useSeo(
     scenario
@@ -567,7 +578,7 @@ const ScenarioPage = () => {
               <StepVehicleFilter
                 value={partial}
                 onChange={applyPartial}
-                count={hits.length}
+                count={shownHits.length}
                 withUniversal={withUniversal}
                 onUniversal={(v) => {
                   setWithUniversal(v);
@@ -616,7 +627,7 @@ const ScenarioPage = () => {
             onNeedLead={scrollToLead}
             onSkip={skipStep}
           />
-        ) : hits.length === 0 ? (
+        ) : shownHits.length === 0 ? (
           <div className="py-16 text-center">
             <div className="font-head text-xl font-bold">
               Под эту машину пока ничего нет
@@ -640,7 +651,7 @@ const ScenarioPage = () => {
             fit={fit}
             ordered={ordered}
             visible={visible}
-            hitsCount={hits.length}
+            hitsCount={shownHits.length}
             vehicle={vehicle}
             sort={sort}
             onSort={setSort}
@@ -666,6 +677,18 @@ const ScenarioPage = () => {
             }
             onSectionCollapse={(title) =>
               setSectionShown((m) => ({ ...m, [title]: CATEGORY_FIRST }))
+            }
+            screenNote={
+              <ScreenSizeNote
+                sizes={screen.sizes}
+                hidden={screen.hiddenCount}
+                vehicleLabel={screen.vehicleLabel}
+                filtered={screen.filtered}
+                onToggle={() => {
+                  screen.toggle();
+                  setShown(PAGE_SIZE);
+                }}
+              />
             }
           />
         )}
