@@ -6,6 +6,7 @@ import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
 import { useVehicle } from '@/hooks/use-vehicle';
+import { usePrice } from '@/hooks/use-price';
 import { buildShareUrl } from '@/lib/share-kit';
 import ShareKitDialog from '@/components/share/ShareKitDialog';
 import Confetti from '@/components/kit/Confetti';
@@ -33,6 +34,10 @@ const KitBar = () => {
   const { allProducts: products } = useCatalog();
   const { add, setOpen } = useCart();
   const { vehicle } = useVehicle();
+  /* Дилер собирает комплект по своим ценам: он считает закупку, а не
+     то, что заплатит его клиент. Розница остаётся рядом — по ней он
+     называет цену заказчику */
+  const { dealer, priceOf } = usePrice();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [added, setAdded] = useState(false);
@@ -115,7 +120,13 @@ const KitBar = () => {
     return null;
   }
 
+  /** Сумма по цене текущего посетителя: дилеру — закупочная */
   const total = chosen.reduce(
+    (sum, x) => sum + (x.product ? priceOf(x.product) : 0) * x.count,
+    0,
+  );
+  /** Розничная стоимость того же набора */
+  const retail = chosen.reduce(
     (sum, x) => sum + (x.product?.price ?? 0) * x.count,
     0,
   );
@@ -123,7 +134,8 @@ const KitBar = () => {
     (sum, x) => sum + (x.product?.oldPrice ?? x.product?.price ?? 0) * x.count,
     0,
   );
-  const save = old - total;
+  /* У дилера выгода — это разница с розницей, а не старая цена по акции */
+  const save = dealer ? retail - total : old - total;
   const onScenario = pathname === `/scenario/${slug}`;
 
   const addAll = () => {
@@ -245,8 +257,15 @@ const KitBar = () => {
                       </button>
                     </div>
                     <span className="font-head text-[0.85rem] font-bold">
-                      {formatPrice(product!.price * count)}
+                      {formatPrice(priceOf(product!) * count)}
                     </span>
+                    {/* Розница рядом с закупкой: по ней дилер называет
+                        цену своему заказчику */}
+                    {dealer && priceOf(product!) < product!.price && (
+                      <span className="text-[0.72rem] text-muted-foreground line-through">
+                        {formatPrice(product!.price * count)}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button
@@ -278,15 +297,26 @@ const KitBar = () => {
           <div className="flex flex-none items-center justify-between gap-4">
             <div className="leading-none">
               <div className="text-[0.66rem] uppercase tracking-[0.12em] text-muted-foreground">
-                Итого
+                {dealer ? 'Ваша закупка' : 'Итого'}
               </div>
               <div className="mt-1 font-head text-[1.45rem] font-bold tracking-tight">
                 {formatPrice(total)}
               </div>
-              {save > 0 && (
-                <div className="mt-1 text-[0.72rem] text-success">
-                  выгода {formatPrice(save)}
+              {dealer && retail > total ? (
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[0.72rem]">
+                  <span className="text-muted-foreground">
+                    в рознице {formatPrice(retail)}
+                  </span>
+                  <span className="text-success">
+                    выгода {formatPrice(save)}
+                  </span>
                 </div>
+              ) : (
+                save > 0 && (
+                  <div className="mt-1 text-[0.72rem] text-success">
+                    выгода {formatPrice(save)}
+                  </div>
+                )
               )}
             </div>
 
@@ -389,10 +419,9 @@ const KitBar = () => {
         open={sharing}
         onClose={() => setSharing(false)}
         url={shareUrl}
-        count={chosen.length}
         total={total}
         vehicle={vehicle}
-        names={chosen.map((x) => x.product!.name)}
+        items={chosen.map((x) => ({ product: x.product!, qty: x.count }))}
       />
     </>
   );
