@@ -14,6 +14,7 @@ import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
 import { describeQuery, parseQuery, smartSearch, SearchHit } from "@/lib/smart-search";
+import { indexReady, loadIndex } from "@/lib/search-index";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import YearPrompt from "@/components/YearPrompt";
 import CategorySection, {
@@ -59,9 +60,28 @@ const SearchPage = () => {
     setSectionShown({});
   }, [query]);
 
+  /*
+   * Поиск по описаниям работает через отдельный файл-индекс: описания
+   * вынесены из каталога ради его веса. Пока индекс едет, выдача уже
+   * есть — по названию и характеристикам, — а как приедет, пересчитаем.
+   */
+  const [indexAt, setIndexAt] = useState(0);
+  useEffect(() => {
+    if (!query.trim() || indexReady()) return;
+    let alive = true;
+    loadIndex().then(() => {
+      if (alive) setIndexAt((n) => n + 1);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [query]);
+
   const found = useMemo(
     () => smartSearch(products, query, undefined, brands),
-    [products, query, brands],
+    // indexAt меняется, когда подъехал индекс — тогда ищем заново
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [products, query, brands, indexAt],
   );
 
   /**

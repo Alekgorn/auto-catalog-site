@@ -246,6 +246,66 @@ const textRest = (data) => {
   return out;
 };
 
+/**
+ * Поисковый индекс по описаниям и характеристикам.
+ *
+ * Описания уехали из общего каталога — вместе с ними поиск перестал
+ * находить товар по словам, которых нет в названии («восьмиядерный»,
+ * «ABS-пластик»). Тащить ради этого два мегабайта текста на каждую
+ * страницу незачем: для поиска нужны не сами описания, а знание, в
+ * каком товаре какое слово встречается.
+ *
+ * Поэтому строим обратный индекс «слово → номера товаров». Он весит
+ * 0,4 МБ вместо 2 МБ и грузится один раз, когда человек начал искать.
+ */
+const searchIndex = (data) => {
+  const products = data.products ?? [];
+  const ids = products.map((p) => p.id);
+  const inv = new Map();
+
+  const words = (text) =>
+    String(text ?? '')
+      .toLowerCase()
+      /* «ё» → «е» ровно как в поиске: там запрос приводится к этому же
+         виду, и без замены «надёжный» из описания никогда бы не совпал
+         с набранным «надежный» */
+      .replace(/ё/g, 'е')
+      .replace(/[^a-zа-я0-9]+/g, ' ')
+      .split(' ')
+      /* Короче трёх букв — предлоги и обрывки: они раздувают индекс, а
+         искать по ним бессмысленно. Трёхбуквенные оставляем: это как раз
+         аббревиатуры вроде ABS, USB, GPS, по которым и ищут */
+      .filter((w) => w.length >= 3);
+
+  products.forEach((p, i) => {
+    const set = new Set();
+    for (const d of p.description ?? []) words(d).forEach((w) => set.add(w));
+    for (const [k, v] of p.specs ?? []) {
+      words(`${k} ${v}`).forEach((w) => set.add(w));
+    }
+    for (const w of set) {
+      if (!inv.has(w)) inv.set(w, []);
+      inv.get(w).push(i);
+    }
+  });
+
+  /* Номера пишем разницей с предыдущим и в 16-ричном виде: подряд
+     идущие товары дают «1,1,1» вместо «701,702,703» — файл втрое легче */
+  const packed = {};
+  for (const [w, list] of inv) {
+    let prev = 0;
+    packed[w] = list
+      .map((n) => {
+        const d = n - prev;
+        prev = n;
+        return d.toString(16);
+      })
+      .join(',');
+  }
+
+  return { ids, w: packed };
+};
+
 const upsertMeta = (head, matcher, tag) =>
   matcher.test(head)
     ? head.replace(matcher, tag)
@@ -328,7 +388,7 @@ const cleanOld = async () => {
   }
   // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
   for (const name of await fs.readdir(PUBLIC)) {
-    if (/^catalog-(data|photos|texts)-\d+\.js$/.test(name)) {
+    if (/^catalog-(data|photos|texts|index)-\d+\.js$/.test(name)) {
       await fs.rm(path.join(PUBLIC, name), { force: true });
     }
   }
@@ -433,6 +493,7 @@ const main = async () => {
       `window.__CATALOG_AT__=${builtAt};` +
       `window.__PHOTOS_AT__=${builtAt};` +
       `window.__TEXTS_AT__=${builtAt};` +
+      `window.__INDEX_AT__=${builtAt};` +
       `window.dispatchEvent(new Event('catalog-ready'))`,
     'utf-8',
   );
@@ -465,6 +526,21 @@ const main = async () => {
   );
   console.log(
     `[prerender] тексты: ${Object.keys(texts).length} товаров с описанием`,
+  );
+
+  /*
+   * Поисковый индекс — отдельным файлом: он нужен, только когда человек
+   * начал искать, и это далеко не каждый визит.
+   */
+  const index = searchIndex(data);
+  await fs.writeFile(
+    path.join(PUBLIC, `catalog-index-${builtAt}.js`),
+    `window.__SEARCH_INDEX__=${safeJson(index)};` +
+      `window.dispatchEvent(new Event('index-ready'))`,
+    'utf-8',
+  );
+  console.log(
+    `[prerender] поиск: ${Object.keys(index.w).length} слов в индексе`,
   );
 
   /*
