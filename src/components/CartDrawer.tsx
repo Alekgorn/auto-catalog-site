@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { usePrice } from '@/hooks/use-price';
 import { formatPrice, isCompatible, productImages } from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
+import { buildShareUrl } from '@/lib/share-kit';
+import ShareKitDialog from '@/components/share/ShareKitDialog';
 import { sendOrder } from '@/lib/api';
 import { FREE_ALL_FROM, FREE_FROM, untilFree } from '@/lib/delivery';
 
@@ -25,6 +27,8 @@ const CartDrawer = () => {
   const vehicle = loadVehicle();
 
   const [step, setStep] = useState<'list' | 'form'>('list');
+  /** Открыто окно «Поделиться» */
+  const [sharing, setSharing] = useState(false);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
@@ -194,13 +198,24 @@ const CartDrawer = () => {
                 );
               })}
 
-              <button
-                onClick={clear}
-                className="my-5 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-              >
-                <Icon name="Trash2" size={14} />
-                Очистить заказ
-              </button>
+              <div className="my-5 flex flex-wrap items-center justify-between gap-4">
+                <button
+                  onClick={clear}
+                  className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <Icon name="Trash2" size={14} />
+                  Очистить заказ
+                </button>
+                {/* Отправить состав другу или клиенту — рядом с очисткой,
+                    чтобы не спорить за внимание с кнопкой заявки */}
+                <button
+                  onClick={() => setSharing(true)}
+                  className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+                >
+                  <Icon name="Share2" size={14} />
+                  Поделиться
+                </button>
+              </div>
             </div>
 
             <div className="border-t border-foreground px-6 py-5">
@@ -342,6 +357,20 @@ const CartDrawer = () => {
           </div>
         )}
       </SheetContent>
+
+      {/* Вне панели: окно должно лежать поверх неё, а не внутри */}
+      <ShareKitDialog
+        open={sharing}
+        onClose={() => setSharing(false)}
+        url={buildShareUrl({
+          lines: items.map((i) => ({ id: i.product.id, qty: i.qty })),
+          vehicle,
+        })}
+        count={items.length}
+        total={total}
+        vehicle={vehicle}
+        names={items.map((i) => i.product.name)}
+      />
     </Sheet>
   );
 };

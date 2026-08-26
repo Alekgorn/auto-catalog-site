@@ -20,6 +20,9 @@ import ScenarioPage from './pages/Scenario';
 const Admin = lazy(() => import('./pages/Admin'));
 const SearchPage = lazy(() => import('./pages/Search'));
 const ComparePage = lazy(() => import('./pages/Compare'));
+/* Присланная сборка: страницу открывают по ссылке из переписки, поэтому
+   заранее её никто не собирает и в общий код тянуть незачем */
+const SharedKitPage = lazy(() => import('./pages/SharedKit'));
 
 /** Пока грузится страница — короткая заглушка вместо пустоты */
 const Loading = () => (
@@ -45,6 +48,14 @@ const AppRoutes = () => (
       element={
         <Suspense fallback={<Loading />}>
           <ComparePage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/sborka"
+      element={
+        <Suspense fallback={<Loading />}>
+          <SharedKitPage />
         </Suspense>
       }
     />

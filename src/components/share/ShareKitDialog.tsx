@@ -1,0 +1,267 @@
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Icon from '@/components/ui/icon';
+import { Vehicle, formatPrice } from '@/data/catalog';
+import { isVehicle } from '@/lib/vehicle';
+import { shareText } from '@/lib/share-kit';
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  /** Готовая ссылка на состав */
+  url: string;
+  /** Сколько позиций в комплекте — для подписи к ссылке */
+  count: number;
+  /** Итоговая сумма: человек должен понимать, чем делится */
+  total: number;
+  vehicle: Vehicle | null;
+  /** Названия позиций — короткий список в окне */
+  names: string[];
+}
+
+/**
+ * Окно «Поделиться сборкой».
+ *
+ * Ссылка уносит состав целиком, поэтому получателю ничего не надо
+ * собирать заново: он открывает готовый комплект под ту же машину,
+ * может поменять позиции и заказать сам.
+ */
+const ShareKitDialog = ({
+  open,
+  onClose,
+  url,
+  count,
+  total,
+  vehicle,
+  names,
+}: Props) => {
+  const [copied, setCopied] = useState(false);
+  /** Родное меню телефона есть не везде — кнопку рисуем только там, где есть */
+  const [canSystem, setCanSystem] = useState(false);
+
+  useEffect(() => {
+    setCanSystem(typeof navigator !== 'undefined' && !!navigator.share);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setCopied(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      /* Esc закрывает только это окно: корзина под ним ловит ту же
+         клавишу и иначе схлопнулась бы вместе с ним */
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const text = shareText(count, vehicle);
+  const message = `${text} ${url}`;
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      /* Буфер закрыт настройками браузера — выделяем текст запасным полем */
+      const input = document.createElement('input');
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2200);
+  };
+
+  const openWindow = (link: string) => {
+    window.open(link, '_blank', 'noopener,noreferrer');
+  };
+
+  /* MAX и Telegram принимают ссылку и текст отдельными полями,
+     ВКонтакте — одним адресом с подписью */
+  const targets: { key: string; label: string; icon: string; run: () => void }[] =
+    [
+      {
+        key: 'max',
+        label: 'MAX',
+        icon: 'MessageCircle',
+        run: () =>
+          openWindow(
+            `https://max.ru/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+          ),
+      },
+      {
+        key: 'tg',
+        label: 'Telegram',
+        icon: 'Send',
+        run: () =>
+          openWindow(
+            `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
+          ),
+      },
+      {
+        key: 'vk',
+        label: 'ВКонтакте',
+        icon: 'Users',
+        run: () =>
+          openWindow(
+            `https://vk.com/share.php?url=${encodeURIComponent(url)}&title=${encodeURIComponent(text)}`,
+          ),
+      },
+    ];
+
+  const car = isVehicle(vehicle)
+    ? `${vehicle.brand} ${vehicle.model}, ${vehicle.year} г.`
+    : '';
+
+  /*
+   * Через портал в body: окно открывают из боковой корзины, а она гасит
+   * нажатия по всему, что лежит внутри неё. Рядом с ней — не внутри.
+   */
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
+      /* Корзина закрывается по клику мимо себя — нажатия по нашему окну
+         до неё доходить не должны, иначе исчезнут оба */
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+    >
+      <button
+        aria-label="Закрыть"
+        onClick={onClose}
+        className="fixed inset-0 bg-foreground/50 backdrop-blur-[2px]"
+      />
+
+      <div className="relative w-full max-w-md bg-surface shadow-panel">
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <div className="min-w-0">
+            <div className="eyebrow">Поделиться</div>
+            <h2 className="mt-0.5 font-head text-lg font-bold uppercase leading-tight tracking-tight">
+              {count === 1 ? 'Ваш выбор' : 'Ваша сборка'}
+            </h2>
+          </div>
+          <button
+            onClick={onClose}
+            aria-label="Закрыть"
+            className="-mr-1 flex-none p-1 text-muted-foreground transition-colors hover:text-primary"
+          >
+            <Icon name="X" size={22} />
+          </button>
+        </div>
+
+        <div className="px-5 py-4">
+          {/* Что именно уедет по ссылке: без этого человек шлёт вслепую */}
+          <div className="border border-border bg-surface-muted px-4 py-3">
+            {car && (
+              <div className="text-[0.78rem] uppercase tracking-[0.08em] text-muted-foreground">
+                {car}
+              </div>
+            )}
+            <ul className="mt-1.5 space-y-1">
+              {names.slice(0, 4).map((name, i) => (
+                <li
+                  key={name + i}
+                  className="truncate text-[0.85rem] leading-snug"
+                >
+                  {name}
+                </li>
+              ))}
+              {names.length > 4 && (
+                <li className="text-[0.8rem] text-muted-foreground">
+                  и ещё {names.length - 4}
+                </li>
+              )}
+            </ul>
+            <div className="mt-3 flex items-end justify-between border-t border-border pt-2.5">
+              <span className="text-[0.75rem] uppercase tracking-[0.1em] text-muted-foreground">
+                Итого
+              </span>
+              <span className="font-head text-xl font-bold tracking-tight">
+                {formatPrice(total)}
+              </span>
+            </div>
+          </div>
+
+          {/* Родное меню телефона — самый привычный жест, поэтому первым */}
+          {canSystem && (
+            <button
+              onClick={() =>
+                navigator
+                  .share({ title: 'Комплект', text, url })
+                  .catch(() => undefined)
+              }
+              className="mt-4 flex w-full items-center justify-center gap-2 bg-foreground px-5 py-3.5 font-head text-[0.82rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <Icon name="Share2" size={17} />
+              Отправить
+            </button>
+          )}
+
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {targets.map((t) => (
+              <button
+                key={t.key}
+                onClick={t.run}
+                className="flex flex-col items-center gap-1.5 border border-border px-2 py-3 text-[0.75rem] font-medium transition-colors hover:border-foreground hover:bg-surface-muted"
+              >
+                <Icon name={t.icon} size={20} className="text-primary" />
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 flex items-stretch gap-2">
+            <div className="min-w-0 flex-1 truncate border border-border px-3 py-2.5 text-[0.8rem] text-muted-foreground">
+              {url}
+            </div>
+            <button
+              onClick={copy}
+              className={`flex flex-none items-center gap-2 border px-4 text-[0.75rem] font-bold uppercase tracking-[0.06em] transition-colors ${
+                copied
+                  ? 'border-success bg-success text-success-foreground'
+                  : 'border-foreground hover:bg-foreground hover:text-background'
+              }`}
+            >
+              <Icon name={copied ? 'Check' : 'Copy'} size={15} />
+              {copied ? 'Готово' : 'Копировать'}
+            </button>
+          </div>
+
+          <p className="mt-3 text-[0.78rem] leading-snug text-muted-foreground">
+            По ссылке откроется этот же комплект — состав можно поменять, а
+            цены будут актуальны на момент открытия.
+          </p>
+
+          {/* Скрытый текст для копирования целиком — им пользуются те,
+              кто пишет сообщение руками */}
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(message);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2200);
+              } catch {
+                copy();
+              }
+            }}
+            className="mt-3 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-primary"
+          >
+            <Icon name="ClipboardList" size={14} />
+            Скопировать с текстом
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+};
+
+export default ShareKitDialog;
