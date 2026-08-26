@@ -1,15 +1,18 @@
 User-agent: Googlebot
 Allow: /
 Disallow: /admin
+Disallow: /sborka
 
 User-agent: Yandex
 Allow: /
 Disallow: /admin
+Disallow: /sborka
 Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content&yclid&gclid
 
 User-agent: Bingbot
 Allow: /
 Disallow: /admin
+Disallow: /sborka
 
 User-agent: Twitterbot
 Allow: /
@@ -20,5 +23,6 @@ Allow: /
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /sborka
 
 Sitemap: https://xn--80a0adnb7a.xn--p1ai/sitemap.xml

@@ -5,6 +5,9 @@ import { formatPrice, productImages } from '@/data/catalog';
 import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
 import { useCatalog } from '@/context/CatalogContext';
+import { useVehicle } from '@/hooks/use-vehicle';
+import { buildShareUrl } from '@/lib/share-kit';
+import ShareKitDialog from '@/components/share/ShareKitDialog';
 import Confetti from '@/components/kit/Confetti';
 
 /**
@@ -29,10 +32,13 @@ const KitBar = () => {
   // позиции из собранного комплекта
   const { allProducts: products } = useCatalog();
   const { add, setOpen } = useCart();
+  const { vehicle } = useVehicle();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [added, setAdded] = useState(false);
   const [hidden, setHidden] = useState(false);
+  /** Открыто окно «Поделиться» */
+  const [sharing, setSharing] = useState(false);
   /** Счётчик залпов салюта: растёт — значит пора праздновать */
   const [boom, setBoom] = useState(0);
   const wasFull = useRef(false);
@@ -129,6 +135,14 @@ const KitBar = () => {
   };
 
   const celebrate = complete && !added;
+
+  /* Ссылку собираем из того же состава, что видно в панели: получатель
+     откроет ровно этот комплект под ту же машину */
+  const shareUrl = buildShareUrl({
+    lines: chosen.map((x) => ({ id: x.product!.id, qty: x.count })),
+    vehicle,
+    slug,
+  });
 
   if (hidden) {
     return (
@@ -287,6 +301,19 @@ const KitBar = () => {
                 </button>
               )}
 
+              {/* «Спросить друга» — второстепенное действие рядом с
+                  заказом: подпись прячем на узком экране, чтобы кнопка
+                  не отжимала главную */}
+              <button
+                onClick={() => setSharing(true)}
+                title="Поделиться сборкой"
+                aria-label="Поделиться сборкой"
+                className="flex flex-none items-center gap-2 border border-foreground px-3.5 py-3.5 font-head text-[0.75rem] font-bold uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary sm:px-4"
+              >
+                <Icon name="Share2" size={16} />
+                <span className="hidden lg:inline">Поделиться</span>
+              </button>
+
               <div className="relative">
                 {/* Комплект собран — ведём взгляд прямо на кнопку заказа.
                     На телефоне подсказку прячем: там она ложилась поверх
@@ -357,6 +384,16 @@ const KitBar = () => {
         </div>
         </div>
       </div>
+
+      <ShareKitDialog
+        open={sharing}
+        onClose={() => setSharing(false)}
+        url={shareUrl}
+        count={chosen.length}
+        total={total}
+        vehicle={vehicle}
+        names={chosen.map((x) => x.product!.name)}
+      />
     </>
   );
 };
