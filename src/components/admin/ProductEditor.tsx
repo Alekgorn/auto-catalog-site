@@ -78,17 +78,31 @@ const ProductEditor = ({
   };
 
   /**
-   * Перенос уже загруженного снимка из «Описания и фото» в «Особенности».
-   * Файл не перезагружаем — используем ту же ссылку, поэтому перенос
-   * мгновенный. Сразу открываем вкладку, чтобы было видно результат.
+   * Перенос уже загруженного снимка из «Описания и фото» в блочный раздел:
+   * «Особенности» или «Свой раздел». Файл не перезагружаем — используем ту
+   * же ссылку, поэтому перенос мгновенный. Сразу открываем вкладку, чтобы
+   * было видно результат.
    */
-  const moveToNotes = (src: string) => {
+  const moveToBlocks = (src: string, to: 'notes' | 'extra') => {
     setForm((f) => ({
       ...f,
       images: f.images.filter((x) => x !== src),
-      notes: [...f.notes, { type: 'image' as const, image: src, caption: '' }],
+      [to]: [...f[to], { type: 'image' as const, image: src, caption: '' }],
     }));
-    setSection('notes');
+    setSection(to);
+  };
+
+  /**
+   * Перекладываем снимок между блочными разделами, не возвращая его
+   * в галерею: фото салона может понадобиться и в нюансах монтажа, и
+   * в своём разделе — раньше для этого приходилось делать два шага.
+   */
+  const moveBetweenBlocks = (src: string, to: 'notes' | 'extra') => {
+    setForm((f) => ({
+      ...f,
+      [to]: [...f[to], { type: 'image' as const, image: src, caption: '' }],
+    }));
+    setSection(to);
   };
 
   /**
@@ -210,7 +224,7 @@ const ProductEditor = ({
               uploading={uploading}
               upload={upload}
               missingFields={missingFields}
-              moveToNotes={moveToNotes}
+              moveToBlocks={moveToBlocks}
             />
           )}
 
@@ -230,6 +244,10 @@ const ProductEditor = ({
                     : [...f.images, src],
                 }))
               }
+              moveTo={{
+                label: 'В «Свой раздел»',
+                run: (src) => moveBetweenBlocks(src, 'extra'),
+              }}
             />
           )}
 
@@ -269,6 +287,10 @@ const ProductEditor = ({
                         : [...f.images, src],
                     }))
                   }
+                  moveTo={{
+                    label: 'В «Особенности»',
+                    run: (src) => moveBetweenBlocks(src, 'notes'),
+                  }}
                 />
               </div>
             </div>

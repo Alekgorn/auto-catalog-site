@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
+import ImageZoom from '@/components/admin/ImageZoom';
 import { adminFetch } from '@/lib/api';
 import { GuideBlock } from '@/data/catalog';
 
@@ -49,6 +50,11 @@ interface Props {
   emptyText?: string;
   /** Вернуть снимок в общую галерею товара */
   onMoveImageOut?: (src: string) => void;
+  /**
+   * Перебросить снимок в соседний блочный раздел, минуя галерею.
+   * Название раздела нужно для подписи кнопки.
+   */
+  moveTo?: { label: string; run: (src: string) => void };
 }
 
 /**
@@ -63,8 +69,11 @@ const BlocksEditor = ({
   hint,
   emptyText = 'Пока пусто — добавьте абзац или фото.',
   onMoveImageOut,
+  moveTo,
 }: Props) => {
   const [busy, setBusy] = useState(false);
+  /** Снимок, открытый на весь экран */
+  const [zoom, setZoom] = useState<string | null>(null);
 
   const setBlock = (i: number, next: GuideBlock) =>
     onChange(blocks.map((b, idx) => (idx === i ? next : b)));
@@ -169,7 +178,18 @@ const BlocksEditor = ({
                 <div className="flex items-center gap-3">
                   {b.image ? (
                     <div className="relative">
-                      <img src={b.image} alt="" className="h-20 w-28 bg-card object-cover" />
+                      <button
+                        onClick={() => setZoom(b.image!)}
+                        title="Открыть на весь экран"
+                        aria-label="Открыть фото на весь экран"
+                        className="block cursor-zoom-in border border-transparent transition-colors hover:border-primary"
+                      >
+                        <img
+                          src={b.image}
+                          alt=""
+                          className="h-20 w-28 bg-card object-cover"
+                        />
+                      </button>
                       <button
                         onClick={() => setBlock(i, { ...b, image: undefined })}
                         aria-label="Удалить фото"
@@ -209,28 +229,58 @@ const BlocksEditor = ({
             {b.type === 'image' && (
               <div className="space-y-3">
                 {b.image ? (
-                  <div className="relative w-fit">
-                    <img src={b.image} alt="" className="h-28 w-40 bg-card object-cover" />
-                    {onMoveImageOut && (
+                  <div className="w-fit">
+                    <div className="relative w-fit">
+                      {/* Миниатюра открывается на весь экран: по кадру
+                          40×28 не понять, что на снимке */}
+                      <button
+                        onClick={() => setZoom(b.image)}
+                        title="Открыть на весь экран"
+                        aria-label="Открыть фото на весь экран"
+                        className="block cursor-zoom-in border border-transparent transition-colors hover:border-primary"
+                      >
+                        <img
+                          src={b.image}
+                          alt=""
+                          className="h-28 w-40 bg-card object-cover"
+                        />
+                      </button>
+                      {onMoveImageOut && (
+                        <button
+                          onClick={() => {
+                            onMoveImageOut(b.image);
+                            onChange(blocks.filter((_, idx) => idx !== i));
+                          }}
+                          title="Вернуть в «Описание и фото»"
+                          aria-label="Вернуть в «Описание и фото»"
+                          className="absolute -left-2 -top-2 border border-foreground bg-background p-1 text-foreground transition-colors hover:bg-foreground hover:text-background"
+                        >
+                          <Icon name="ArrowRightLeft" size={11} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setBlock(i, { ...b, image: '' })}
+                        aria-label="Удалить"
+                        className="absolute -right-2 -top-2 bg-primary p-1 text-primary-foreground"
+                      >
+                        <Icon name="X" size={11} />
+                      </button>
+                    </div>
+
+                    {/* Прямой путь в соседний раздел: раньше снимок
+                        приходилось сначала возвращать в галерею */}
+                    {moveTo && (
                       <button
                         onClick={() => {
-                          onMoveImageOut(b.image);
+                          moveTo.run(b.image);
                           onChange(blocks.filter((_, idx) => idx !== i));
                         }}
-                        title="Вернуть в «Описание и фото»"
-                        aria-label="Вернуть в «Описание и фото»"
-                        className="absolute -left-2 -top-2 border border-foreground bg-background p-1 text-foreground transition-colors hover:bg-foreground hover:text-background"
+                        className="mt-1.5 flex w-40 items-center justify-center gap-1.5 border border-border px-2 py-1.5 text-[0.7rem] uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                       >
-                        <Icon name="ArrowRightLeft" size={11} />
+                        <Icon name="ArrowRight" size={12} className="flex-none" />
+                        {moveTo.label}
                       </button>
                     )}
-                    <button
-                      onClick={() => setBlock(i, { ...b, image: '' })}
-                      aria-label="Удалить"
-                      className="absolute -right-2 -top-2 bg-primary p-1 text-primary-foreground"
-                    >
-                      <Icon name="X" size={11} />
-                    </button>
                   </div>
                 ) : (
                   <label className="flex h-28 w-40 cursor-pointer flex-col items-center justify-center gap-1 border border-dashed border-border text-[0.68rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary">
@@ -257,6 +307,8 @@ const BlocksEditor = ({
           </div>
         ))}
       </div>
+
+      <ImageZoom src={zoom} onClose={() => setZoom(null)} />
     </div>
   );
 };
