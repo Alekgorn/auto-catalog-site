@@ -14,6 +14,7 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { usePhotos } from '@/hooks/use-photos';
+import { useProductText } from '@/hooks/use-product-text';
 import { isVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
@@ -33,10 +34,13 @@ const SPECS_SHOWN = 5;
 const SUMMARY_MAX = 230;
 
 /** Быстрый просмотр: главное о товаре без ухода из каталога. */
-const QuickView = ({ product, vehicle: rawVehicle, onClose }: Props) => {
+const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(rawVehicle) ? rawVehicle : null;
   const { brands } = useCatalog();
+  /* Описание и полная таблица подъезжают отдельным файлом: в списках
+     они не нужны и в общий каталог не попадают */
+  const product = useProductText(base);
   /* Обложка уже нарисована в карточке, остальные снимки подъедут следом */
   const images = usePhotos(product);
   /**

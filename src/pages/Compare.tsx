@@ -10,6 +10,7 @@ import { useCatalog } from '@/context/CatalogContext';
 import { useCompare } from '@/context/CompareContext';
 import { useKit } from '@/context/KitContext';
 import { Product } from '@/data/catalog';
+import { useProductTexts } from '@/hooks/use-product-text';
 import { useSeo } from '@/hooks/use-seo';
 import { SITE_URL } from '@/lib/seo';
 
@@ -41,13 +42,16 @@ const ComparePage = () => {
     window.scrollTo({ top: 0 });
   }, []);
 
-  const picked = useMemo(
+  const chosen = useMemo(
     () =>
       ids
         .map((id) => products.find((p) => p.id === id))
         .filter((p): p is Product => !!p),
     [ids, products],
   );
+  /* Таблица сравнения строится по полным характеристикам — они лежат
+     отдельным файлом и подъезжают следом за списком */
+  const picked = useProductTexts(chosen);
 
   /* Идёт сборка и раздел сравнения — один из её шагов: можно выбрать сразу */
   const kitStep = steps.find((s) => s.category === category);

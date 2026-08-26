@@ -21,6 +21,7 @@ import {
   productsWithThis,
 } from "@/data/catalog";
 import { usePhotos } from "@/hooks/use-photos";
+import { useProductText } from "@/hooks/use-product-text";
 import { VEHICLE_EVENT, loadVehicle } from "@/lib/vehicle";
 import { telHref } from "@/lib/site-settings";
 import {
@@ -43,10 +44,13 @@ const Product = () => {
   // Сам товар ищем в полном каталоге: по прямой ссылке страница должна
   // открыться, даже если дилер включил фильтр наличия
   const { products, allProducts, guides, contacts, loading } = useCatalog();
-  const product = useMemo(
+  const found = useMemo(
     () => allProducts.find((p) => p.id === id) ?? null,
     [id, allProducts],
   );
+  /* Описание и полная таблица характеристик лежат отдельным файлом —
+     в списках они не нужны, а весят больше половины каталога */
+  const product = useProductText(found);
 
   /*
    * На странице товара кнопка ВСЕГДА кладёт в корзину: панель сборки
