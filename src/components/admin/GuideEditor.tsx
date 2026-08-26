@@ -4,7 +4,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { GuideBlock } from '@/data/catalog';
 import { AdminProduct } from '@/components/admin/ProductEditor';
 import BlocksEditor, { cleanBlocks, uploadImage } from '@/components/admin/BlocksEditor';
-import ImageZoom from '@/components/admin/ImageZoom';
+import ImageZoom, { keepOpenOnZoom } from '@/components/admin/ImageZoom';
 
 export interface AdminGuide {
   id?: number;
@@ -94,8 +94,12 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
   );
 
   return (
-    <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-3xl gap-0 overflow-y-auto rounded-none border-foreground p-0">
+    <>
+      <Dialog open onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        {...keepOpenOnZoom}
+        className="max-h-[92vh] max-w-3xl gap-0 overflow-y-auto rounded-none border-foreground p-0"
+      >
         <div className="sticky top-0 z-10 border-b border-foreground bg-primary px-6 py-5 text-primary-foreground">
           <div className="text-[0.7rem] uppercase tracking-[0.16em] opacity-80">
             {form.id ? 'Редактирование инструкции' : 'Новая инструкция'}
@@ -268,9 +272,12 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
           </div>
         </div>
       </DialogContent>
+      </Dialog>
 
+      {/* Вне Dialog: просмотр не должен быть частью окна, иначе оно
+          закрывает и себя, и фото одним нажатием */}
       <ImageZoom src={zoom} onClose={() => setZoom(null)} />
-    </Dialog>
+    </>
   );
 };
 

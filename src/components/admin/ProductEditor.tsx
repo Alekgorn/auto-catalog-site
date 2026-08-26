@@ -8,6 +8,7 @@ import ProductMainTab from '@/components/admin/product-editor/ProductMainTab';
 import ProductContentTab from '@/components/admin/product-editor/ProductContentTab';
 import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
 import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
+import { keepOpenOnZoom } from '@/components/admin/ImageZoom';
 import { findFitKey, hasFitModel, sameFit } from '@/lib/fits-match';
 import { FitMode } from '@/data/catalog';
 
@@ -178,7 +179,10 @@ const ProductEditor = ({
 
   return (
     <Dialog open onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-h-[92vh] max-w-3xl gap-0 overflow-y-auto rounded-none border-foreground p-0">
+      <DialogContent
+        {...keepOpenOnZoom}
+        className="max-h-[92vh] max-w-3xl gap-0 overflow-y-auto rounded-none border-foreground p-0"
+      >
         <div className="sticky top-0 z-10 border-b border-foreground bg-primary px-6 py-5 text-primary-foreground">
           <div className="text-[0.7rem] uppercase tracking-[0.16em] opacity-80">
             {form.id ? 'Редактирование' : 'Новый товар'}

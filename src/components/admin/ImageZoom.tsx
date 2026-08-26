@@ -19,15 +19,22 @@ const ImageZoom = ({ src, onClose }: Props) => {
   useEffect(() => {
     if (!src) return;
     const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
       /* Esc закрывает только фото: окно редактора остаётся открытым,
          иначе одно нажатие теряло бы несохранённую правку */
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      onClose();
     };
-    document.addEventListener('keydown', onKey, true);
-    return () => document.removeEventListener('keydown', onKey, true);
+    /*
+     * Слушаем на окне и на перехвате: редактор товара ловит Esc на
+     * документе и подписался раньше нас. Окно в цепочке перехвата стоит
+     * выше документа, поэтому наш обработчик срабатывает первым и
+     * останавливает нажатие до того, как редактор его увидит.
+     */
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [src, onClose]);
 
   if (!src) return null;
@@ -42,8 +49,21 @@ const ImageZoom = ({ src, onClose }: Props) => {
       role="dialog"
       aria-modal="true"
       aria-label="Просмотр фото"
+      /* По этой метке окно редактора узнаёт свой просмотр и не считает
+         клик по нему поводом закрыться (см. keepOpenOnZoom) */
+      data-image-zoom=""
       onClick={onClose}
-      className="fixed inset-0 z-[120] flex cursor-zoom-out flex-col bg-foreground/95 p-4 animate-fade-in"
+      /*
+       * Нажатие не должно доходить до окна редактора: оно считает любой
+       * клик за своими границами поводом закрыться, и вместе с фото
+       * захлопывался весь товар с несохранёнными правками.
+       */
+      onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      /* Открытая модалка гасит нажатия по всему, что вне её окна —
+         возвращаем их себе, иначе кнопка «Закрыть» не нажимается */
+      className="pointer-events-auto fixed inset-0 z-[120] flex cursor-zoom-out flex-col bg-foreground/95 p-4 animate-fade-in"
     >
       <div className="flex flex-none justify-end">
         <button
@@ -78,6 +98,29 @@ const ImageZoom = ({ src, onClose }: Props) => {
     </div>,
     document.body,
   );
+};
+
+/**
+ * Пропсы для окна, внутри которого открывают просмотр фото.
+ *
+ * Модалка закрывается по клику мимо себя, а просмотр рисуется рядом с ней,
+ * а не внутри — поэтому любое нажатие по фото читалось как «клик снаружи»,
+ * и вместе с фото захлопывался товар с несохранёнными правками. Здесь мы
+ * узнаём свой просмотр по метке и оставляем окно открытым.
+ */
+export const keepOpenOnZoom = {
+  onPointerDownOutside: (e: { target: EventTarget | null; preventDefault: () => void }) => {
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('[data-image-zoom]')) e.preventDefault();
+  },
+  onInteractOutside: (e: { target: EventTarget | null; preventDefault: () => void }) => {
+    const el = e.target as HTMLElement | null;
+    if (el?.closest?.('[data-image-zoom]')) e.preventDefault();
+  },
+  onEscapeKeyDown: (e: Event) => {
+    /* Просмотр открыт — Esc относится к нему, а не к форме товара */
+    if (document.querySelector('[data-image-zoom]')) e.preventDefault();
+  },
 };
 
 export default ImageZoom;
