@@ -15,13 +15,12 @@ import {
   Vehicle,
   formatPrice,
   productDescription,
-  productImages,
-  productKit,
   productSku,
   productSpecs,
   productsByCategory,
   productsWithThis,
 } from "@/data/catalog";
+import { usePhotos } from "@/hooks/use-photos";
 import { VEHICLE_EVENT, loadVehicle } from "@/lib/vehicle";
 import { telHref } from "@/lib/site-settings";
 import {
@@ -50,17 +49,14 @@ const Product = () => {
   );
 
   /*
-   * На странице товара кнопка ВСЕГДА кладёт в корзину.
-   *
-   * Раньше она отмечала позицию в сборке комплекта, а панель сборки на
-   * этой странице не показывается — человек жал кнопку, и внешне не
-   * происходило ничего. Сборка живёт сутки, поэтому эффект догонял и
-   * через день: на обычной рамке появлялось «Выбрать в комплект».
-   *
-   * Если сборка идёт, вместо подмены кнопки показываем ссылку обратно
-   * к шагу — выбирать позицию в комплект логично там, где виден весь
-   * комплект и его цена.
+   * На странице товара кнопка ВСЕГДА кладёт в корзину: панель сборки
+   * комплекта здесь не показывается, и любое другое поведение выглядело
+   * бы как нажатие впустую.
    */
+
+  /* Обложка есть сразу, остальные снимки подъезжают следом */
+  const shots = usePhotos(product);
+
   const { add: addToCart, has: inCart, setOpen: openCart } = useCart();
   const chosen = inCart(product?.id ?? '');
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -113,7 +109,7 @@ const Product = () => {
     return {
       title: `${product.name} — купить, артикул ${productSku(product)} | ШТАТНО`,
       description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ""}`,
-      image: productImages(product)[0],
+      image: shots[0],
       canonical: url,
       type: "product" as const,
       jsonLd: [
@@ -124,7 +120,7 @@ const Product = () => {
           name: product.name,
           sku: productSku(product),
           category: product.category,
-          image: productImages(product),
+          image: shots,
           description: summary,
           brand: { "@type": "Brand", name: "ШТАТНО" },
           offers: {
@@ -211,10 +207,7 @@ const Product = () => {
 
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 py-10 lg:grid-cols-12 lg:py-14">
             <div className="lg:col-span-5">
-              <ProductGallery
-                images={productImages(product)}
-                alt={product.name}
-              />
+              <ProductGallery images={shots} alt={product.name} />
               <ProductTrust product={product} />
             </div>
 

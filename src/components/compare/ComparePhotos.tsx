@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, productImages } from '@/data/catalog';
+import { allPhotos, loadPhotos } from '@/lib/product-photos';
 
 interface Props {
   /** Все товары сравнения — между ними листаем стрелками */
@@ -22,6 +23,18 @@ const ComparePhotos = ({ products, startId, onClose }: Props) => {
   );
   const [pos, setPos] = useState(startIndex);
   const [shot, setShot] = useState(0);
+  /* Счётчик перерисовки: между товарами листают стрелками, поэтому
+     словарь фото тянем один раз на всё окно, а не на текущий товар */
+  const [, setLoaded] = useState(0);
+
+  useEffect(() => {
+    if (!startId) return;
+    let alive = true;
+    loadPhotos().then(() => alive && setLoaded((n) => n + 1));
+    return () => {
+      alive = false;
+    };
+  }, [startId]);
 
   /* Открыли на другом товаре — показываем его */
   useEffect(() => {
@@ -50,7 +63,7 @@ const ComparePhotos = ({ products, startId, onClose }: Props) => {
   if (!startId || !products.length) return null;
 
   const product = products[pos] ?? products[0];
-  const shots = productImages(product);
+  const shots = allPhotos(product);
   const image = shots[Math.min(shot, shots.length - 1)];
 
   const step = (delta: number) => {
