@@ -25,6 +25,16 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "name", label: "По названию" },
 ];
 
+/*
+ * По сколько товаров показываем за раз.
+ *
+ * В крупных категориях больше тысячи позиций, и рисовать их разом
+ * бессмысленно: страница «Переходные рамки» весила 5 МБ и открывалась
+ * тринадцать секунд. Столько карточек всё равно никто не просматривает —
+ * показываем первый экран, остальное по кнопке.
+ */
+const PAGE_SIZE = 24;
+
 /** Каталог одной категории по собственному адресу — чтобы его индексировали. */
 const CategoryPage = () => {
   const { slug = "" } = useParams();
@@ -32,6 +42,7 @@ const CategoryPage = () => {
   const { products, categories, loading } = useCatalog();
   const { vehicle } = useVehicle();
   const [sort, setSort] = useState<SortKey>("popular");
+  const [shown, setShown] = useState(PAGE_SIZE);
 
   const category = useMemo(
     () => categories.find((c) => slugify(c) === slug) ?? null,
@@ -129,6 +140,17 @@ const CategoryPage = () => {
 
     return sorted;
   }, [items, filters, sort]);
+
+  const visible = useMemo(() => list.slice(0, shown), [list, shown]);
+
+  /*
+   * Сменили фильтр, сортировку или перешли в другую категорию — начинаем
+   * показ заново. Иначе человек, догрузивший пятьсот карточек, после
+   * смены сортировки получил бы те же пятьсот, но уже другие.
+   */
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+  }, [filters, sort, slug]);
 
   const minPrice = items.length ? Math.min(...items.map((p) => p.price)) : 0;
 
@@ -261,9 +283,23 @@ const CategoryPage = () => {
                 id="catalog-top"
                 className="grid grid-cols-2 gap-3 py-8 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
               >
-                {list.map((p) => (
+                {visible.map((p) => (
                   <ProductCard key={p.id} product={p} vehicle={vehicle} />
                 ))}
+              </div>
+            )}
+
+            {shown < list.length && (
+              <div className="pb-10 text-center">
+                <button
+                  onClick={() => setShown((n) => n + PAGE_SIZE)}
+                  className="border border-foreground px-6 py-3 text-[0.8rem] uppercase tracking-[0.1em] transition-colors hover:border-primary hover:text-primary"
+                >
+                  Показать ещё
+                  <span className="ml-2 text-muted-foreground">
+                    осталось {list.length - shown}
+                  </span>
+                </button>
               </div>
             )}
           </div>
