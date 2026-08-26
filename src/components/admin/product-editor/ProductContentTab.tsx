@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import Icon from '@/components/ui/icon';
+import ImageZoom from '@/components/admin/ImageZoom';
 import { AdminProduct, SetField, label, field } from './product-types';
 
 interface Props {
@@ -7,8 +9,8 @@ interface Props {
   uploading: boolean;
   upload: (files: FileList | null) => void;
   missingFields: string[];
-  /** Перенести уже загруженное фото во вкладку «Особенности» */
-  moveToNotes: (src: string) => void;
+  /** Перенести уже загруженное фото в блочный раздел товара */
+  moveToBlocks: (src: string, to: 'notes' | 'extra') => void;
 }
 
 /** Вкладка «Описание и фото»: снимки, абзацы, характеристики, комплектация. */
@@ -18,8 +20,12 @@ const ProductContentTab = ({
   uploading,
   upload,
   missingFields,
-  moveToNotes,
+  moveToBlocks,
 }: Props) => {
+  /** Снимок, открытый на весь экран */
+  const [zoom, setZoom] = useState<string | null>(null);
+  /** У какого снимка раскрыт выбор раздела для переноса */
+  const [moving, setMoving] = useState<string | null>(null);
   /**
    * Меняет характеристики местами. Порядок здесь — порядок строк на
    * странице товара, а первые три видны прямо в плитке каталога.
@@ -38,19 +44,36 @@ const ProductContentTab = ({
       <span className={label}>Фотографии</span>
       {form.images.length > 0 && (
         <p className="mt-1 text-[0.78rem] text-muted-foreground">
-          Стрелка на снимке переносит его в «Особенности» — заново загружать не
-          нужно.
+          Клик по снимку открывает его на весь экран. Стрелка переносит фото в
+          «Особенности» или «Свой раздел» — заново загружать не нужно.
         </p>
       )}
       <div className="mt-2 flex flex-wrap gap-3">
         {form.images.map((src, i) => (
           <div key={src + i} className="group relative">
-            <img src={src} alt="" className="h-24 w-24 bg-card object-contain p-1" />
+            {/* Миниатюра кликабельна: по 96 пикселям не понять, что на
+                снимке — схема, фото в салоне или дубль соседнего кадра */}
             <button
-              onClick={() => moveToNotes(src)}
-              title="Перенести в «Особенности»"
-              aria-label="Перенести в «Особенности»"
-              className="absolute -left-2 -top-2 border border-foreground bg-background p-1 text-foreground transition-colors hover:bg-foreground hover:text-background"
+              onClick={() => setZoom(src)}
+              title="Открыть на весь экран"
+              aria-label="Открыть фото на весь экран"
+              className="block cursor-zoom-in border border-transparent transition-colors hover:border-primary"
+            >
+              <img
+                src={src}
+                alt=""
+                className="h-24 w-24 bg-card object-contain p-1"
+              />
+            </button>
+            <button
+              onClick={() => setMoving(moving === src ? null : src)}
+              title="Перенести в другой раздел"
+              aria-label="Перенести в другой раздел"
+              className={`absolute -left-2 -top-2 border border-foreground p-1 transition-colors ${
+                moving === src
+                  ? 'bg-foreground text-background'
+                  : 'bg-background text-foreground hover:bg-foreground hover:text-background'
+              }`}
             >
               <Icon name="ArrowRightLeft" size={12} />
             </button>
@@ -66,6 +89,42 @@ const ProductContentTab = ({
             >
               <Icon name="X" size={12} />
             </button>
+
+            {/* Разделов два, поэтому спрашиваем куда: молча ронять фото
+                в «Особенности» было бы угадыванием за магазин */}
+            {moving === src && (
+              <>
+                {/* Клик мимо закрывает выбор — иначе меню висит,
+                    пока не ткнёшь в ту же стрелку */}
+                <button
+                  aria-label="Закрыть выбор раздела"
+                  onClick={() => setMoving(null)}
+                  className="fixed inset-0 z-10 cursor-default"
+                />
+                <div className="absolute left-0 top-full z-20 mt-1 w-40 border border-foreground bg-background shadow-lg">
+                  <button
+                    onClick={() => {
+                      moveToBlocks(src, 'notes');
+                      setMoving(null);
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[0.78rem] transition-colors hover:bg-foreground hover:text-background"
+                  >
+                    <Icon name="Wrench" size={13} className="flex-none" />
+                    В «Особенности»
+                  </button>
+                  <button
+                    onClick={() => {
+                      moveToBlocks(src, 'extra');
+                      setMoving(null);
+                    }}
+                    className="flex w-full items-center gap-2 border-t border-border px-3 py-2 text-left text-[0.78rem] transition-colors hover:bg-foreground hover:text-background"
+                  >
+                    <Icon name="LayoutGrid" size={13} className="flex-none" />
+                    В «Свой раздел»
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ))}
         <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 border border-dashed border-border text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary">
@@ -265,6 +324,8 @@ const ProductContentTab = ({
         Пункт
       </button>
     </div>
+
+    <ImageZoom src={zoom} onClose={() => setZoom(null)} />
   </div>
   );
 };

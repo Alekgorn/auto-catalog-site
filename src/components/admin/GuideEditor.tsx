@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { GuideBlock } from '@/data/catalog';
 import { AdminProduct } from '@/components/admin/ProductEditor';
 import BlocksEditor, { cleanBlocks, uploadImage } from '@/components/admin/BlocksEditor';
+import ImageZoom from '@/components/admin/ImageZoom';
 
 export interface AdminGuide {
   id?: number;
@@ -55,6 +56,8 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Обложка, открытая на весь экран */
+  const [zoom, setZoom] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   const set = <K extends keyof AdminGuide>(key: K, value: AdminGuide[K]) =>
@@ -174,7 +177,18 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
             <div className="mt-2 flex items-center gap-4">
               {form.cover ? (
                 <div className="relative">
-                  <img src={form.cover} alt="" className="h-24 w-32 bg-card object-cover" />
+                  <button
+                    onClick={() => setZoom(form.cover)}
+                    title="Открыть на весь экран"
+                    aria-label="Открыть обложку на весь экран"
+                    className="block cursor-zoom-in border border-transparent transition-colors hover:border-primary"
+                  >
+                    <img
+                      src={form.cover}
+                      alt=""
+                      className="h-24 w-32 bg-card object-cover"
+                    />
+                  </button>
                   <button
                     onClick={() => set('cover', '')}
                     aria-label="Удалить"
@@ -254,6 +268,8 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
           </div>
         </div>
       </DialogContent>
+
+      <ImageZoom src={zoom} onClose={() => setZoom(null)} />
     </Dialog>
   );
 };
