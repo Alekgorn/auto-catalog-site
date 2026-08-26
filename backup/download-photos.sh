@@ -12,9 +12,9 @@ set -e
 DEST="${1:-photos}"
 LIST="$(dirname "$0")/photos-archive-parts.txt"
 TMP="$(mktemp -d)"
-MD5="0cd43fc19611a4989f1fd6fe001ea37d"
+MD5="1746fbe658632a3cb66e0cb23ac8cfc4"
 
-echo "Скачиваю части архива (187 МБ)..."
+echo "Скачиваю части архива (261 МБ)..."
 i=0
 total=$(wc -l < "$LIST" | tr -d ' ')
 while read -r url; do
