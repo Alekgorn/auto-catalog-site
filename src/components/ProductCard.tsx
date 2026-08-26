@@ -11,6 +11,7 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
+import { HEADUNITS_CATEGORY, screenLabel } from '@/lib/kit-filter';
 import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
@@ -67,6 +68,11 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   const compareBlocked = !canAdd(product);
   // Список переполнен — это другая причина отказа, и объяснять её надо иначе
   const compareFull = compareBlocked && compareCategory === product.category;
+
+  /* Диагональ показываем только у магнитол: у рамок это примета
+     посадочного места, а не то, по чему их выбирают */
+  const diagonal =
+    product.category === HEADUNITS_CATEGORY ? screenLabel(product) : null;
 
   /**
    * Характеристики под названием — то, ради чего покупатель раньше заходил
@@ -160,6 +166,21 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         {product.badge && (
           <span className="absolute right-0 top-2 bg-primary px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-primary-foreground sm:top-3 sm:px-2.5 sm:text-[0.68rem]">
             {product.badge}
+          </span>
+        )}
+
+        {/* Диагональ крупно у правого края.
+            Размер экрана — первое, по чему выбирают магнитолу, но в списке
+            он читался только внутри длинного названия. Числом на фото его
+            видно, не читая: взгляд идёт по снимкам, а не по строкам.
+            Встаёт под значком «Хит», если тот есть. */}
+        {diagonal && (
+          <span
+            className={`absolute right-0 bg-foreground px-2 py-1 font-head text-[0.72rem] font-bold leading-none tracking-tight text-background sm:px-2.5 sm:text-[0.82rem] ${
+              product.badge ? 'top-9 sm:top-11' : 'top-2 sm:top-3'
+            }`}
+          >
+            {diagonal}
           </span>
         )}
 
