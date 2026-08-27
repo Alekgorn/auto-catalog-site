@@ -124,7 +124,10 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
   const chosen = kitFlow ? inKit(product.id) : inCart(product.id);
   const kit = productKit(product);
 
-  const goodFit = anyCar || (!vehicle && universal) || (!!vehicle && fits);
+  /* Универсальный товар подходит всегда — и когда машина выбрана тоже.
+     Раньше universal учитывался только без выбранной машины, и стоило
+     указать авто, как магнитола помечалась крестиком «не подходит» */
+  const goodFit = anyCar || universal || (!!vehicle && fits);
   const shownSpecs = allSpecs ? specs : specs.slice(0, SPECS_SHOWN);
   const hiddenCount = specs.length - shownSpecs.length;
 
@@ -252,12 +255,10 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
                     className="flex-none"
                   />
                 )}
-                {anyCar
+                {anyCar || universal
                   ? 'Подходит ко всем автомобилям'
                   : !vehicle
-                    ? universal
-                      ? 'Подходит ко всем автомобилям'
-                      : 'Подходит не всем машинам — укажите свою'
+                    ? 'Подходит не всем машинам — укажите свою'
                     : fits
                       ? `Подходит к ${vehicle.brand} ${vehicle.model}`
                       : `Не подходит к ${vehicle.brand} ${vehicle.model}`}
