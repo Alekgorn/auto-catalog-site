@@ -248,7 +248,9 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           </span>
         )}
 
-        {vehicle && !fits && !anyCar && (
+        {/* Универсальный товар встаёт на любую машину — метка «не подходит»
+            на нём была бы неправдой */}
+        {vehicle && !fits && !forAnyCar && (
           <span className="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-muted px-2 py-1.5 text-[0.62rem] font-bold uppercase leading-tight tracking-[0.04em] text-muted-foreground sm:px-3 sm:py-2 sm:text-[0.7rem]">
             <Icon name="CircleSlash" size={12} className="flex-none" />
             <span className="truncate">Не подходит машине</span>

@@ -60,9 +60,10 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
 
   return (
     <div className="mt-6 border border-border">
-      {anyCar ? (
-        /* Марки в товаре не заданы — ограничений по авто нет.
-           Зелёная плашка без галки: это не подбор под конкретную машину */
+      {anyCar || universal ? (
+        /* Товар без ограничений по авто: либо марки не заданы, либо он
+           прямо помечен универсальным. Зелёная плашка без галки — это
+           не подбор под конкретную машину, а «встанет на любую» */
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-success-soft px-5 py-4">
           <span className="min-w-0 flex-1 font-head text-[0.95rem] font-bold uppercase tracking-tight text-success">
             Подходит ко всем автомобилям

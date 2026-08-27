@@ -4,8 +4,15 @@ import Icon from '@/components/ui/icon';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
+import { useCatalog } from '@/context/CatalogContext';
 import { usePrice } from '@/hooks/use-price';
-import { formatPrice, isCompatible, productImages } from '@/data/catalog';
+import {
+  fitsAll,
+  formatPrice,
+  isCompatible,
+  isUniversal,
+  productImages,
+} from '@/data/catalog';
 import { loadVehicle } from '@/lib/vehicle';
 import { buildShareUrl } from '@/lib/share-kit';
 import ShareKitDialog from '@/components/share/ShareKitDialog';
@@ -25,6 +32,8 @@ const CartDrawer = () => {
   const left = untilFree(total);
   const { toast } = useToast();
   const vehicle = loadVehicle();
+  /* Нужен, чтобы отличить универсальный товар от неподходящего */
+  const { brands } = useCatalog();
 
   const [step, setStep] = useState<'list' | 'form'>('list');
   /** Открыто окно «Поделиться» */
@@ -128,7 +137,16 @@ const CartDrawer = () => {
               )}
 
               {items.map(({ product, qty }) => {
-                const fits = isCompatible(product, vehicle);
+                /*
+                 * Универсальный товар подходит любой машине — у него
+                 * просто не заполнен список марок. Раньше корзина этого
+                 * не учитывала и честно подобранная магнитола получала
+                 * метку «не подходит к вашей машине».
+                 */
+                const fits =
+                  isCompatible(product, vehicle) ||
+                  fitsAll(product) ||
+                  isUniversal(product, brands.length);
                 return (
                   <div key={product.id} className="border-b border-border py-5">
                     <div className="flex gap-4">
