@@ -1,5 +1,6 @@
 import { Vehicle } from '@/data/catalog';
 import { isVehicle } from '@/lib/vehicle';
+import { SITE_URL } from '@/lib/seo';
 
 /**
  * Ссылка на собранный комплект.
@@ -64,9 +65,17 @@ export const buildShareUrl = ({ lines, vehicle, slug }: ShareData): string => {
   if (car) params.set('car', car);
   if (slug) params.set('s', slug);
 
-  const origin =
-    typeof window === 'undefined' ? '' : window.location.origin;
-  return `${origin}${SHARE_PATH}?${params.toString()}`;
+  /*
+   * Всегда боевой домен, а не адрес текущей вкладки.
+   *
+   * Раньше сюда подставлялся window.location.origin — и ссылка уносила
+   * с собой тот адрес, где сборку делали. Из редактора уходила ссылка на
+   * черновой домен, с локального запуска — на localhost, который у
+   * получателя ведёт в никуда. Хуже того, Telegram молча выбрасывает
+   * такой адрес как невалидный: окно открывалось, а поле сообщения
+   * оставалось пустым.
+   */
+  return `${SITE_URL}${SHARE_PATH}?${params.toString()}`;
 };
 
 /** Разбор адреса обратно в состав комплекта */

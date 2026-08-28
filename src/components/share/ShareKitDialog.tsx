@@ -32,6 +32,8 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
   const [canSystem, setCanSystem] = useState(false);
   /** Что отправляем: ссылку на сборку или свою смету */
   const [mode, setMode] = useState<'link' | 'quote'>('link');
+  /** Подсказка под кнопками — например, что сообщение уже в буфере */
+  const [hint, setHint] = useState('');
   const { dealer, priceOf } = usePrice();
 
   const count = items.length;
@@ -45,6 +47,7 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
     if (!open) return;
     setCopied(false);
     setMode('link');
+    setHint('');
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       /* Esc закрывает только это окно: корзина под ним ловит ту же
@@ -63,18 +66,22 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
   const text = shareText(count, vehicle);
   const message = `${text} ${url}`;
 
-  const copy = async () => {
+  /** Кладём строку в буфер; запасной путь — для браузеров, где буфер закрыт */
+  const copyText = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(value);
     } catch {
-      /* Буфер закрыт настройками браузера — выделяем текст запасным полем */
       const input = document.createElement('input');
-      input.value = url;
+      input.value = value;
       document.body.appendChild(input);
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
     }
+  };
+
+  const copy = async () => {
+    await copyText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   };
@@ -83,18 +90,30 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
     window.open(link, '_blank', 'noopener,noreferrer');
   };
 
-  /* MAX и Telegram принимают ссылку и текст отдельными полями,
-     ВКонтакте — одним адресом с подписью */
-  const targets: { key: string; label: string; icon: string; run: () => void }[] =
+  /* Telegram и ВКонтакте принимают ссылку своей страницей «поделиться»,
+     у MAX такой страницы нет — ему передаём текст через буфер */
+  const targets: {
+    key: string;
+    label: string;
+    icon: string;
+    run: () => void | Promise<void>;
+  }[] =
     [
       {
         key: 'max',
         label: 'MAX',
         icon: 'MessageCircle',
-        run: () =>
-          openWindow(
-            `https://max.ru/share?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
-          ),
+        /*
+         * У MAX нет страницы «поделиться» — адрес max.ru/share отвечает
+         * ошибкой, и раньше кнопка открывала пустую вкладку. Поэтому
+         * кладём готовое сообщение в буфер и открываем сам мессенджер:
+         * человеку остаётся выбрать чат и вставить.
+         */
+        run: async () => {
+          await copyText(message);
+          setHint('Сообщение скопировано — вставьте его в чат');
+          openWindow('https://max.ru/');
+        },
       },
       {
         key: 'tg',
@@ -250,6 +269,13 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
               </button>
             ))}
           </div>
+
+          {hint && (
+            <div className="mt-2.5 flex items-center gap-2 border border-success bg-success-soft px-3 py-2 text-[0.78rem] text-success">
+              <Icon name="Check" size={14} strokeWidth={3} className="flex-none" />
+              {hint}
+            </div>
+          )}
 
           <div className="mt-3 flex items-stretch gap-2">
             <div className="min-w-0 flex-1 truncate border border-border px-3 py-2.5 text-[0.8rem] text-muted-foreground">

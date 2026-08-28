@@ -53,6 +53,15 @@ export const DELIVERY: DeliveryOption[] = [
     from: 500,
     onDelivery: false,
   },
+  {
+    id: 'avito',
+    icon: 'Handshake',
+    title: 'Авито Доставка',
+    text: 'Оформляете на Авито. Деньги придут нам только после получения.',
+    free: 3000,
+    from: 500,
+    onDelivery: false,
+  },
 ];
 
 /**
