@@ -20,7 +20,9 @@ const HowToBuy = () => (
       note="Мы интернет-магазин из Санкт-Петербурга — привозим к вам."
     />
 
-    <div className="grid grid-cols-1 gap-6 pb-6 md:grid-cols-3">
+    {/* Способов четыре: на широком экране два ряда по два, иначе
+        последний висел бы в одиночестве под тройкой */}
+    <div className="grid grid-cols-1 gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-4">
       {DELIVERY.map((d) => (
         <div key={d.id} className="border border-border p-5">
           <div className="flex items-start gap-3">
