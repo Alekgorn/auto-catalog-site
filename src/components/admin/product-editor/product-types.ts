@@ -20,6 +20,8 @@ export interface AdminProduct {
   yearTo: number;
   badge: string | null;
   images: string[];
+  /** Видео товара: файл на своём CDN или ссылка на YouTube/Rutube */
+  videoUrl: string;
   description: string[];
   specs: [string, string][];
   kit: string[];
@@ -61,6 +63,7 @@ export const emptyProduct = (): AdminProduct => ({
   stock: 0,
   stockNote: DEFAULT_STOCK_NOTE,
   images: [],
+  videoUrl: '',
   description: [''],
   specs: [],
   kit: [''],

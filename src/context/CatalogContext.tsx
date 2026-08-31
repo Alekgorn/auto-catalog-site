@@ -94,6 +94,7 @@ const expandImages = (data: PrerenderData): PrerenderData => {
       ozonUrl: '',
       wbUrl: '',
       stockNote: '',
+      videoUrl: '',
       notes: [],
       guides: [],
       kit: [],

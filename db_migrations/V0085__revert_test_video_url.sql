@@ -1,0 +1,1 @@
+UPDATE products SET video_url = '' WHERE id = 31;

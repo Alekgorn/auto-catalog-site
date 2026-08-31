@@ -211,7 +211,11 @@ const Product = () => {
 
           <div className="grid grid-cols-1 gap-x-6 gap-y-10 py-10 lg:grid-cols-12 lg:py-14">
             <div className="lg:col-span-5">
-              <ProductGallery images={shots} alt={product.name} />
+              <ProductGallery
+                images={shots}
+                alt={product.name}
+                videoUrl={product.videoUrl}
+              />
               <ProductTrust product={product} />
             </div>
 

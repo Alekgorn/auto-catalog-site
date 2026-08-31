@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import ImageZoom from '@/components/admin/ImageZoom';
+import ProductVideoField from './ProductVideoField';
 import { AdminProduct, SetField, label, field } from './product-types';
 
 interface Props {
@@ -140,6 +141,11 @@ const ProductContentTab = ({
         </label>
       </div>
     </div>
+
+    <ProductVideoField
+      value={form.videoUrl}
+      onChange={(url) => set('videoUrl', url)}
+    />
 
     <div>
       <span className={label}>Описание (абзацы)</span>
