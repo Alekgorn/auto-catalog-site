@@ -1282,6 +1282,19 @@ def handler(event: dict, context) -> dict:
                     items = page.get('Contents') or []
                     if not items:
                         done = True
+                        # Хранилище не отдаёт список файлов: обзор каталога
+                        # для наших ключей закрыт, доступ есть только к
+                        # конкретному файлу по имени. Отличаем это от честно
+                        # пустого хранилища, чтобы не показать «0 файлов»
+                        # там, где их тысячи.
+                        if not token:
+                            cur.close()
+                            return resp(200, {
+                                'done': True,
+                                'scanned': 0,
+                                'added': 0,
+                                'unsupported': True,
+                            })
                         break
 
                     values = []
@@ -1400,8 +1413,46 @@ def handler(event: dict, context) -> dict:
                 for r in cur.fetchall()
             ]
 
+            # Картина по каталогу — она доступна всегда, даже когда обзор
+            # хранилища закрыт: считаем ссылки, которыми пользуется сайт.
+            cdn_pref_now = f"{CDN_PREFIX}{os.environ.get('AWS_ACCESS_KEY_ID', '')}/bucket/"
+            refs_sql = (
+                f"SELECT jsonb_array_elements_text(images) AS u "
+                f"FROM {schema()}.products WHERE images IS NOT NULL "
+                f"UNION ALL SELECT video_url FROM {schema()}.products "
+                f"UNION ALL SELECT scheme_url FROM {schema()}.products "
+                f"UNION ALL SELECT b->>'image' FROM {schema()}.products, "
+                f"jsonb_array_elements(COALESCE(notes, '[]'::jsonb)) b "
+                f"UNION ALL SELECT b->>'image' FROM {schema()}.products, "
+                f"jsonb_array_elements(COALESCE(extra, '[]'::jsonb)) b "
+                f"UNION ALL SELECT b->>'video' FROM {schema()}.products, "
+                f"jsonb_array_elements(COALESCE(extra, '[]'::jsonb)) b "
+                f"UNION ALL SELECT cover FROM {schema()}.guides "
+                f"UNION ALL SELECT video_url FROM {schema()}.guides "
+                f"UNION ALL SELECT b->>'image' FROM {schema()}.guides, "
+                f"jsonb_array_elements(COALESCE(blocks, '[]'::jsonb)) b "
+                f"UNION ALL SELECT b->>'video' FROM {schema()}.guides, "
+                f"jsonb_array_elements(COALESCE(blocks, '[]'::jsonb)) b "
+                f"UNION ALL SELECT image FROM {schema()}.categories"
+            )
+            cur.execute(
+                f"SELECT COUNT(*) AS refs, COUNT(DISTINCT u) AS files, "
+                f"COUNT(DISTINCT u) FILTER (WHERE u LIKE {q(cdn_pref_now + '%')}) AS own, "
+                f"COUNT(DISTINCT u) FILTER (WHERE u NOT LIKE {q(cdn_pref_now + '%')}) AS external, "
+                f"COUNT(DISTINCT u) FILTER (WHERE u LIKE {q(cdn_pref_now + 'catalog/video/%')}) AS videos "
+                f"FROM ({refs_sql}) t WHERE u IS NOT NULL AND u <> ''"
+            )
+            cat = cur.fetchone() or {}
+
             cur.close()
             return resp(200, {
+                'catalog': {
+                    'refs': int(cat.get('refs') or 0),
+                    'files': int(cat.get('files') or 0),
+                    'own': int(cat.get('own') or 0),
+                    'external': int(cat.get('external') or 0),
+                    'videos': int(cat.get('videos') or 0),
+                },
                 'scan': {
                     'done': bool(scan['done']) if scan else False,
                     'startedAt': scan['started_at'].isoformat() if scan and scan['started_at'] else None,

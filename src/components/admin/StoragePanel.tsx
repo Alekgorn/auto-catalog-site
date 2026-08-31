@@ -15,6 +15,14 @@ interface FolderRow {
 }
 
 interface Report {
+  /** Картина по каталогу — доступна всегда, считается по базе */
+  catalog?: {
+    refs: number;
+    files: number;
+    own: number;
+    external: number;
+    videos: number;
+  };
   scan: { done: boolean; startedAt: string | null; finishedAt: string | null } | null;
   totals: {
     files: number;
@@ -76,6 +84,8 @@ const StoragePanel = () => {
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
   const [scanned, setScanned] = useState(0);
+  /** Хранилище не отдаёт список файлов — обзор для наших ключей закрыт */
+  const [unsupported, setUnsupported] = useState(false);
   /** Прерывает обход, если человек ушёл со страницы посреди сканирования */
   const stop = useRef(false);
 
@@ -102,6 +112,7 @@ const StoragePanel = () => {
   const scan = async () => {
     setScanning(true);
     setScanned(0);
+    setUnsupported(false);
     stop.current = false;
     try {
       let restart = true;
@@ -115,10 +126,14 @@ const StoragePanel = () => {
         const step = await res.json();
         setScanned(step.scanned ?? 0);
         restart = false;
+        if (step.unsupported) {
+          setUnsupported(true);
+          break;
+        }
         if (step.done) break;
       }
       load();
-      toast({ title: 'Проверка хранилища завершена' });
+      if (!unsupported) toast({ title: 'Проверка хранилища завершена' });
     } catch {
       toast({ title: 'Не удалось проверить хранилище' });
     } finally {
@@ -127,6 +142,9 @@ const StoragePanel = () => {
   };
 
   const t = report?.totals;
+  const c = report?.catalog;
+  /* Обход дал ноль файлов, хотя они точно есть — значит обзор закрыт */
+  const blind = unsupported || (report?.scan?.done === true && t?.files === 0);
   const neverScanned = !report?.scan;
 
   return (
@@ -177,7 +195,77 @@ const StoragePanel = () => {
         </div>
       )}
 
-      {t && report?.scan && (
+      {blind && !scanning && (
+        <div className="mt-6 border border-primary bg-card px-5 py-4">
+          <div className="flex items-start gap-3">
+            <Icon name="TriangleAlert" size={17} className="mt-0.5 flex-none text-primary" />
+            <div className="text-[0.88rem] leading-relaxed">
+              <div className="font-bold">Хранилище не даёт себя пересчитать</div>
+              <p className="mt-1 text-muted-foreground">
+                Файлы на месте и открываются по прямой ссылке, но список всего
+                содержимого хранилище нам не выдаёт — такой доступ для проекта
+                закрыт. Поэтому посчитать вес папок и найти ненужные файлы
+                отсюда нельзя.
+              </p>
+              <p className="mt-2 text-muted-foreground">
+                Убрать лишнее можно через поддержку платформы:{' '}
+                <a
+                  href="https://poehali.dev/help"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline underline-offset-2"
+                >
+                  poehali.dev/help
+                </a>
+                . Ниже — что о файлах знает сам каталог.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {blind && c && (
+        <div className="mt-6 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-surface p-5">
+            <div className="eyebrow">Файлов в каталоге</div>
+            <div className="mt-1 font-head text-2xl font-bold">
+              {fmtNum(c.files)}
+            </div>
+            <div className="mt-1 text-[0.8rem] text-muted-foreground">
+              используются сайтом
+            </div>
+          </div>
+          <div className="bg-surface p-5">
+            <div className="eyebrow">Наши файлы</div>
+            <div className="mt-1 font-head text-2xl font-bold text-success">
+              {fmtNum(c.own)}
+            </div>
+            <div className="mt-1 text-[0.8rem] text-muted-foreground">
+              лежат в вашем хранилище
+            </div>
+          </div>
+          <div className="bg-surface p-5">
+            <div className="eyebrow">Чужие ссылки</div>
+            <div className="mt-1 font-head text-2xl font-bold">
+              {fmtNum(c.external)}
+            </div>
+            <div className="mt-1 text-[0.8rem] text-muted-foreground">
+              грузятся с других сайтов
+            </div>
+          </div>
+          <div className="bg-surface p-5">
+            <div className="eyebrow">Видео</div>
+            <div className="mt-1 font-head text-2xl font-bold">
+              {fmtNum(c.videos)}
+            </div>
+            <div className="mt-1 text-[0.8rem] text-muted-foreground">
+              загружено к товарам
+            </div>
+          </div>
+        </div>
+      )}
+
+      {t && report?.scan && !blind && (
         <>
           <div className="mt-6 grid grid-cols-1 gap-px border border-border bg-border sm:grid-cols-3">
             <div className="bg-surface p-5">
