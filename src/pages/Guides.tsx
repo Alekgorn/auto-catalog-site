@@ -89,12 +89,6 @@ const Guides = () => {
                   </p>
                 )}
                 <div className="mt-5 flex items-center gap-4 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground">
-                  {g.duration && (
-                    <span className="flex items-center gap-1.5">
-                      <Icon name="Clock" size={13} />
-                      {g.duration}
-                    </span>
-                  )}
                   {g.difficulty && (
                     <span className="flex items-center gap-1.5">
                       <Icon name="Wrench" size={13} />

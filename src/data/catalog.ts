@@ -92,7 +92,10 @@ export type GuideBlock =
   | { type: 'text'; text: string }
   | { type: 'step'; title: string; text: string; image?: string }
   | { type: 'image'; image: string; caption?: string }
-  | { type: 'note'; text: string };
+  | { type: 'note'; text: string }
+  /* Свой файл на CDN или ссылка на YouTube/Rutube — что именно,
+     определяет parseVideo по самой ссылке (src/lib/video.ts) */
+  | { type: 'video'; video: string; caption?: string };
 
 export interface Guide {
   slug: string;
