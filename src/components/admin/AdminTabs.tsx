@@ -8,6 +8,7 @@ export type AdminTab =
   | "fits"
   | "missing-fit"
   | "site"
+  | "storage"
   | "settings";
 
 interface Props {
@@ -56,6 +57,7 @@ const AdminTabs = ({
         ],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],
+        ["storage", "Хранилище"],
         ["settings", "Настройки"],
       ] as const
     ).map(([key, label]) => (
