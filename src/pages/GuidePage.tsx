@@ -32,7 +32,7 @@ const GuidePage = () => {
       title: `${guide.title} — пошаговая инструкция | ШТАТНО`,
       description:
         guide.excerpt ||
-        `Пошаговая инструкция: ${guide.title}. Что снимать, куда подключать и какой инструмент нужен.`,
+        `Пошаговая инструкция: ${guide.title}. Что снимать, куда подключать и на что смотреть.`,
       image: guide.cover,
       canonical: `${SITE_URL}/guides/${guide.slug}`,
       type: "article" as const,
@@ -47,11 +47,6 @@ const GuidePage = () => {
           name: guide.title,
           description: guide.excerpt || guide.title,
           image: guide.cover || undefined,
-          totalTime: guide.duration || undefined,
-          tool: (guide.tools ?? []).map((t) => ({
-            "@type": "HowToTool",
-            name: t,
-          })),
           step: steps.map((b, i) => ({
             "@type": "HowToStep",
             position: i + 1,

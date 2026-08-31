@@ -130,30 +130,12 @@ const GuideEditor = ({ guide, products, onClose, onSave }: Props) => {
               />
             </div>
             <div>
-              <span className={label}>Время работ</span>
-              <input
-                value={form.duration}
-                onChange={(e) => set('duration', e.target.value)}
-                className={field}
-                placeholder="2,5 часа"
-              />
-            </div>
-            <div>
               <span className={label}>Сложность</span>
               <input
                 value={form.difficulty}
                 onChange={(e) => set('difficulty', e.target.value)}
                 className={field}
                 placeholder="средняя"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <span className={label}>Инструмент (через запятую)</span>
-              <input
-                value={form.tools.join(', ')}
-                onChange={(e) => set('tools', e.target.value.split(',').map((t) => t.trim()))}
-                className={field}
-                placeholder="Ключ на 17, динамометрический ключ, домкрат"
               />
             </div>
             <div>

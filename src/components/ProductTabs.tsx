@@ -195,12 +195,6 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
                       {steps} шагов
                     </span>
                   )}
-                  {g.duration && (
-                    <span className="flex items-center gap-2">
-                      <Icon name="Clock" size={14} />
-                      {g.duration}
-                    </span>
-                  )}
                   {g.difficulty && (
                     <span className="flex items-center gap-2">
                       <Icon name="Wrench" size={14} />

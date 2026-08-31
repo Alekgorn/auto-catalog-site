@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import PhotoViewer from '@/components/PhotoViewer';
+import VideoPlayer from '@/components/VideoPlayer';
 import { Guide, GuideBlock } from '@/data/catalog';
 
 interface Props {
@@ -66,28 +67,12 @@ const GuideContent = ({ guide, compact = false }: Props) => {
         />
       )}
 
-      {(guide.duration || guide.difficulty || guide.tools?.length > 0) && (
-        <div className="mb-8 grid grid-cols-1 gap-x-6 gap-y-4 border-y border-border py-5 sm:grid-cols-3">
-          {guide.duration && (
-            <div>
-              <div className="eyebrow">Время работ</div>
-              <div className="mt-1 font-head text-lg font-medium">{guide.duration}</div>
-            </div>
-          )}
-          {guide.difficulty && (
-            <div>
-              <div className="eyebrow">Сложность</div>
-              <div className="mt-1 font-head text-lg font-medium">{guide.difficulty}</div>
-            </div>
-          )}
-          {guide.tools?.length > 0 && (
-            <div>
-              <div className="eyebrow">Инструмент</div>
-              <div className="mt-1 text-[0.9rem] text-muted-foreground">
-                {guide.tools.join(', ')}
-              </div>
-            </div>
-          )}
+      {/* Осталась одна сложность: время работ и список инструмента убрали —
+          у каждой машины они свои, и точные цифры только вводили в спор */}
+      {guide.difficulty && (
+        <div className="mb-8 border-y border-border py-5">
+          <div className="eyebrow">Сложность</div>
+          <div className="mt-1 font-head text-lg font-medium">{guide.difficulty}</div>
         </div>
       )}
 
@@ -156,6 +141,19 @@ const GuideContent = ({ guide, compact = false }: Props) => {
           // Одиночные фото уже разобраны выше в галерею
           if (b.type === 'image') {
             return null;
+          }
+
+          if (b.type === 'video') {
+            return (
+              <figure key={row.index} className="max-w-[46em]">
+                <VideoPlayer url={b.video} title={guide.title} />
+                {b.caption && (
+                  <figcaption className="mt-2 text-[0.85rem] leading-snug text-muted-foreground">
+                    {b.caption}
+                  </figcaption>
+                )}
+              </figure>
+            );
           }
 
           stepNo += 1;

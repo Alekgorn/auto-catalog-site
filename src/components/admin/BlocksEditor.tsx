@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import ImageZoom from '@/components/admin/ImageZoom';
+import VideoField from '@/components/admin/VideoField';
 import { adminFetch } from '@/lib/api';
 import { GuideBlock } from '@/data/catalog';
 
@@ -14,6 +15,7 @@ const BLOCK_LABEL: Record<string, string> = {
   text: 'Абзац',
   image: 'Фото',
   note: 'Примечание',
+  video: 'Видео',
 };
 
 export const uploadImage = async (file: File): Promise<string | null> => {
@@ -35,9 +37,11 @@ export const cleanBlocks = (blocks: GuideBlock[]): GuideBlock[] =>
   blocks.filter((b) =>
     b.type === 'image'
       ? Boolean(b.image)
-      : b.type === 'step'
-        ? Boolean(b.text.trim() || b.title.trim())
-        : Boolean(b.text.trim()),
+      : b.type === 'video'
+        ? Boolean(b.video.trim())
+        : b.type === 'step'
+          ? Boolean(b.text.trim() || b.title.trim())
+          : Boolean(b.text.trim()),
   );
 
 interface Props {
@@ -64,7 +68,7 @@ interface Props {
 const BlocksEditor = ({
   blocks,
   onChange,
-  types = ['step', 'text', 'image', 'note'],
+  types = ['step', 'text', 'image', 'video', 'note'],
   title = 'Содержание',
   hint,
   emptyText = 'Пока пусто — добавьте абзац или фото.',
@@ -86,7 +90,9 @@ const BlocksEditor = ({
           ? { type: 'text', text: '' }
           : type === 'note'
             ? { type: 'note', text: '' }
-            : { type: 'image', image: '' };
+            : type === 'video'
+              ? { type: 'video', video: '' }
+              : { type: 'image', image: '' };
     onChange([...blocks, fresh]);
   };
 
@@ -300,6 +306,21 @@ const BlocksEditor = ({
                   value={b.caption ?? ''}
                   onChange={(e) => setBlock(i, { ...b, caption: e.target.value })}
                   placeholder="Подпись к фото"
+                  className={field}
+                />
+              </div>
+            )}
+
+            {b.type === 'video' && (
+              <div className="space-y-3">
+                <VideoField
+                  value={b.video}
+                  onChange={(url) => setBlock(i, { ...b, video: url })}
+                />
+                <input
+                  value={b.caption ?? ''}
+                  onChange={(e) => setBlock(i, { ...b, caption: e.target.value })}
+                  placeholder="Подпись к видео"
                   className={field}
                 />
               </div>
