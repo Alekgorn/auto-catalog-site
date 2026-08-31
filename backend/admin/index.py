@@ -1227,6 +1227,197 @@ def handler(event: dict, context) -> dict:
                         pass
             return resp(200, {'ok': True})
 
+        if action == 'storage':
+            """Ревизия файлового хранилища: что лежит, сколько весит и на
+            что сайт больше не ссылается.
+
+            Обход идёт порциями. Хранилище отдаёт список файлов страницами
+            по тысяче, а функция живёт считаные секунды — за один вызов всё
+            не обойти, поэтому фронт вызывает 'scan' в цикле, пока не
+            придёт done. Промежуточный список копится в storage_files.
+
+            Только чтение: этот раздел ничего не удаляет.
+            """
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            def folder_of(key: str) -> str:
+                """Папка файла — то, что до последней косой черты."""
+                return key.rsplit('/', 1)[0] if '/' in key else '(корень)'
+
+            if method == 'POST' and body.get('mode') == 'scan':
+                started = time.time()
+                s3 = _s3()
+
+                if body.get('restart'):
+                    cur.execute(f"TRUNCATE {schema()}.storage_files")
+                    cur.execute(f"DELETE FROM {schema()}.storage_scan")
+                    cur.execute(
+                        f"INSERT INTO {schema()}.storage_scan (id, cursor_key, done) "
+                        f"VALUES (1, NULL, FALSE)"
+                    )
+                    conn.commit()
+
+                cur.execute(
+                    f"SELECT cursor_key, done FROM {schema()}.storage_scan WHERE id = 1"
+                )
+                state = cur.fetchone()
+                if not state:
+                    cur.execute(
+                        f"INSERT INTO {schema()}.storage_scan (id, cursor_key, done) "
+                        f"VALUES (1, NULL, FALSE)"
+                    )
+                    conn.commit()
+                    state = {'cursor_key': None, 'done': False}
+
+                token = state['cursor_key']
+                added = 0
+                done = False
+
+                # Успеваем сколько успеем: 3 секунды с запасом до таймаута
+                while time.time() - started < 3.0:
+                    kw = {'Bucket': 'files', 'MaxKeys': 1000}
+                    if token:
+                        kw['StartAfter'] = token
+                    page = s3.list_objects_v2(**kw)
+                    items = page.get('Contents') or []
+                    if not items:
+                        done = True
+                        break
+
+                    values = []
+                    for it in items:
+                        k = it['Key']
+                        size = int(it.get('Size') or 0)
+                        mod = it.get('LastModified')
+                        mod_sql = q(mod.isoformat()) if mod else 'NULL'
+                        values.append(f"({q(k)}, {size}, {mod_sql})")
+                    cur.execute(
+                        f"INSERT INTO {schema()}.storage_files (key, size_bytes, modified_at) "
+                        f"VALUES {','.join(values)} "
+                        f"ON CONFLICT (key) DO UPDATE SET "
+                        f"size_bytes = EXCLUDED.size_bytes, "
+                        f"modified_at = EXCLUDED.modified_at"
+                    )
+                    added += len(items)
+                    token = items[-1]['Key']
+
+                    if not page.get('IsTruncated'):
+                        done = True
+                        break
+
+                cur.execute(
+                    f"UPDATE {schema()}.storage_scan SET cursor_key = {q(token) if token else 'NULL'}, "
+                    f"done = {'TRUE' if done else 'FALSE'}, "
+                    f"finished_at = {'NOW()' if done else 'NULL'} WHERE id = 1"
+                )
+                conn.commit()
+
+                if done:
+                    # Полный список знаем только сейчас — размечаем, что нужно
+                    # сайту. Ссылки лежат в разных таблицах и внутри JSON,
+                    # поэтому собираем их одним запросом и сверяем по имени файла.
+                    cdn_pref = f"{CDN_PREFIX}{os.environ.get('AWS_ACCESS_KEY_ID', '')}/bucket/"
+                    used_sql = (
+                        f"SELECT jsonb_array_elements_text(images) AS u "
+                        f"FROM {schema()}.products WHERE images IS NOT NULL "
+                        f"UNION ALL SELECT video_url FROM {schema()}.products "
+                        f"UNION ALL SELECT scheme_url FROM {schema()}.products "
+                        f"UNION ALL SELECT b->>'image' FROM {schema()}.products, "
+                        f"jsonb_array_elements(COALESCE(notes, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT b->>'image' FROM {schema()}.products, "
+                        f"jsonb_array_elements(COALESCE(extra, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT b->>'video' FROM {schema()}.products, "
+                        f"jsonb_array_elements(COALESCE(extra, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT b->>'video' FROM {schema()}.products, "
+                        f"jsonb_array_elements(COALESCE(notes, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT cover FROM {schema()}.guides "
+                        f"UNION ALL SELECT video_url FROM {schema()}.guides "
+                        f"UNION ALL SELECT b->>'image' FROM {schema()}.guides, "
+                        f"jsonb_array_elements(COALESCE(blocks, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT b->>'video' FROM {schema()}.guides, "
+                        f"jsonb_array_elements(COALESCE(blocks, '[]'::jsonb)) b "
+                        f"UNION ALL SELECT image FROM {schema()}.categories"
+                    )
+                    cur.execute(
+                        f"UPDATE {schema()}.storage_files f SET used = EXISTS ("
+                        f"SELECT 1 FROM ({used_sql}) t "
+                        f"WHERE t.u IS NOT NULL AND t.u <> '' "
+                        f"AND split_part(t.u, '?', 1) = {q(cdn_pref)} || f.key)"
+                    )
+                    conn.commit()
+
+                cur.execute(f"SELECT COUNT(*) AS n FROM {schema()}.storage_files")
+                total = int(cur.fetchone()['n'] or 0)
+                cur.close()
+                return resp(200, {'done': done, 'scanned': total, 'added': added})
+
+            # GET — показать последний отчёт
+            cur.execute(
+                f"SELECT cursor_key, done, started_at, finished_at "
+                f"FROM {schema()}.storage_scan WHERE id = 1"
+            )
+            scan = cur.fetchone()
+
+            cur.execute(
+                f"SELECT COUNT(*) AS files, COALESCE(SUM(size_bytes), 0) AS bytes, "
+                f"COUNT(*) FILTER (WHERE used) AS used_files, "
+                f"COALESCE(SUM(size_bytes) FILTER (WHERE used), 0) AS used_bytes, "
+                f"COUNT(*) FILTER (WHERE used IS FALSE) AS free_files, "
+                f"COALESCE(SUM(size_bytes) FILTER (WHERE used IS FALSE), 0) AS free_bytes "
+                f"FROM {schema()}.storage_files"
+            )
+            totals = cur.fetchone() or {}
+
+            # Группируем максимум по двум уровням: обрывки видео лежат
+            # каждый в своей подпапке, и по полному пути отчёт превратился
+            # бы в сотни одинаковых строк вместо одной понятной
+            folder_expr = (
+                "CASE WHEN POSITION('/' IN key) = 0 THEN '(корень)' "
+                "WHEN POSITION('/' IN SUBSTRING(key FROM POSITION('/' IN key) + 1)) = 0 "
+                "THEN SPLIT_PART(key, '/', 1) "
+                "ELSE SPLIT_PART(key, '/', 1) || '/' || SPLIT_PART(key, '/', 2) END"
+            )
+            cur.execute(
+                f"SELECT {folder_expr} AS folder, "
+                f"COUNT(*) AS files, COALESCE(SUM(size_bytes), 0) AS bytes, "
+                f"COUNT(*) FILTER (WHERE used) AS used_files, "
+                f"COUNT(*) FILTER (WHERE used IS FALSE) AS free_files, "
+                f"COALESCE(SUM(size_bytes) FILTER (WHERE used IS FALSE), 0) AS free_bytes, "
+                f"MIN(modified_at) AS oldest, MAX(modified_at) AS newest "
+                f"FROM {schema()}.storage_files GROUP BY 1 ORDER BY bytes DESC"
+            )
+            folders = [
+                {
+                    'folder': r['folder'],
+                    'files': int(r['files']),
+                    'bytes': int(r['bytes']),
+                    'usedFiles': int(r['used_files'] or 0),
+                    'freeFiles': int(r['free_files'] or 0),
+                    'freeBytes': int(r['free_bytes'] or 0),
+                    'oldest': r['oldest'].isoformat() if r['oldest'] else None,
+                    'newest': r['newest'].isoformat() if r['newest'] else None,
+                }
+                for r in cur.fetchall()
+            ]
+
+            cur.close()
+            return resp(200, {
+                'scan': {
+                    'done': bool(scan['done']) if scan else False,
+                    'startedAt': scan['started_at'].isoformat() if scan and scan['started_at'] else None,
+                    'finishedAt': scan['finished_at'].isoformat() if scan and scan['finished_at'] else None,
+                } if scan else None,
+                'totals': {
+                    'files': int(totals.get('files') or 0),
+                    'bytes': int(totals.get('bytes') or 0),
+                    'usedFiles': int(totals.get('used_files') or 0),
+                    'usedBytes': int(totals.get('used_bytes') or 0),
+                    'freeFiles': int(totals.get('free_files') or 0),
+                    'freeBytes': int(totals.get('free_bytes') or 0),
+                },
+                'folders': folders,
+            })
+
         if action == 'external-images':
             """Переносит к нам картинки, которые в каталоге указаны ссылками
             на чужие сайты. За один вызов — сколько успеем до конца отведённого

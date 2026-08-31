@@ -15,6 +15,7 @@ import GuideEditor, {
   emptyGuide,
 } from "@/components/admin/GuideEditor";
 import SettingsPanel from "@/components/admin/SettingsPanel";
+import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
 import CategoriesEditor from "@/components/admin/CategoriesEditor";
 import AdminLogin from "@/components/admin/AdminLogin";
@@ -425,6 +426,8 @@ const Admin = () => {
         )}
 
         {tab === "site" && <SitePanel onSaved={load} />}
+
+        {tab === "storage" && <StoragePanel />}
 
         {tab === "settings" && <SettingsPanel onImported={load} />}
 
