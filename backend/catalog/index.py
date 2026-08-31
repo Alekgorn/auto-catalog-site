@@ -31,7 +31,7 @@ def handler(event: dict, context) -> dict:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(
             f"SELECT p.slug, p.sku, p.name, p.category, p.subcategory, p.price, p.old_price, p.pro_price, p.ozon_url, p.wb_url, p.install, p.warranty, "
-            f"p.year_from, p.year_to, p.badge, p.images, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
+            f"p.year_from, p.year_to, p.badge, p.images, p.video_url, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
             # Тип подбора: своё значение товара важнее умолчания категории
             f"COALESCE(NULLIF(p.fit_mode, ''), c.fit_mode, 'universal') AS fit_mode "
             f"FROM {schema}.products p LEFT JOIN {schema}.categories c ON c.name = p.category "
@@ -55,6 +55,7 @@ def handler(event: dict, context) -> dict:
                 'years': [r['year_from'], r['year_to']],
                 'badge': r['badge'],
                 'images': r['images'],
+                'videoUrl': r['video_url'] or '',
                 'description': r['description'],
                 'specs': r['specs'],
                 'kit': r['kit'],

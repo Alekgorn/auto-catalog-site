@@ -41,6 +41,7 @@ const ProductEditor = ({
     kit: product.kit?.length ? product.kit : [''],
     specs: product.specs ?? [],
     images: product.images ?? [],
+    videoUrl: product.videoUrl ?? '',
     notes: product.notes ?? [],
     extra: product.extra ?? [],
     extraTitle: product.extraTitle ?? '',

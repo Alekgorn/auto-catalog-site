@@ -143,6 +143,26 @@ CDN_PREFIX = 'https://cdn.poehali.dev/projects/'
 # Больше 15 МБ на одно фото — почти наверняка не товарный снимок
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
+# Видео крупнее — это уже не ролик для карточки товара, а исходник
+# со смартфона без сжатия. Оставляет запас на разумный обзор в 1-2 минуты.
+MAX_VIDEO_BYTES = 180 * 1024 * 1024
+
+VIDEO_CONTENT_TYPE = {
+    'mp4': 'video/mp4',
+    'webm': 'video/webm',
+    'mov': 'video/quicktime',
+    'mkv': 'video/x-matroska',
+    'ogg': 'video/ogg',
+    'avi': 'video/x-msvideo',
+}
+
+
+def _video_ext(name: str) -> str:
+    tail = str(name or '').lower().rsplit('.', 1)
+    ext = tail[1] if len(tail) == 2 else 'mp4'
+    return ext if ext in VIDEO_CONTENT_TYPE else 'mp4'
+
+
 # Сколько всего живёт функция. Платформа обрывает её на этом сроке,
 # поэтому работу планируем так, чтобы успеть ответить самим.
 FUNCTION_BUDGET = float(os.environ.get('FUNCTION_TIMEOUT', '2'))
@@ -299,6 +319,7 @@ def row_to_product(r: dict) -> dict:
         'yearTo': r['year_to'],
         'badge': r['badge'],
         'images': r['images'],
+        'videoUrl': r.get('video_url') or '',
         'description': r['description'],
         'specs': r['specs'],
         'kit': r['kit'],
@@ -927,6 +948,7 @@ def import_rows(conn, in_products: list, in_brands: list, mode: str) -> dict:
             'year_to': qint(p.get('yearTo'), 2026),
             'badge': q((str(p.get('badge'))[:32] if p.get('badge') else None)),
             'images': qjson(p.get('images') or []),
+            'video_url': q(str(p.get('videoUrl') or '')[:500]),
             'description': qjson(p.get('description') or []),
             'specs': qjson(p.get('specs') or []),
             'kit': qjson(p.get('kit') or []),
@@ -1098,6 +1120,112 @@ def handler(event: dict, context) -> dict:
             if not data_url.startswith('data:'):
                 return resp(400, {'error': 'Некорректный файл'})
             return resp(200, {'url': upload_image(data_url)})
+
+        # Видео товара грузится не одним запросом, как фото, а по частям.
+        #
+        # Один вызов функции принимает не больше ~3,5 МБ тела запроса — это
+        # предел самой платформы, обойти его нельзя. Ролик с телефона легко
+        # весит 50-150 МБ, поэтому браузер режет файл на куски по 1 МБ и
+        # шлёт их один за другим.
+        #
+        # Штатная многочастевая загрузка S3 (CreateMultipartUpload) в этом
+        # хранилище не работает — проверено, отвечает 405. Поэтому каждый
+        # кусок кладём отдельным маленьким файлом, а когда пришёл последний,
+        # скачиваем все куски по порядку и одним put_object собираем
+        # итоговое видео. Временные файлы после сборки удаляем.
+
+        def video_part_key(upload_id: str, index: int) -> str:
+            return f"catalog/video-tmp/{upload_id}/{index:05d}"
+
+        if action == 'video-init':
+            filename = str(body.get('filename', ''))
+            size = int(body.get('size') or 0)
+            if size <= 0 or size > MAX_VIDEO_BYTES:
+                return resp(400, {'error': 'Видео весит слишком много — до 180 МБ'})
+            ext = _video_ext(filename)
+            key = f"catalog/video/{uuid.uuid4().hex}.{ext}"
+            upload_id = uuid.uuid4().hex
+            return resp(200, {'uploadId': upload_id, 'key': key})
+
+        if action == 'video-part':
+            upload_id = str(body.get('uploadId', ''))
+            index = int(body.get('index') if body.get('index') is not None else -1)
+            chunk_b64 = str(body.get('chunk', ''))
+            if not upload_id or index < 0 or not chunk_b64:
+                return resp(400, {'error': 'Неполные данные куска'})
+            try:
+                raw = base64.b64decode(chunk_b64)
+            except Exception:
+                return resp(400, {'error': 'Кусок файла повреждён'})
+            _s3().put_object(Bucket='files', Key=video_part_key(upload_id, index), Body=raw)
+            return resp(200, {'ok': True})
+
+        if action == 'video-complete':
+            key = str(body.get('key', ''))
+            upload_id = str(body.get('uploadId', ''))
+            total_parts = int(body.get('totalParts') or 0)
+            filename = str(body.get('filename', ''))
+            if not (key and upload_id and total_parts):
+                return resp(400, {'error': 'Неполные данные загрузки'})
+
+            s3 = _s3()
+
+            def fetch_part(i: int) -> bytes:
+                return s3.get_object(Bucket='files', Key=video_part_key(upload_id, i))['Body'].read()
+
+            # Части качаем параллельно: это сеть, а не процессор, и по
+            # очереди сотня мелких файлов не успела бы собраться в срок
+            # жизни функции. Порядок восстанавливаем после — потоки
+            # завершаются не по очереди.
+            from concurrent.futures import ThreadPoolExecutor
+
+            try:
+                with ThreadPoolExecutor(max_workers=16) as pool:
+                    chunks = list(pool.map(fetch_part, range(total_parts)))
+            except Exception:
+                return resp(400, {'error': 'Часть видео не найдена — загрузите заново'})
+
+            data = b''.join(chunks)
+            if len(data) > MAX_VIDEO_BYTES:
+                return resp(400, {'error': 'Видео весит слишком много — до 180 МБ'})
+
+            ext = _video_ext(filename) if filename else key.rsplit('.', 1)[-1]
+            s3.put_object(
+                Bucket='files',
+                Key=key,
+                Body=data,
+                ContentType=VIDEO_CONTENT_TYPE.get(ext, 'video/mp4'),
+                CacheControl='public, max-age=31536000, immutable',
+            )
+
+            def cleanup_part(i: int):
+                try:
+                    s3.delete_object(Bucket='files', Key=video_part_key(upload_id, i))
+                except Exception:
+                    pass
+
+            # Удаление временных кусков не влияет на результат — если не
+            # уложимся в оставшееся время, лишний мусор в bucket не страшен
+            try:
+                with ThreadPoolExecutor(max_workers=16) as pool:
+                    list(pool.map(cleanup_part, range(total_parts)))
+            except Exception:
+                pass
+
+            url = f"{CDN_PREFIX}{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}"
+            return resp(200, {'url': url})
+
+        if action == 'video-abort':
+            upload_id = str(body.get('uploadId', ''))
+            total_parts = int(body.get('totalParts') or 0)
+            if upload_id and total_parts:
+                s3 = _s3()
+                for i in range(total_parts):
+                    try:
+                        s3.delete_object(Bucket='files', Key=video_part_key(upload_id, i))
+                    except Exception:
+                        pass
+            return resp(200, {'ok': True})
 
         if action == 'external-images':
             """Переносит к нам картинки, которые в каталоге указаны ссылками
@@ -1881,6 +2009,7 @@ def handler(event: dict, context) -> dict:
                 'year_to': qint(body.get('yearTo'), 2026),
                 'badge': q(body.get('badge') or None),
                 'images': qjson(body.get('images') or []),
+                'video_url': q(str(body.get('videoUrl') or '')[:500]),
                 'description': qjson(body.get('description') or []),
                 'specs': qjson(body.get('specs') or []),
                 'kit': qjson(body.get('kit') or []),

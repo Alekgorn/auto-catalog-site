@@ -70,6 +70,8 @@ export interface Product {
   years: [number, number];
   badge?: string;
   images?: string[];
+  /** Видео товара: файл на своём CDN или ссылка на YouTube/Rutube */
+  videoUrl?: string;
   description?: string[];
   specs?: [string, string][];
   kit?: string[];

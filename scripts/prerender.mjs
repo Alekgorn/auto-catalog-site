@@ -110,6 +110,7 @@ const OPTIONAL_TEXT = [
   'ozonUrl',
   'wbUrl',
   'stockNote',
+  'videoUrl',
 ];
 const OPTIONAL_NUM = ['oldPrice', 'proPrice'];
 const OPTIONAL_LIST = ['notes', 'guides', 'kit'];
