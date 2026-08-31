@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import HotspotsEditor from '@/components/admin/HotspotsEditor';
+import ScenariosCheck from '@/components/admin/ScenariosCheck';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import ExternalImages from '@/components/admin/ExternalImages';
 import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
@@ -246,6 +247,10 @@ const SitePanel = ({ onSaved }: Props) => {
 
       <div className="mt-14 border-t border-foreground pt-10">
         <HotspotsEditor value={hotspots} onChange={setHotspots} />
+      </div>
+
+      <div className="mt-14 border-t border-foreground">
+        <ScenariosCheck />
       </div>
 
       <div className="sticky bottom-0 mt-10 border-t border-foreground bg-background py-5">
