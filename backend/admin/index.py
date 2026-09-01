@@ -13,6 +13,8 @@ from datetime import datetime, timedelta
 import psycopg2
 import psycopg2.extras
 
+import supplier
+
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -1991,6 +1993,78 @@ def handler(event: dict, context) -> dict:
             ]
             cur.close()
             data = build_xlsx(products, brands, categories)
+            return resp(200, {'file': base64.b64encode(data).decode('ascii')})
+
+        if action == 'supplier-scan':
+            # Читаем прайс поставщика и сверяем с каталогом по артикулу:
+            # что новинка, а что у нас уже есть
+            raw = str(body.get('file', ''))
+            if ',' in raw and raw.startswith('data:'):
+                raw = raw.split(',', 1)[1]
+            try:
+                blob = base64.b64decode(raw)
+            except Exception:
+                return resp(400, {'error': 'Файл не читается'})
+            try:
+                items, idx = supplier.read_price(blob)
+            except Exception:
+                return resp(400, {'error': 'Это не таблица Excel'})
+            if not items:
+                return resp(400, {'error': 'В прайсе не нашлось строк с товарами'})
+            if 'url' not in idx:
+                return resp(400, {
+                    'error': 'В прайсе нет колонки со ссылкой на товар — '
+                             'без неё нечего открывать'
+                })
+
+            cur = conn.cursor()
+            cur.execute(f"SELECT sku, slug FROM {schema()}.products WHERE sku <> ''")
+            mine = {
+                str(r[0]).strip().upper().replace(' ', ''): r[1]
+                for r in cur.fetchall()
+            }
+            cur.close()
+
+            new_count = 0
+            for it in items:
+                key = it['sku'].upper().replace(' ', '')
+                it['slug'] = mine.get(key, '')
+                it['exists'] = bool(it['slug'])
+                if not it['exists']:
+                    new_count += 1
+
+            return resp(200, {
+                'ok': True,
+                'total': len(items),
+                'new': new_count,
+                'exists': len(items) - new_count,
+                'noUrl': sum(1 for it in items if not it['url']),
+                'items': items,
+            })
+
+        if action == 'supplier-collect':
+            # Карточки обходим порциями: за один вызов функция успевает
+            # немного, а прайс бывает и на тысячу строк
+            items = body.get('items') or []
+            if not items:
+                return resp(400, {'error': 'Нечего собирать'})
+            cur = conn.cursor()
+            cur.execute(f"SELECT name, models FROM {schema()}.brands")
+            brands = {r[0]: (r[1] or []) for r in cur.fetchall()}
+            cur.close()
+            rows = supplier.collect(items, brands)
+            return resp(200, {
+                'ok': True,
+                'rows': rows,
+                'failed': sum(1 for r in rows if not r.get('ok')),
+            })
+
+        if action == 'supplier-xlsx':
+            rows = body.get('rows') or []
+            if not rows:
+                return resp(400, {'error': 'Нет данных для таблицы'})
+            category = str(body.get('category') or '')
+            data = supplier.build_xlsx(rows, category, DEFAULT_STOCK_NOTE)
             return resp(200, {'file': base64.b64encode(data).decode('ascii')})
 
         if action == 'import-xlsx':

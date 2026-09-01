@@ -18,6 +18,13 @@
       "path": "/?action=login",
       "body": {"password": "definitely-wrong-password-000"},
       "expectedStatus": 401
+    },
+    {
+      "name": "Разбор прайса требует входа",
+      "method": "POST",
+      "path": "/?action=supplier-scan",
+      "body": {"file": ""},
+      "expectedStatus": 401
     }
   ]
 }
