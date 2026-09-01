@@ -15,6 +15,7 @@ import GuideEditor, {
   emptyGuide,
 } from "@/components/admin/GuideEditor";
 import SettingsPanel from "@/components/admin/SettingsPanel";
+import SupplierPanel from "@/components/admin/SupplierPanel";
 import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
 import CategoriesEditor from "@/components/admin/CategoriesEditor";
@@ -429,7 +430,14 @@ const Admin = () => {
 
         {tab === "storage" && <StoragePanel />}
 
-        {tab === "settings" && <SettingsPanel onImported={load} />}
+        {tab === "settings" && (
+          <>
+            <SettingsPanel onImported={load} />
+            <div className="border-t border-foreground">
+              <SupplierPanel categories={categories} />
+            </div>
+          </>
+        )}
 
         {tab === "products" && (
           <AdminProductsTab
