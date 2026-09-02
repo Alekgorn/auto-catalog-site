@@ -32,7 +32,7 @@ const UniversalDivider = ({ count, vehicle }: Props) => (
         </div>
         <p className="mt-0.5 text-[0.82rem] text-muted-foreground">
           {vehicle
-            ? `Не зависит от марки и года — встанет и на ваш ${vehicle.brand} ${vehicle.model}.`
+            ? `Не зависят от марки и года. Если у товара стоит пометка о размере — на ваш ${vehicle.brand} ${vehicle.model} он не встанет.`
             : 'Не зависит от марки и года выпуска.'}
         </p>
       </div>
