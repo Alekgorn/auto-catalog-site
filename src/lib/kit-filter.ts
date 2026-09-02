@@ -145,6 +145,27 @@ export const fitsAvailableSizes = (p: Product, sizes: number[]): boolean => {
   return sizes.some((x) => sameSize(x, s));
 };
 
+/**
+ * Встанет ли магнитола в выбранную машину.
+ *
+ * Магнитолы не привязаны к марке — они подходят «всем» через переходную
+ * рамку. Но рамка есть не под любой размер: если под Hyundai Solaris в
+ * каталоге только рамки 9″ и 12,3″, то десятидюймовую магнитолу ставить
+ * некуда. Поэтому для раздела магнитол совместимость определяет именно
+ * размер: подошла диагональ — товар подобран под машину, нет — уходит
+ * ниже с пояснением.
+ *
+ * Пустой список размеров означает «нечем ограничивать» (рамок нет или у
+ * них не заполнен типоразмер) — тогда ничего не утверждаем.
+ */
+export const headunitFitsVehicle = (p: Product, sizes: number[]): boolean => {
+  if (p.category !== HEADUNITS_CATEGORY) return false;
+  if (!sizes.length) return false;
+  const s = screenSize(p);
+  if (s === null) return false;
+  return sizes.some((x) => sameSize(x, s));
+};
+
 interface Args {
   step: KitStep;
   products: Product[];
