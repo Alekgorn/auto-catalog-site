@@ -47,32 +47,68 @@ const CategorySection = ({
   /** Раздел развернули — даём вернуть его к первому ряду */
   const expanded = shown > CATEGORY_FIRST && items.length > CATEGORY_FIRST;
 
+  const universalCount = items.length - exactCount;
+  /**
+   * Раздел, где под машину нет ничего: показывать внутри полосу
+   * «подходит любой машине» бессмысленно — она относилась бы ко всему
+   * списку. Пишем это один раз в шапке раздела.
+   */
+  const onlyUniversal = !!vehicle && exactCount === 0;
+
   return (
     <section className="pb-9">
-      <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border pb-2">
-        <h2 className="font-head text-[1.05rem] font-bold uppercase tracking-tight md:text-[1.15rem]">
-          {title}
-        </h2>
-        <span className="flex-none bg-primary px-2.5 py-1 font-head text-[0.72rem] font-bold uppercase tracking-[0.04em] text-primary-foreground">
-          всего {items.length} {plural(items.length, 'товар', 'товара', 'товаров')}
-        </span>
-        {expanded && (
-          <button
-            onClick={onCollapse}
-            className="ml-auto flex flex-none items-center gap-1.5 text-[0.78rem] text-muted-foreground transition-colors hover:text-primary"
-          >
-            <Icon name="ChevronUp" size={15} />
-            Свернуть
-          </button>
+      <div className="mb-3 border-b-2 border-foreground pb-2.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <h2 className="font-head text-[1.2rem] font-bold uppercase tracking-tight md:text-[1.4rem]">
+            {title}
+          </h2>
+
+          {/* Под машину и «любой машине» — разные вещи, считаем их отдельно */}
+          {vehicle && exactCount > 0 && (
+            <span className="flex-none bg-primary px-2.5 py-1 font-head text-[0.72rem] font-bold uppercase tracking-[0.04em] text-primary-foreground">
+              под вашу машину: {exactCount}
+            </span>
+          )}
+          {vehicle && universalCount > 0 && (
+            <span className="flex-none border border-border bg-surface px-2.5 py-1 font-head text-[0.72rem] font-bold uppercase tracking-[0.04em] text-muted-foreground">
+              универсальных: {universalCount}
+            </span>
+          )}
+          {!vehicle && (
+            <span className="flex-none bg-primary px-2.5 py-1 font-head text-[0.72rem] font-bold uppercase tracking-[0.04em] text-primary-foreground">
+              всего {items.length} {plural(items.length, 'товар', 'товара', 'товаров')}
+            </span>
+          )}
+
+          {expanded && (
+            <button
+              onClick={onCollapse}
+              className="ml-auto flex flex-none items-center gap-1.5 text-[0.78rem] text-muted-foreground transition-colors hover:text-primary"
+            >
+              <Icon name="ChevronUp" size={15} />
+              Свернуть
+            </button>
+          )}
+        </div>
+
+        {onlyUniversal && (
+          <p className="mt-1.5 text-[0.82rem] text-muted-foreground">
+            Именно под {vehicle!.brand} {vehicle!.model} в этом разделе ничего
+            нет — здесь товары, которые не зависят от марки и года.
+          </p>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {visible.map((h, i) => (
           <Fragment key={h.product.id}>
-            {/* Граница между «точно встанет» и «подойдёт почти всем» */}
-            {i === exactCount && exactCount < visible.length && (
-              <UniversalDivider count={items.length - exactCount} vehicle={vehicle} />
+            {/*
+              Граница между «точно встанет» и «подойдёт любой машине».
+              Нужна, только когда выше неё что-то есть: иначе полоса
+              повторяла бы заголовок раздела в каждой категории подряд.
+            */}
+            {i === exactCount && exactCount > 0 && exactCount < visible.length && (
+              <UniversalDivider count={universalCount} vehicle={vehicle} />
             )}
             <ProductCard product={h.product} vehicle={vehicle} />
           </Fragment>
