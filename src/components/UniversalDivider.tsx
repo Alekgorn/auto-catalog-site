@@ -25,7 +25,9 @@ const UniversalDivider = ({ count, vehicle }: Props) => (
         <Icon name="Check" size={17} className="text-muted-foreground" />
       </span>
       <div>
-        <div className="font-head text-[0.95rem] font-bold uppercase tracking-tight">
+        {/* Мельче и тусклее заголовка раздела: это подпись внутри него,
+            а не название категории — иначе они спорят за внимание */}
+        <div className="font-head text-[0.85rem] font-bold uppercase tracking-tight text-muted-foreground">
           Подходит любой машине ({count})
         </div>
         <p className="mt-0.5 text-[0.82rem] text-muted-foreground">
