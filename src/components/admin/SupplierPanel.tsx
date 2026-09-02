@@ -36,8 +36,11 @@ interface Props {
   categories: string[];
 }
 
-/** Сколько карточек берём за один заход к серверу */
-const STEP = 20;
+/**
+ * Сколько карточек берём за один заход к серверу.
+ * Функции отведено около двух секунд — больше восьми она не успевает.
+ */
+const STEP = 8;
 
 const word = (n: number, one: string, few: string, many: string) => {
   const t = n % 100;
@@ -118,24 +121,94 @@ const SupplierPanel = ({ categories }: Props) => {
     const rows: Row[] = [];
     let failed = 0;
     try {
+      /**
+       * Порцию, которая не прошла, пробуем ещё раз: сайт поставщика
+       * иногда отвечает не сразу. Если и повтор не помог — пропускаем её
+       * и идём дальше, чтобы из-за десятка карточек не потерять весь сбор.
+       */
       for (let i = 0; i < target.length; i += STEP) {
         setProgress({ done: i, all: target.length });
         setStage('Открываем карточки товаров…');
-        const res = await adminFetch('?action=supplier-collect', {
-          method: 'POST',
-          body: JSON.stringify({ items: target.slice(i, i + STEP) }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          toast({
-            title: 'Сбор прерван',
-            description: data.error ?? 'Поставщик не отвечает',
-          });
-          return;
+        const chunk = target.slice(i, i + STEP);
+
+        let got: Row[] | null = null;
+        for (let attempt = 0; attempt < 3 && !got; attempt += 1) {
+          if (attempt > 0) {
+            setStage('Поставщик задумался, пробуем ещё раз…');
+            await new Promise((r) => setTimeout(r, 1200 * attempt));
+          }
+          try {
+            const res = await adminFetch('?action=supplier-collect', {
+              method: 'POST',
+              body: JSON.stringify({ items: chunk }),
+            });
+            if (!res.ok) continue;
+            const data = await res.json();
+            got = (data.rows ?? []) as Row[];
+            failed += Number(data.failed ?? 0);
+          } catch {
+            /* сеть моргнула — попробуем снова */
+          }
         }
-        rows.push(...((data.rows ?? []) as Row[]));
-        failed += Number(data.failed ?? 0);
+
+        if (got) {
+          rows.push(...got);
+        } else {
+          // Строки всё равно нужны: цена и артикул есть, остальное допишут руками
+          rows.push(
+            ...chunk.map((it) => ({
+              ...it,
+              images: [],
+              description: '',
+              specs: '',
+              fits: '',
+              fitsSrc: '',
+              yearFrom: '' as const,
+              yearTo: '' as const,
+              ok: false,
+            })),
+          );
+        }
       }
+
+      if (!rows.length) {
+        toast({
+          title: 'Не получилось',
+          description: 'Сайт поставщика не отвечает. Попробуйте позже',
+        });
+        return;
+      }
+
+      /**
+       * Второй заход по карточкам, которые не открылись с первого раза:
+       * первые запросы уходят, пока сервер ещё просыпается, и часть из них
+       * не успевает. На повторе они обычно отвечают нормально.
+       */
+      const retry = rows.filter((r) => !r.ok);
+      if (retry.length) {
+        setProgress(null);
+        setStage('Возвращаемся к тем, что не открылись…');
+        for (let i = 0; i < retry.length; i += STEP) {
+          const chunk = retry.slice(i, i + STEP);
+          try {
+            const res = await adminFetch('?action=supplier-collect', {
+              method: 'POST',
+              body: JSON.stringify({ items: chunk }),
+            });
+            if (!res.ok) continue;
+            const data = await res.json();
+            ((data.rows ?? []) as Row[]).forEach((fresh) => {
+              if (!fresh.ok) return;
+              const at = rows.findIndex((r) => r.sku === fresh.sku && !r.ok);
+              if (at >= 0) rows[at] = fresh;
+            });
+          } catch {
+            /* не вышло и на второй раз — строка останется без фото */
+          }
+        }
+      }
+
+      failed = rows.filter((r) => !r.ok).length;
 
       setProgress(null);
       setStage('Собираем таблицу…');
@@ -167,7 +240,9 @@ const SupplierPanel = ({ categories }: Props) => {
         description:
           `${rows.length} ${word(rows.length, 'товар', 'товара', 'товаров')}, ` +
           `${photos} фото` +
-          (failed ? `. Не открылось карточек: ${failed}` : ''),
+          (failed
+            ? `. Не открылось карточек: ${failed} — они в файле без фото`
+            : ''),
       });
     } catch {
       toast({ title: 'Ошибка', description: 'Что-то пошло не так' });
@@ -182,7 +257,8 @@ const SupplierPanel = ({ categories }: Props) => {
     ? (onlyNew ? scan.items.filter((i) => !i.exists) : scan.items).filter((i) => i.url)
         .length
     : 0;
-  const minutes = Math.max(1, Math.round((willTake / STEP) * 2.5) / 60);
+  // Порция уходит и возвращается примерно за полторы секунды
+  const minutes = ((willTake / STEP) * 1.5) / 60;
 
   return (
     <div className="py-8">
