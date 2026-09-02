@@ -16,6 +16,8 @@ import GuideEditor, {
 } from "@/components/admin/GuideEditor";
 import SettingsPanel from "@/components/admin/SettingsPanel";
 import SupplierPanel from "@/components/admin/SupplierPanel";
+import DataAuditPanel from "@/components/admin/DataAuditPanel";
+import { auditProducts } from "@/lib/data-audit";
 import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
 import CategoriesEditor from "@/components/admin/CategoriesEditor";
@@ -358,6 +360,15 @@ const Admin = () => {
     }).length;
   }, [products, brands]);
 
+  /**
+   * Карточки с расхождениями в данных — цифра на вкладке.
+   * Считает та же проверка, что и сама панель.
+   */
+  const dataIssues = useMemo(
+    () => auditProducts(products, true).length,
+    [products],
+  );
+
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -392,6 +403,7 @@ const Admin = () => {
           categoriesCount={categories.length}
           fitsIssues={fitsIssues}
           missingFits={missingFits}
+          dataIssues={dataIssues}
         />
 
         {tab === "orders" && <OrdersPanel />}
@@ -420,6 +432,10 @@ const Admin = () => {
             brands={brands}
             onEdit={setEditing}
           />
+        )}
+
+        {tab === "audit" && (
+          <DataAuditPanel products={products} onEdit={setEditing} />
         )}
 
         {tab === "missing-fit" && (
