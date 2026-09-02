@@ -7,6 +7,7 @@ import ProductCard from "@/components/ProductCard";
 import VehicleFilterBar from "@/components/VehicleFilterBar";
 import { Vehicle, matchVehicle, splitByFit } from "@/data/catalog";
 import UniversalDivider from "@/components/UniversalDivider";
+import { availableScreenSizes, headunitFitsVehicle } from "@/lib/kit-filter";
 import FloatingFilters from "@/components/FloatingFilters";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -197,10 +198,26 @@ const SearchPage = () => {
     if (q) setParams({ q });
   };
 
+  /**
+   * Какие диагонали реально встанут в выбранную машину — по типоразмерам
+   * рамок, которые на неё есть. Магнитола не привязана к марке, но упрётся
+   * в рамку: под Solaris есть 9″ и 12,3″, десятидюймовую ставить некуда.
+   */
+  const availableSizes = useMemo(
+    () => availableScreenSizes(products, vehicle),
+    [products, vehicle],
+  );
+
   /** Точные совпадения по машине первыми, универсальные — отдельно ниже */
   const fit = useMemo(
-    () => splitByFit(list, (h) => h.product, vehicle),
-    [list, vehicle],
+    () =>
+      splitByFit(
+        list,
+        (h) => h.product,
+        vehicle,
+        (p) => headunitFitsVehicle(p, availableSizes),
+      ),
+    [list, vehicle, availableSizes],
   );
   const ordered = useMemo(
     () => [...fit.exact, ...fit.universal],
