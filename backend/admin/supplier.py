@@ -57,16 +57,15 @@ ALIAS = {
 }
 
 
-def fetch(url: str, tries: int = 2) -> str:
-    for attempt in range(tries):
-        try:
-            req = urllib.request.Request(url, headers={'User-Agent': UA})
-            with urllib.request.urlopen(req, timeout=12) as r:
-                return r.read().decode('utf-8', 'ignore')
-        except Exception:
-            if attempt == tries - 1:
-                return ''
-    return ''
+def fetch(url: str, timeout: float = 1.8) -> str:
+    """Ждём страницу недолго: у функции всего пара секунд на всю порцию,
+    и одна зависшая карточка не должна утащить за собой остальные."""
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': UA})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return r.read().decode('utf-8', 'ignore')
+    except Exception:
+        return ''
 
 
 def read_price(blob: bytes) -> tuple:
@@ -292,9 +291,13 @@ def collect_one(item: dict, brands: dict) -> dict:
     return out
 
 
-def collect(items: list, brands: dict, workers: int = 10) -> list:
-    """Карточки грузим пачкой: по одной 261 товар занял бы минуты."""
-    with ThreadPoolExecutor(max_workers=workers) as ex:
+def collect(items: list, brands: dict, workers: int = 12) -> list:
+    """Карточки грузим пачкой: по одной 261 товар занял бы минуты.
+
+    Функции отведено около двух секунд, поэтому важнее вернуть то, что
+    успели, чем оборваться по таймауту и потерять всю порцию.
+    """
+    with ThreadPoolExecutor(max_workers=max(workers, len(items))) as ex:
         return list(ex.map(lambda it: collect_one(it, brands), items))
 
 
