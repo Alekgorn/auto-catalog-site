@@ -16,6 +16,7 @@ interface Row extends Item {
   images: string[];
   description: string;
   specs: string;
+  kit: string;
   fits: string;
   fitsSrc: string;
   yearFrom: number | '';
@@ -38,9 +39,9 @@ interface Props {
 
 /**
  * Сколько карточек берём за один заход к серверу.
- * Функции отведено около двух секунд — больше восьми она не успевает.
+ * Функции отведено около двух секунд — больше пяти она не успевает.
  */
-const STEP = 8;
+const STEP = 5;
 
 const word = (n: number, one: string, few: string, many: string) => {
   const t = n % 100;
@@ -161,6 +162,7 @@ const SupplierPanel = ({ categories }: Props) => {
               images: [],
               description: '',
               specs: '',
+              kit: '',
               fits: '',
               fitsSrc: '',
               yearFrom: '' as const,
@@ -268,8 +270,9 @@ const SupplierPanel = ({ categories }: Props) => {
       </h2>
       <p className="mt-4 max-w-[42em] text-muted-foreground">
         Загрузите прайс в Excel — сверим его с каталогом по артикулу, откроем
-        карточки товаров и соберём таблицу с фото, описанием и совместимостью.
-        Её останется проверить и загрузить через импорт каталога.
+        карточки товаров и соберём таблицу с фото, описанием, характеристиками,
+        комплектацией и совместимостью. Если у товара указан CAN-адаптер, его
+        тоже заберём. Останется проверить и загрузить через импорт каталога.
       </p>
 
       <input

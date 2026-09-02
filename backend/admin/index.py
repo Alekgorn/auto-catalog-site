@@ -2048,9 +2048,9 @@ def handler(event: dict, context) -> dict:
             items = body.get('items') or []
             if not items:
                 return resp(400, {'error': 'Нечего собирать'})
-            # Функции отведено около двух секунд: больше восьми карточек
+            # Функции отведено около двух секунд: больше пяти карточек
             # за раз она не успевает и обрывается по таймауту
-            items = items[:8]
+            items = items[:5]
             cur = conn.cursor()
             cur.execute(f"SELECT name, models FROM {schema()}.brands")
             brands = {r[0]: (r[1] or []) for r in cur.fetchall()}

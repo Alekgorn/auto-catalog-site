@@ -57,7 +57,7 @@ ALIAS = {
 }
 
 
-def fetch(url: str, timeout: float = 1.8) -> str:
+def fetch(url: str, timeout: float = 1.5) -> str:
     """Ждём страницу недолго: у функции всего пара секунд на всю порцию,
     и одна зависшая карточка не должна утащить за собой остальные."""
     try:
@@ -197,15 +197,63 @@ def photos(html: str) -> list:
     return out[:15]
 
 
-def specs(html: str) -> str:
-    txt = clean_html(js_block(html, 'var mainAttributes'))
+# Заголовки блоков в правой колонке карточки
+LIST_HEADS = ('Характеристики', 'Информация о CAN BUS', 'Комплектация')
+
+# Юридическая приписка вместо значения цвета — в характеристики не берём
+DISCLAIMER = re.compile(
+    r'могут отличаться|не является публичной офертой|без предварительного',
+    re.I,
+)
+
+
+def attributes(html: str) -> dict:
+    """Правая колонка карточки: «Характеристики» и «Информация о CAN BUS».
+
+    Устроена как заголовок раздела, а под ним пары строк: название
+    свойства, следом его значение. Двоеточий там нет, поэтому идём
+    построчно и складываем пары.
+    """
+    txt = clean_html(js_block(html, 'var listAttributes'))
+    if not txt:
+        return {}
+
+    lines = [x.strip() for x in txt.split('\n') if x.strip()]
+    out, cur, pending = {}, None, None
+    for s in lines:
+        if s in LIST_HEADS:
+            cur = s
+            pending = None
+            continue
+        if cur is None:
+            continue
+        if pending is None:
+            pending = s
+            continue
+        # Пара собрана: слева название свойства, справа значение
+        if not DISCLAIMER.search(s) and len(pending) < 60 and len(s) < 200:
+            out.setdefault(cur, []).append((pending, s))
+        pending = None
+    return {k: v for k, v in out.items() if v}
+
+
+def specs(html: str, attrs: dict = None) -> str:
+    """Характеристики товара — в формате «Имя=Значение», как ждёт импорт."""
+    data = attrs if attrs is not None else attributes(html)
     rows = []
-    for line in txt.split('\n'):
-        if ':' in line:
-            k, _, v = line.partition(':')
-            k, v = k.strip(), v.strip()
-            if k and v and len(k) < 60 and len(v) < 120:
-                rows.append(f'{k}={v}')
+    for name, value in data.get('Характеристики', []):
+        if name != 'Совместимость':
+            rows.append(f'{name}={value}')
+
+    # В каталоге адаптер записан одной строкой — «CAN адаптер Raise G-RZ-FT68».
+    # У поставщика бренд и модель лежат раздельно, поэтому склеиваем.
+    can = dict(data.get('Информация о CAN BUS', []))
+    marka = ' '.join(x for x in (can.get('Бренд'), can.get('Модель')) if x)
+    if marka:
+        rows.append(f'CAN адаптер={marka}')
+    for name, value in data.get('Информация о CAN BUS', []):
+        if name not in ('Бренд', 'Модель', 'Совместимость'):
+            rows.append(f'CAN {name.lower()}={value}')
     return '; '.join(rows)
 
 
@@ -261,7 +309,7 @@ def collect_one(item: dict, brands: dict) -> dict:
     html = fetch(item['url']) if item.get('url') else ''
     out = dict(item)
     out.update({
-        'images': [], 'description': '', 'specs': '',
+        'images': [], 'description': '', 'specs': '', 'kit': '',
         'fits': '', 'fitsSrc': '', 'yearFrom': '', 'yearTo': '',
         'ok': bool(html),
     })
@@ -271,15 +319,27 @@ def collect_one(item: dict, brands: dict) -> dict:
         if m:
             base = clean_html(m.group(1))[:200] or base
         d = sections(html)
-        parts = [d[k] for k in ('Описание', 'Дополнительно', 'Комплектация')
-                 if d.get(k)]
+        attrs = attributes(html)
+        parts = [d[k] for k in ('Описание', 'Дополнительно') if d.get(k)]
+
+        # Совместимость собираем отовсюду: свой блок, раздел по рамкам
+        # и строка «Совместимость» внутри данных CAN-адаптера
+        can_fit = ' '.join(
+            v for n, v in attrs.get('Информация о CAN BUS', [])
+            if n == 'Совместимость'
+        )
         fit_text = ' '.join(
             x for x in (d.get('Совместимость', ''),
-                        d.get('Совместимость по рамкам:', '')) if x
+                        d.get('Совместимость по рамкам:', ''), can_fit) if x
         )
+
+        kit = d.get('Комплектация', '')
         out['images'] = photos(html)
         out['description'] = ' | '.join(' '.join(p.split('\n')) for p in parts)
-        out['specs'] = specs(html)
+        out['specs'] = specs(html, attrs)
+        out['kit'] = '; '.join(
+            x.strip(' ◦•-–—') for x in kit.split('\n') if x.strip(' ◦•-–—')
+        )
         out['fitsSrc'] = ' '.join(fit_text.split('\n'))[:300]
         # Блок на странице точнее названия, но бывает пустым
         out['fits'] = fits(fit_text, brands) or fits(base, brands)
@@ -389,7 +449,7 @@ def build_xlsx(rows: list, category: str, stock_note: str) -> bytes:
             'images': '; '.join(item.get('images') or []),
             'description': item.get('description', ''),
             'specs': item.get('specs', ''),
-            'kit': '',
+            'kit': item.get('kit', ''),
             '_status': 'уже есть' if exists else 'новинка',
             '_photos': len(item.get('images') or []),
             '_url': item.get('url', ''),
@@ -405,6 +465,7 @@ def build_xlsx(rows: list, category: str, stock_note: str) -> bytes:
                 cell.fill = have if exists else warn
             elif (key == '_photos' and not item.get('images')) \
                     or (key == 'fits' and not item.get('fits')) \
+                    or (key == 'specs' and not item.get('specs')) \
                     or (key == 'description' and not item.get('description')):
                 cell.fill = warn
 
@@ -416,8 +477,11 @@ def build_xlsx(rows: list, category: str, stock_note: str) -> bytes:
     wsi.column_dimensions['A'].width = 112
     info = [
         ('Что это за файл', True),
-        ('Прайс поставщика, дополненный данными с карточек товаров: '
-         'фото, описание, совместимость с машинами.', False),
+        ('Прайс поставщика, дополненный данными с карточек товаров: фото, '
+         'описание, характеристики, комплектация и совместимость с машинами.',
+         False),
+        ('Если у товара указан CAN-адаптер, он попадёт в характеристики '
+         'отдельной строкой.', False),
         ('Колонки совпадают с выгрузкой каталога — файл можно загрузить '
          'через Каталог → Импорт.', False),
         ('', False),
