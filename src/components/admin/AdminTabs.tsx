@@ -6,6 +6,7 @@ export type AdminTab =
   | "brands"
   | "categories"
   | "fits"
+  | "audit"
   | "missing-fit"
   | "site"
   | "storage"
@@ -23,6 +24,8 @@ interface Props {
   fitsIssues: number;
   /** Машины, под которые не собрался комплект */
   missingFits: number;
+  /** Карточки с расхождениями в данных — счётчик у вкладки */
+  dataIssues: number;
 }
 
 /** Панель вкладок админки со счётчиками заявок, товаров, инструкций и т.д. */
@@ -36,6 +39,7 @@ const AdminTabs = ({
   categoriesCount,
   fitsIssues,
   missingFits,
+  dataIssues,
 }: Props) => (
   <div className="flex flex-wrap gap-8 border-b border-border py-5">
     {(
@@ -50,6 +54,10 @@ const AdminTabs = ({
           fitsIssues > 0
             ? `Совместимость (${fitsIssues})`
             : "Совместимость",
+        ],
+        [
+          "audit",
+          dataIssues > 0 ? `Проверка данных (${dataIssues})` : "Проверка данных",
         ],
         [
           "missing-fit",
