@@ -689,6 +689,10 @@ const main = async () => {
       .join('\n') +
     '\n</urlset>\n';
   await fs.writeFile(path.join(PUBLIC, 'sitemap.xml'), sitemap, 'utf-8');
+  // Карта строится после сборки, поэтому в dist лежала бы версия с прошлой
+  // публикации — новые товары попадали в поиск только через раз. Пишем в обе
+  // папки сразу: в public для следующей сборки, в dist для текущей.
+  await fs.writeFile(path.join(DIST, 'sitemap.xml'), sitemap, 'utf-8');
 
   console.log(
     `[prerender] готово: ${generated.length} страниц, карта сайта на ${routes.length} адресов`,
