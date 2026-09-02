@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import {
@@ -11,7 +12,13 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
-import { HEADUNITS_CATEGORY, screenLabel } from '@/lib/kit-filter';
+import {
+  HEADUNITS_CATEGORY,
+  availableScreenSizes,
+  headunitFitsVehicle,
+  screenLabel,
+  screenSize,
+} from '@/lib/kit-filter';
 import { isVehicle } from '@/lib/vehicle';
 import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
@@ -36,7 +43,27 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
-  const { cardFields, categorySpecs, brands } = useCatalog();
+  const { cardFields, categorySpecs, brands, products } = useCatalog();
+
+  /**
+   * Магнитолу к машине привязывает не марка, а размер: она встаёт через
+   * переходную рамку, и если рамки нужной диагонали под это авто нет —
+   * ставить её некуда. Считаем доступные размеры и говорим об этом прямо
+   * на карточке, чтобы человек не заказал экран, который не влезет.
+   */
+  const sizes = useMemo(
+    () => availableScreenSizes(products, vehicle),
+    [products, vehicle],
+  );
+  const isHeadunit = product.category === HEADUNITS_CATEGORY;
+  const headunitFits = headunitFitsVehicle(product, sizes);
+  /** Размер известен, рамки под него нет — честно предупреждаем */
+  const noFrameForSize =
+    isHeadunit &&
+    !!vehicle &&
+    sizes.length > 0 &&
+    screenSize(product) !== null &&
+    !headunitFits;
   /** Товар и правда подходит любой машине, а не «просто машина не выбрана» */
   const universal = isUniversal(product, brands.length);
   /** Марки не заданы — товар без ограничений по авто */
@@ -118,7 +145,8 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
    * Универсальный товар под неё не попадает: «Для всех авто» — это про
    * ассортимент, а не про совместимость именно с вашим авто.
    */
-  const fitConfirmed = !!vehicle && fits && !anyCar && !universal;
+  const fitConfirmed =
+    (!!vehicle && fits && !anyCar && !universal) || headunitFits;
 
   /** Товар без ограничений по марке — про такой пишем строкой в теле */
   const forAnyCar = anyCar || universal;
@@ -129,7 +157,10 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
    * «Для всех авто» на фото не выносим — оно стояло бы почти везде.
    */
   const platePhoto = (() => {
+    // У магнитолы совместимость — это наличие рамки нужного размера
+    if (headunitFits) return `Есть рамка: ${vehicle!.brand} ${vehicle!.model}`;
     if (fitConfirmed) return `Подходит: ${vehicle!.brand} ${vehicle!.model}`;
+    if (noFrameForSize) return null;
     if (forAnyCar) return null;
     if (vehicle && !fits) return null;
     if (fitBrands.length === 1) return `Для ${fitBrands[0]}`;
@@ -137,8 +168,16 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
     return null;
   })();
 
-  /** Строка в теле карточки — только про универсальные позиции */
-  const fitLine = forAnyCar ? 'Для всех авто' : null;
+  /**
+   * Строка в теле карточки. У магнитолы без подходящей рамки она важнее
+   * пометки «для всех авто»: формально товар и правда встаёт в любую
+   * машину, но конкретно в эту — некуда.
+   */
+  const fitLine = noFrameForSize
+    ? `Нет рамки ${screenLabel(product) ?? ''} под ${vehicle!.brand} ${vehicle!.model}`
+    : forAnyCar
+      ? 'Для всех авто'
+      : null;
 
   return (
     <article className="group flex flex-col border border-border bg-surface transition-colors duration-200 hover:border-foreground/40">
@@ -309,8 +348,16 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
         {/* Универсальные позиции — спокойной строкой в теле карточки:
             плашкой на фото они стояли бы почти на каждом товаре */}
         {fitLine && (
-          <div className="mt-1.5 flex items-start gap-1.5 text-[0.68rem] leading-snug text-muted-foreground">
-            <Icon name="Car" size={12} className="mt-0.5 flex-none" />
+          <div
+            className={`mt-1.5 flex items-start gap-1.5 text-[0.68rem] leading-snug ${
+              noFrameForSize ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Icon
+              name={noFrameForSize ? 'TriangleAlert' : 'Car'}
+              size={12}
+              className="mt-0.5 flex-none"
+            />
             <span className="min-w-0 flex-1 truncate">{fitLine}</span>
           </div>
         )}

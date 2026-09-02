@@ -632,12 +632,21 @@ export const splitByFit = <T,>(
   items: T[],
   getProduct: (item: T) => Product,
   vehicle: Vehicle | null,
+  /**
+   * Проверка «встанет на эту машину» помимо списка совместимости.
+   * Нужна магнитолам: они не привязаны к марке, но упираются в размер
+   * рамки — под Solaris есть рамки 9″ и 12,3″, значит десятидюймовую
+   * ставить некуда. Без неё магнитолы целиком считаются универсальными
+   * и пропадают, стоит покупателю скрыть «подходящее всем».
+   */
+  alsoFits?: (product: Product) => boolean,
 ): { exact: T[]; universal: T[] } => {
   if (!vehicle) return { exact: items, universal: [] };
   const exact: T[] = [];
   const universal: T[] = [];
   items.forEach((item) => {
-    if (isCompatible(getProduct(item), vehicle)) exact.push(item);
+    const p = getProduct(item);
+    if (isCompatible(p, vehicle) || alsoFits?.(p)) exact.push(item);
     else universal.push(item);
   });
   return { exact, universal };

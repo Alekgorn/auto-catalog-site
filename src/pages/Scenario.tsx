@@ -14,7 +14,11 @@ import {
   matchesPartial,
   splitByFit,
 } from "@/data/catalog";
-import { availableScreenSizes, screenSize } from "@/lib/kit-filter";
+import {
+  availableScreenSizes,
+  headunitFitsVehicle,
+  screenSize,
+} from "@/lib/kit-filter";
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
@@ -429,8 +433,15 @@ const ScenarioPage = () => {
    * с «подойдёт почти всем».
    */
   const fit = useMemo(
-    () => splitByFit(list, (h) => h.product, vehicle),
-    [list, vehicle],
+    () =>
+      splitByFit(
+        list,
+        (h) => h.product,
+        vehicle,
+        // Магнитолу к машине привязывает не марка, а размер доступной рамки
+        (p) => headunitFitsVehicle(p, availableSizes),
+      ),
+    [list, vehicle, availableSizes],
   );
   const ordered = useMemo(
     () => [...fit.exact, ...fit.universal],
