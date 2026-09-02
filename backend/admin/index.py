@@ -172,6 +172,11 @@ FUNCTION_BUDGET = float(os.environ.get('FUNCTION_TIMEOUT', '2'))
 # Запас на ответ и запись в базу — его не занимаем скачиванием
 RESERVE = 0.6
 
+# Сколько картинок качаем за один вызов. Качаем параллельно — сеть ждёт
+# все сразу, — но каждую потом надо сжать и отправить в хранилище, а это
+# уже процессор. Четыре укладываются в отведённые функции две секунды.
+BATCH_IMAGES = 4
+
 
 def _is_own_cdn(url: str) -> bool:
     key = os.environ.get('AWS_ACCESS_KEY_ID', '')
@@ -219,6 +224,79 @@ def _is_external_image(url: str) -> bool:
     if not u.lower().startswith(('http://', 'https://')):
         return False
     return not u.startswith(CDN_PREFIX)
+
+
+def download_external(url: str, timeout: float) -> tuple:
+    """Только скачивает файл, ничего не обрабатывая.
+
+    Вынесено отдельно, чтобы качать пачку картинок разом: сеть — самая
+    долгая часть переноса, и пока один сайт думает, остальные грузятся.
+    Возвращает (сырые_байты, расширение, причина_отказа).
+    """
+    import urllib.error
+    import urllib.request
+
+    if timeout <= 0:
+        return None, None, 'не хватило времени'
+
+    req = urllib.request.Request(
+        url,
+        headers={
+            'User-Agent': 'Mozilla/5.0 (compatible; ShtatnoBot/1.0)',
+            'Accept': 'image/*,*/*',
+        },
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            ctype = str(r.headers.get('Content-Type', '')).lower()
+            raw = r.read(MAX_IMAGE_BYTES + 1)
+    except urllib.error.HTTPError as e:
+        return None, None, f'сайт ответил отказом ({e.code})'
+    except Exception:
+        return None, None, 'сайт отвечает слишком долго'
+
+    if len(raw) > MAX_IMAGE_BYTES:
+        return None, None, 'файл слишком большой'
+    if not raw:
+        return None, None, 'пустой файл'
+
+    ext = 'jpg'
+    for name in ('png', 'webp', 'gif', 'jpeg', 'jpg'):
+        if name in ctype:
+            ext = 'jpg' if name == 'jpeg' else name
+            break
+    else:
+        tail = url.lower().split('?')[0].rsplit('.', 1)
+        if len(tail) == 2 and tail[1] in ('png', 'webp', 'gif', 'jpg', 'jpeg'):
+            ext = 'jpg' if tail[1] == 'jpeg' else tail[1]
+        elif 'image' not in ctype:
+            return None, None, 'по ссылке не картинка'
+
+    return raw, ext, None
+
+
+def store_image(raw: bytes, ext: str) -> tuple:
+    """Сжимает скачанную картинку и кладёт в наше хранилище."""
+    from image_optimizer import optimize
+
+    try:
+        data, new_ext, content_type = optimize(raw, ext)
+    except Exception:
+        return None, 'не удалось обработать картинку'
+
+    key = f"catalog/{uuid.uuid4().hex}.{new_ext}"
+    try:
+        _s3().put_object(
+            Bucket='files',
+            Key=key,
+            Body=data,
+            ContentType=content_type,
+            CacheControl='public, max-age=31536000, immutable',
+        )
+    except Exception:
+        return None, 'не удалось сохранить у нас'
+
+    return f"{CDN_PREFIX}{os.environ['AWS_ACCESS_KEY_ID']}/bucket/{key}", None
 
 
 def fetch_external_url(url: str, timeout: float = 0) -> tuple:
@@ -1493,9 +1571,20 @@ def handler(event: dict, context) -> dict:
             # Отбор делает база: искать «http» по всему полю нельзя —
             # наши собственные адреса тоже начинаются с http, и в выборку
             # попадали уже перенесённые товары, вытесняя те, что ждут очереди.
+            #
+            # Ссылки из чёрного списка тоже не считаются: у первых сорока
+            # товаров каталога все картинки оказались битыми, выборка
+            # упиралась в них и возвращала «нечего переносить», хотя дальше
+            # ждали тысячи рабочих. Поэтому условие требует хотя бы одну
+            # ссылку, которую ещё имеет смысл качать.
+            not_failed = (
+                f"NOT EXISTS (SELECT 1 FROM {schema()}.failed_images f "
+                f"WHERE f.url = u)"
+            )
             has_external = (
                 f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(images) AS u "
-                f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')})"
+                f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
+                f"AND {not_failed})"
             )
             tail = '' if method == 'GET' else ' LIMIT 40'
             cur.execute(
@@ -1515,15 +1604,17 @@ def handler(event: dict, context) -> dict:
             else:
                 # При переносе в выборке только часть товаров, поэтому
                 # общий остаток берём отдельным быстрым запросом
+                # Считаем только то, что реально предстоит скачать:
+                # отказы уже исключены условием выборки
                 cur.execute(
                     f"SELECT COALESCE(SUM(("
                     f"SELECT COUNT(*) FROM jsonb_array_elements_text(images) AS u "
-                    f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')}"
+                    f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
+                    f"AND {not_failed}"
                     f")), 0) AS n FROM {schema()}.products "
                     f"WHERE {has_external}"
                 )
-                left = int(cur.fetchone()['n'] or 0) - len(skip)
-                left = max(left, 0)
+                left = max(int(cur.fetchone()['n'] or 0), 0)
 
             failed = [
                 {
@@ -1545,31 +1636,44 @@ def handler(event: dict, context) -> dict:
             problem = None
             done_urls = set()
 
+            # Собираем очередь ссылок: качать будем пачкой, а не по одной.
+            # Сеть — самая долгая часть, и раньше за вызов успевала пройти
+            # одна картинка. Параллельно за то же время проходит десяток.
+            queue = []
             for r in rows:
-                # Осталось меньше, чем нужно на одно скачивание — выходим
-                # сами, с готовым ответом. Иначе платформа оборвёт вызов,
-                # и админка посчитает это ошибкой.
-                spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
-                if spare < 0.5:
-                    break
+                for idx, u in enumerate(r['images'] or []):
+                    if _is_external_image(u) and u not in skip:
+                        queue.append((r, idx, u))
 
-                urls = list(r['images'] or [])
-                changed = False
+            spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
+            batch = queue[:BATCH_IMAGES]
 
-                for idx, u in enumerate(urls):
-                    if not _is_external_image(u) or u in skip or u in done_urls:
-                        continue
+            if batch and spare > 0.4:
+                from concurrent.futures import ThreadPoolExecutor
 
-                    spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
-                    if spare < 0.5:
+                # Половину остатка отдаём сети, половину бережём на сжатие
+                # и отправку в хранилище — иначе скачаем и не успеем сохранить
+                wait = max(min(spare * 0.5, 1.0), 0.4)
+                with ThreadPoolExecutor(max_workers=len(batch)) as ex:
+                    got = list(
+                        ex.map(lambda it: download_external(it[2], wait), batch)
+                    )
+
+                # Скачанное складываем к нам и правим ссылки в товарах
+                changed_rows = {}
+                for (r, idx, u), (raw, ext, reason) in zip(batch, got):
+                    # Время вышло — необработанное не помечаем разобранным,
+                    # чтобы вернуться к нему на следующем заходе
+                    if FUNCTION_BUDGET - RESERVE - (time.time() - started) < 0.2:
                         break
-
-                    own, reason = fetch_external_url(u, timeout=spare)
                     done_urls.add(u)
+                    own = None
+                    if raw:
+                        own, reason = store_image(raw, ext)
 
                     if own:
+                        urls = changed_rows.setdefault(r['id'], list(r['images']))
                         urls[idx] = own
-                        changed = True
                         saved += 1
                     elif reason == 'сайт отвечает слишком долго':
                         # Не вина ссылки — сайт не успел ответить.
@@ -1591,10 +1695,10 @@ def handler(event: dict, context) -> dict:
                             'url': u, 'reason': reason, 'product': r['slug'],
                         }
 
-                if changed:
+                for pid, urls in changed_rows.items():
                     cur.execute(
                         f"UPDATE {schema()}.products SET images = {qjson(urls)}, "
-                        f"updated_at = NOW() WHERE id = {r['id']}"
+                        f"updated_at = NOW() WHERE id = {pid}"
                     )
                 conn.commit()
 
