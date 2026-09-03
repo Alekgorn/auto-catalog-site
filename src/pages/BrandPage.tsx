@@ -15,6 +15,7 @@ import { brandTitle, brandDescription } from "@/lib/brand-seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
 import { findFitModels } from "@/lib/fits-match";
+import { plural } from "@/lib/kit-filter";
 import { SearchHit } from "@/lib/smart-search";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
@@ -125,7 +126,7 @@ const BrandPage = () => {
           index="01"
           eyebrow="Подбор по марке"
           title={`Оборудование для ${brand.name}`}
-          note={`${items.length} позиций подходят для ${brand.name}. Модели: ${brand.models.join(", ")}. Совместимость проверена по штатным разъёмам и посадочному месту.`}
+          note={`${items.length} ${plural(items.length, "позиция подходит", "позиции подходят", "позиций подходят")} для ${brand.name}. Модели: ${brand.models.join(", ")}. Совместимость проверена по штатным разъёмам и посадочному месту.`}
         />
 
         <div className="rule-hair" />

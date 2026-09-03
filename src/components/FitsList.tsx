@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Vehicle } from '@/data/catalog';
+import { plural } from '@/lib/kit-filter';
 
 interface Props {
   brands: [string, string[]][];
@@ -92,7 +93,7 @@ const FitsList = ({ brands, vehicle }: Props) => {
           onClick={() => setExpanded((v) => !v)}
           className="mt-6 flex w-full items-center justify-center gap-2 border border-foreground px-6 py-3.5 font-head text-[0.8rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-primary hover:text-primary"
         >
-          {expanded ? 'Свернуть список' : `Показать ещё ${hidden} марок`}
+          {expanded ? 'Свернуть список' : `Показать ещё ${hidden} ${plural(hidden, 'марку', 'марки', 'марок')}`}
           <Icon name={expanded ? 'ChevronUp' : 'ChevronDown'} size={16} />
         </button>
       )}

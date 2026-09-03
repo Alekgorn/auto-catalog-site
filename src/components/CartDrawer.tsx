@@ -14,6 +14,7 @@ import {
   isUniversal,
   productImages,
 } from '@/data/catalog';
+import { plural } from '@/lib/kit-filter';
 import { loadVehicle } from '@/lib/vehicle';
 import { buildShareUrl } from '@/lib/share-kit';
 import ShareKitDialog from '@/components/share/ShareKitDialog';
@@ -114,7 +115,9 @@ const CartDrawer = () => {
               {step === 'form' ? 'Оформление заказа' : 'Ваш заказ'}
             </div>
             <div className="mt-1 font-head text-xl font-bold uppercase tracking-tight">
-              {count > 0 ? `${count} позиций` : 'Пусто'}
+              {count > 0
+                ? `${count} ${plural(count, 'позиция', 'позиции', 'позиций')}`
+                : 'Пусто'}
             </div>
           </div>
         </div>
