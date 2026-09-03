@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import LogoMark from "@/components/ui/logo-mark";
 import { Link } from "react-router-dom";
 import { useCatalog } from "@/context/CatalogContext";
@@ -12,28 +13,23 @@ const COLS: {
   route?: string;
 }[] = [
   {
+    /*
+     * Дубли склеены: «Доставка», «Оплата», «Возврат» и «О складе» вели
+     * в один и тот же блок на главной, а «Подключение с фото» и «Все
+     * инструкции» — на один адрес. Разных мест было пять, ссылок девять
+     */
     title: "Покупателю",
     links: [
       { label: "Подбор по авто", target: "select" },
-      { label: "Доставка", target: "delivery" },
-      { label: "Оплата", target: "delivery" },
-      { label: "Возврат", target: "delivery" },
-      { label: "Гарантия", target: "faq" },
+      { label: "Доставка и оплата", target: "delivery" },
+      { label: "Возврат и гарантия", target: "faq" },
+      { label: "Инструкции по установке", route: "/guides" },
     ],
     target: "select",
   },
   {
-    title: "Инструкции",
-    links: [
-      { label: "Подключение с фото", route: "/guides" },
-      { label: "Все инструкции", route: "/guides" },
-    ],
-    route: "/guides",
-  },
-  {
     title: "Компания",
     links: [
-      { label: "О складе", target: "delivery" },
       { label: "Контакты", target: "contacts" },
       { label: "Для установщиков", target: "contacts" },
     ],
@@ -49,6 +45,19 @@ const hrefFor = (col: { target?: string; route?: string }) =>
 
 const Footer = () => {
   const { products, contacts, categories, brands } = useCatalog();
+
+  /*
+   * Показываем только марки, под которые есть товары: у остальных нет
+   * готовой страницы, и ссылка вела бы в пустоту. Тот же отбор делает
+   * сборщик страниц, поэтому подвал и карта сайта не расходятся
+   */
+  const liveBrands = useMemo(
+    () =>
+      brands.filter((b) =>
+        products.some((p) => (p.fits?.[b.name] ?? []).length > 0),
+      ),
+    [brands, products],
+  );
 
   return (
     <footer className="section-pad bg-background">
@@ -132,16 +141,22 @@ const Footer = () => {
         </div>
       </div>
 
-      {brands.length > 0 && (
+      {liveBrands.length > 0 && (
         <>
           <div className="rule-hair" />
           <nav aria-label="Подбор по маркам" className="py-6">
             <div className="eyebrow">Оборудование по маркам авто</div>
             <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[0.82rem]">
-              {brands.map((b) => (
+              {liveBrands.map((b) => (
                 <li key={b.name}>
                   <Link
-                    to={`/scenario/vse-po-mashine?brand=${encodeURIComponent(b.name)}`}
+                    /*
+                     * Ведём на готовую страницу марки. Раньше ссылка шла на
+                     * подбор с параметром — такого адреса нет в карте сайта,
+                     * поисковик по нему не ходил, и вес на страницы марок
+                     * не передавался
+                     */
+                    to={`/brand/${slugify(b.name)}`}
                     onClick={() => window.scrollTo({ top: 0 })}
                     className="text-muted-foreground transition-colors hover:text-primary"
                   >
@@ -154,27 +169,12 @@ const Footer = () => {
         </>
       )}
 
-      {products.length > 0 && (
-        <>
-          <div className="rule-hair" />
-          <nav aria-label="Все товары" className="py-6">
-            <div className="eyebrow">Популярные позиции</div>
-            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[0.82rem]">
-              {products.slice(0, 24).map((p) => (
-                <li key={p.id}>
-                  <Link
-                    to={`/product/${p.id}`}
-                    onClick={() => window.scrollTo({ top: 0 })}
-                    className="text-muted-foreground transition-colors hover:text-primary"
-                  >
-                    {p.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        </>
-      )}
+      {/*
+       * Блок «Популярные позиции» убран. Он выводил первые 24 товара из
+       * базы без сортировки по спросу — на деле разъёмы и переходники по
+       * 270 ₽. Подвал каждой страницы предлагал самое дешёвое вместо
+       * сборки, на которой держится заработок
+       */}
 
       <div className="rule-hair" />
       <div className="grid grid-cols-1 gap-x-6 py-5 text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground md:grid-cols-12">
