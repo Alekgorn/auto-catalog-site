@@ -96,7 +96,8 @@ def handler(event: dict, context) -> dict:
         # Настройки подбора проводки по машинам: где проводка известна точно,
         # покупателю вопросов не задаём
         cur.execute(
-            f"SELECT brand, model, year_from, year_to, mode, wire_slug, ask, wheel "
+            f"SELECT brand, model, year_from, year_to, mode, wire_slug, ask, wheel, "
+            f"bodies, reason "
             f"FROM {schema}.vehicle_wiring"
         )
         vehicle_wiring = [
@@ -108,6 +109,8 @@ def handler(event: dict, context) -> dict:
                 'wireSlug': v['wire_slug'],
                 'ask': v['ask'] or {},
                 'wheel': v['wheel'] or '',
+                'bodies': v['bodies'] or [],
+                'reason': v['reason'] or '',
             }
             for v in cur.fetchall()
         ]

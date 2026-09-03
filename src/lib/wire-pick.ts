@@ -27,6 +27,8 @@ export interface VehicleWiring {
   ask: Record<string, boolean>;
   /** Сторона руля машины. Пусто — бывают оба варианта */
   wheel?: '' | 'left' | 'right';
+  /** Кузова этого поколения. Пусто — любой */
+  bodies?: BodyType[];
   /** Почему выбрана эта проводка — показываем покупателю */
   reason?: string;
 }
@@ -189,8 +191,14 @@ export const pickWires = (
   // Ни одного размеченного варианта — показывать нечего, отдаём старый список
   if (!marked.length) return empty;
 
-  // Кузов знаем из рамки — вопрос покупателю не нужен
-  const knownBody = answers.body ?? bodyFromFrame(frame);
+  /*
+   * Кузов берём из трёх мест по убыванию точности: ответ покупателя,
+   * настройка поколения (Civic после 2011 — только седан) и выбранная
+   * рамка. Знаем хоть откуда — вопрос не задаём.
+   */
+  const generationBody =
+    wiring?.bodies?.length === 1 ? wiring.bodies[0] : null;
+  const knownBody = answers.body ?? generationBody ?? bodyFromFrame(frame);
 
   let left = marked.filter(
     (p) =>
@@ -203,8 +211,9 @@ export const pickWires = (
 
   // Кузов спрашиваем первым: его покупатель знает точно, в отличие от
   // усилителя и CAN-шины
+  const allowed = wiring?.bodies?.length ? wiring.bodies : modelBodies;
   const bodies = bodySplits(left).filter(
-    (b) => !modelBodies.length || modelBodies.includes(b),
+    (b) => !allowed.length || allowed.includes(b),
   );
   let question: WireQuestion | null = null;
   if (bodies.length > 1 && !knownBody) {
