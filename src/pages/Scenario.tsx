@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 import Header from "@/components/Header";
@@ -81,7 +81,31 @@ const ScenarioPage = () => {
    * Пропущенные шаги держим там же: панель по ним понимает, что покупатель
    * принял решение по каждому шагу и комплект действительно собран.
    */
-  const { picks, begin, pick: pickForKit, skipped, setSkipped } = useKit();
+  const {
+    picks,
+    begin,
+    pick: pickForKit,
+    skipped,
+    setSkipped,
+    reset: resetKit,
+  } = useKit();
+
+  /*
+   * Сменил машину — старый комплект больше не годится.
+   *
+   * Рамка и магнитола подбираются под конкретную модель и год: рамка от
+   * Соляриса на Рио не встанет. Оставлять их выбранными нельзя — человек
+   * поменял год, увидел «выбрано» и пошёл оформлять чужой комплект.
+   * Сбрасываем всё, кроме первого захода: там ещё нечего терять.
+   */
+  const lastCar = useRef<string | null>(null);
+  useEffect(() => {
+    const key = vehicle
+      ? `${vehicle.brand}|${vehicle.model}|${vehicle.year}`
+      : null;
+    if (lastCar.current !== null && lastCar.current !== key) resetKit();
+    lastCar.current = key;
+  }, [vehicle, resetKit]);
 
   useEffect(() => {
     if (scenario?.kit) begin(scenario.slug, scenario.kit);
