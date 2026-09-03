@@ -6,7 +6,7 @@ import KitNoFrames from "@/components/kit/KitNoFrames";
 import KitWiring from "@/components/kit/KitWiring";
 import { useCatalog } from "@/context/CatalogContext";
 import { modelBodyTypes } from "@/data/catalog";
-import { pickWires } from "@/lib/wire-pick";
+import { pickWires, findWiring } from "@/lib/wire-pick";
 import {
   FRAMES_CATEGORY,
   WIRES_CATEGORY,
@@ -67,7 +67,7 @@ const ScenarioKit = ({
   onNeedLead,
   onSkip,
 }: Props) => {
-  const { brands } = useCatalog();
+  const { brands, vehicleWiring } = useCatalog();
   /*
    * Комплект держится на переходной рамке: без неё магнитоле некуда встать.
    * Если под выбранную машину рамок нет, выбирать нечего ни на одном шаге —
@@ -129,6 +129,7 @@ const ScenarioKit = ({
           vehicle,
           {},
           modelBodyTypes(brands, vehicle.brand, vehicle.model),
+          findWiring(vehicleWiring, vehicle),
         ).fallback;
 
       return (
@@ -140,6 +141,7 @@ const ScenarioKit = ({
               products={products.filter((p) => p.category === step.category)}
               vehicle={vehicle}
               modelBodies={modelBodyTypes(brands, vehicle!.brand, vehicle!.model)}
+              wiring={findWiring(vehicleWiring, vehicle!)}
               pickedId={picks[step.category]}
               onPick={onPick}
             />

@@ -92,6 +92,24 @@ def handler(event: dict, context) -> dict:
             for b in cur.fetchall()
         ]
 
+        # Настройки подбора проводки по машинам: где проводка известна точно,
+        # покупателю вопросов не задаём
+        cur.execute(
+            f"SELECT brand, model, year_from, year_to, mode, wire_slug, ask "
+            f"FROM {schema}.vehicle_wiring"
+        )
+        vehicle_wiring = [
+            {
+                'brand': v['brand'],
+                'model': v['model'],
+                'years': [v['year_from'], v['year_to']],
+                'mode': v['mode'],
+                'wireSlug': v['wire_slug'],
+                'ask': v['ask'] or {},
+            }
+            for v in cur.fetchall()
+        ]
+
         cur.execute(
             f"SELECT id, slug, title, excerpt, cover, duration, difficulty, tools, blocks "
             f"FROM {schema}.guides WHERE is_active = TRUE ORDER BY sort_order, id"
@@ -150,6 +168,7 @@ def handler(event: dict, context) -> dict:
         {
             'products': products,
             'brands': brands,
+            'vehicleWiring': vehicle_wiring,
             'categories': category_rows,
             'categorySpecs': category_specs,
             'guides': guides,

@@ -2561,6 +2561,76 @@ def handler(event: dict, context) -> dict:
 
             cur.close()
 
+        if action == 'vehicle-wiring' and method == 'GET':
+            # Настройки подбора проводки по машинам — для вкладки «Марки»
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"SELECT brand, model, year_from, year_to, mode, wire_slug, "
+                f"reason, ask FROM {schema()}.vehicle_wiring ORDER BY brand, model"
+            )
+            rows = [
+                {
+                    'brand': r['brand'],
+                    'model': r['model'],
+                    'yearFrom': r['year_from'],
+                    'yearTo': r['year_to'],
+                    'mode': r['mode'],
+                    'wireSlug': r['wire_slug'],
+                    'reason': r['reason'],
+                    'ask': r['ask'] or {},
+                }
+                for r in cur.fetchall()
+            ]
+            # Список проводок для выпадающего выбора
+            cur.execute(
+                f"SELECT slug, name, price FROM {schema()}.products "
+                f"WHERE category = {q(WIRES_CATEGORY)} AND is_active "
+                f"ORDER BY name"
+            )
+            wires = [
+                {'slug': w['slug'], 'name': w['name'], 'price': w['price']}
+                for w in cur.fetchall()
+            ]
+            cur.close()
+            return resp(200, {'rows': rows, 'wires': wires})
+
+        if action == 'vehicle-wiring' and method == 'PUT':
+            # Одна машина за раз: правка точечная, всю таблицу не трогаем
+            brand = str(body.get('brand') or '').strip()
+            model = str(body.get('model') or '').strip()
+            if not brand or not model:
+                return resp(400, {'error': 'Не указана машина'})
+            mode = body.get('mode')
+            cur = conn.cursor()
+            if not mode:
+                # Пустой режим — настройка снята, строка не нужна
+                cur.execute(
+                    f"DELETE FROM {schema()}.vehicle_wiring "
+                    f"WHERE brand = {q(brand)} AND model = {q(model)}"
+                )
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True, 'removed': True})
+            if mode not in WIRE_MODES:
+                return resp(400, {'error': 'Неизвестный режим подбора'})
+            ask = body.get('ask') or {}
+            cur.execute(
+                f"INSERT INTO {schema()}.vehicle_wiring "
+                f"(brand, model, year_from, year_to, mode, wire_slug, reason, ask) "
+                f"VALUES ({q(brand)}, {q(model)}, "
+                f"{qint(body.get('yearFrom'), 1990)}, "
+                f"{qint(body.get('yearTo'), 2100)}, {q(mode)}, "
+                f"{q(str(body.get('wireSlug') or '')[:160])}, "
+                f"{q(str(body.get('reason') or '')[:600])}, "
+                f"{qjson({k: bool(ask.get(k)) for k in ('amp', 'camera', 'can')})}) "
+                f"ON CONFLICT (brand, model, year_from, year_to) DO UPDATE SET "
+                f"mode = EXCLUDED.mode, wire_slug = EXCLUDED.wire_slug, "
+                f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, updated_at = NOW()"
+            )
+            conn.commit()
+            cur.close()
+            return resp(200, {'ok': True})
+
         if action == 'brands' and method == 'PUT':
             brands = body.get('brands', [])
             cur = conn.cursor()
