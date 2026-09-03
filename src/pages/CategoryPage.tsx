@@ -17,6 +17,7 @@ import { categoryTitle, categoryDescription } from "@/lib/category-seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
 import { formatPrice } from "@/data/catalog";
+import { plural } from "@/lib/kit-filter";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const SORTS: { key: SortKey; label: string }[] = [
@@ -230,7 +231,7 @@ const CategoryPage = () => {
           index="01"
           eyebrow="Категория"
           title={category}
-          note={`В категории ${items.length} позиций${
+          note={`В категории ${items.length} ${plural(items.length, "позиция", "позиции", "позиций")}${
             minPrice ? `, цены начинаются от ${formatPrice(minPrice)}` : ""
           }. Подберите оборудование по марке и модели автомобиля — совместимость проверена по штатным разъёмам.`}
         />
