@@ -11,6 +11,8 @@ interface Props {
 const ImageOptimizer = ({ onDone }: Props) => {
   const { toast } = useToast();
   const [left, setLeft] = useState<number | null>(null);
+  /** Фото на чужих сайтах — их сначала переносят, сжать их нельзя */
+  const [external, setExternal] = useState(0);
   const [total, setTotal] = useState(0);
   const [running, setRunning] = useState(false);
   const [saved, setSaved] = useState(0);
@@ -21,6 +23,7 @@ const ImageOptimizer = ({ onDone }: Props) => {
     if (!res.ok) return;
     const data = await res.json();
     setLeft(data.left ?? 0);
+    setExternal(data.external ?? 0);
   }, []);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ const ImageOptimizer = ({ onDone }: Props) => {
       const data = await res.json();
       remaining = data.left ?? 0;
       converted += data.saved ?? 0;
+      setExternal(data.external ?? 0);
       setLeft(remaining);
       setSaved(converted);
       stuck = data.saved ? 0 : stuck + 1;
@@ -96,8 +100,17 @@ const ImageOptimizer = ({ onDone }: Props) => {
               ) : (
                 <span className="inline-flex items-center gap-1.5 text-success">
                   <Icon name="Check" size={15} strokeWidth={3} />
-                  Все фотографии уже оптимизированы
+                  Все наши фотографии уже оптимизированы
                 </span>
+              )}
+              {external > 0 && (
+                // Сжимать чужие снимки мы не можем — сначала перенос.
+                // Без этой строки счётчик выглядел бы сломанным
+                <div className="mt-1 text-[0.82rem] text-muted-foreground">
+                  Ещё <b>{external}</b> фото хранятся на сайте поставщика — их
+                  сначала нужно перенести к нам, кнопка ниже. После переноса
+                  они сжимаются сразу.
+                </div>
               )}
             </div>
           )}
