@@ -6,6 +6,7 @@ export type AdminTab =
   | "brands"
   | "categories"
   | "fits"
+  | "wiring"
   | "audit"
   | "missing-fit"
   | "site"
@@ -55,6 +56,7 @@ const AdminTabs = ({
             ? `Совместимость (${fitsIssues})`
             : "Совместимость",
         ],
+        ["wiring", "Подбор проводки"],
         [
           "audit",
           dataIssues > 0 ? `Проверка данных (${dataIssues})` : "Проверка данных",

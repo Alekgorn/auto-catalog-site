@@ -35,6 +35,45 @@ BODY_TYPES = (
 # Как товар подбирается покупателю
 FIT_MODES = ('vehicle', 'universal')
 
+# Подбор проводки. Два РАЗНЫХ блока, и путать их нельзя:
+#
+#   WIRE_TECH  — с чем проводка умеет работать. Это фильтр: если у машины
+#                штатный усилитель, а проводка на него не рассчитана, вариант
+#                вообще не показываем.
+#   WIRE_KEEPS — что останется работать у клиента после установки. Это не
+#                фильтр, а объяснение цены: дешёвый переходник запустит
+#                магнитолу, но климат с экрана пропадёт. Такой товар мы
+#                показываем — но честно помечаем, что теряется.
+WIRE_TECH = ('power', 'sound', 'wheel', 'amp', 'camera', 'can')
+WIRE_KEEPS = ('climate', 'wheel', 'camera', 'amp', 'parktronic')
+
+# yes — рассчитана на машины с этим, no — на машины без,
+# any — параметр не влияет на совместимость (экономит вопрос покупателю)
+WIRE_TECH_VALUES = ('yes', 'no', 'any')
+
+# full — сохраняет всё нужное, basic — часть функций теряется,
+# limited — существенные ограничения
+WIRE_LEVELS = ('full', 'basic', 'limited')
+
+# fixed — проводка для машины известна точно, вопросов не задаём
+# select — вариантов несколько, уточняем по отмеченным параметрам
+WIRE_MODES = ('fixed', 'select')
+
+
+def clean_wire_tech(raw: dict) -> dict:
+    """Оставляем только известные параметры с допустимыми значениями."""
+    out = {}
+    for key in WIRE_TECH:
+        val = str((raw or {}).get(key) or '').strip().lower()
+        if val in WIRE_TECH_VALUES:
+            out[key] = val
+    return out
+
+
+def clean_wire_keeps(raw: dict) -> dict:
+    """Сохраняемые функции — простые да/нет."""
+    return {k: bool((raw or {}).get(k)) for k in WIRE_KEEPS if k in (raw or {})}
+
 
 """
 Каталог перерос лимит ответа функции (4 МБ), поэтому большие ответы
@@ -433,6 +472,11 @@ def row_to_product(r: dict) -> dict:
         'fits': r['fits'],
         # Пусто — значит товар наследует умолчание своей категории
         'fitMode': r.get('fit_mode') or '',
+        # Подбор проводки: с чем работает / что сохраняет / почему такая цена
+        'wireTech': r.get('wire_tech') or {},
+        'wireKeeps': r.get('wire_keeps') or {},
+        'wireLevel': r.get('wire_level') or '',
+        'wireNote': r.get('wire_note') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -888,6 +932,422 @@ def build_brands_xlsx(brands: list) -> bytes:
     buf = io.BytesIO()
     wb.save(buf)
     return buf.getvalue()
+
+
+WIRES_CATEGORY = 'Переходники для подключения магнитол'
+FRAMES_CATEGORY = 'Переходные рамки для магнитол'
+
+# Подписи колонок файла подбора. Меняешь текст — поправь и разбор при импорте
+WIRE_TECH_TITLES = [
+    ('power', 'Питание'),
+    ('sound', 'Акустика'),
+    ('wheel', 'Кнопки руля'),
+    ('amp', 'Усилитель'),
+    ('camera', 'Камера'),
+    ('can', 'CAN'),
+]
+WIRE_KEEPS_TITLES = [
+    ('climate', 'Сохраняет климат'),
+    ('wheel', 'Сохраняет кнопки'),
+    ('camera', 'Сохраняет камеру'),
+    ('amp', 'Сохраняет усилитель'),
+    ('parktronic', 'Сохраняет парктроники'),
+]
+LEVEL_RU = {'full': 'Полная', 'basic': 'Базовая', 'limited': 'Ограниченная'}
+RU_LEVEL = {v.lower(): k for k, v in LEVEL_RU.items()}
+TECH_RU = {'yes': 'Да', 'no': 'Нет', 'any': 'Неважно'}
+RU_TECH = {'да': 'yes', 'нет': 'no', 'неважно': 'any'}
+MODE_RU = {'fixed': 'Фиксированный', 'select': 'Подбор'}
+RU_MODE = {v.lower(): k for k, v in MODE_RU.items()}
+
+
+def vehicle_rows(products: list, brands: list, scope: str) -> list:
+    """
+    Строки листа «Подбор проводки»: одна машина = одна строка.
+
+    Размечать все полторы тысячи моделей смысла нет. Комплект собирается
+    только там, где под машину есть и рамка, и проводка — без рамки
+    магнитоле некуда встать. А деньги теряются там, где к тому же
+    несколько проводок с большим разбросом цен: человек берёт дешёвую,
+    теряет штатную функцию и уходит. Такие машины поднимаем наверх.
+    """
+    wires, frames = {}, set()
+    for p in products:
+        cat = p.get('category') or ''
+        for brand, models in (p.get('fits') or {}).items():
+            for model in models or []:
+                key = (brand, model)
+                if cat == WIRES_CATEGORY:
+                    wires.setdefault(key, []).append(p)
+                elif cat == FRAMES_CATEGORY:
+                    frames.add(key)
+
+    known = set()
+    for b in brands:
+        for m in b.get('models') or []:
+            known.add((b['name'], m))
+
+    rows = []
+    for key in sorted(known):
+        ws = wires.get(key) or []
+        has_frame = key in frames
+        prices = [p.get('price') or 0 for p in ws if p.get('price')]
+        spread = (max(prices) - min(prices)) if len(prices) > 1 else 0
+        hot = (
+            has_frame
+            and len(ws) > 1
+            and spread > 1000
+            and max(prices) >= 3 * max(min(prices), 1)
+        )
+        if scope == 'hot' and not hot:
+            continue
+        if scope == 'kit' and not (has_frame and ws):
+            continue
+        if scope != 'all' and not ws:
+            continue
+        rows.append(
+            {
+                'brand': key[0],
+                'model': key[1],
+                'wires': len(ws),
+                'spread': spread,
+                'hot': hot,
+            }
+        )
+    # Сверху — где разброс цен больше: там сделки и срываются
+    rows.sort(key=lambda r: (-r['spread'], r['brand'], r['model']))
+    return rows
+
+
+def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> bytes:
+    """Файл для массовой разметки: проводки и настройки машин."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+    from openpyxl.worksheet.datavalidation import DataValidation
+
+    wb = Workbook()
+    white = Font(bold=True, color='FFFFFF', size=10)
+    dark = PatternFill('solid', fgColor='1B1B1B')
+    red = PatternFill('solid', fgColor='C8102E')
+    grey = PatternFill('solid', fgColor='6B7280')
+    mid = Alignment(vertical='center', wrap_text=True, horizontal='center')
+
+    # ---------- Лист 1: проводки ----------
+    ws = wb.active
+    ws.title = 'Проводки'
+    base = [
+        ('Код (не менять)', 34),
+        ('Название', 52),
+        ('Цена', 10),
+        ('Год с', 8),
+        ('Год по', 8),
+    ]
+    tech = [(t, 12) for _k, t in WIRE_TECH_TITLES]
+    keeps = [('Уровень', 14)] + [(t, 17) for _k, t in WIRE_KEEPS_TITLES]
+    tail = [('Описание совместимости (видит покупатель)', 60)]
+
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(base))
+    c = ws.cell(1, 1, 'Уже есть — не трогаете')
+    c.fill, c.font, c.alignment = grey, white, mid
+    p1 = len(base) + 1
+    ws.merge_cells(start_row=1, start_column=p1, end_row=1, end_column=p1 + len(tech) - 1)
+    c = ws.cell(1, p1, 'С чем работает — для каких машин проводка')
+    c.fill, c.font, c.alignment = red, white, mid
+    p2 = p1 + len(tech)
+    ws.merge_cells(
+        start_row=1, start_column=p2, end_row=1, end_column=p2 + len(keeps) + len(tail) - 1
+    )
+    c = ws.cell(1, p2, 'Что останется работать у клиента')
+    c.fill, c.font, c.alignment = red, white, mid
+
+    cols = base + tech + keeps + tail
+    for i, (title, width) in enumerate(cols, start=1):
+        cell = ws.cell(2, i, title)
+        cell.font, cell.fill, cell.alignment = white, dark, mid
+        ws.column_dimensions[get_column_letter(i)].width = width
+    ws.row_dimensions[2].height = 34
+    ws.freeze_panes = 'C3'
+
+    wires = [p for p in products if (p.get('category') or '') == WIRES_CATEGORY]
+    for r, p in enumerate(wires, start=3):
+        t = p.get('wireTech') or {}
+        k = p.get('wireKeeps') or {}
+        vals = [
+            p.get('slug', ''),
+            p.get('name', ''),
+            p.get('price', 0),
+            p.get('yearFrom', ''),
+            p.get('yearTo', ''),
+        ]
+        vals += [TECH_RU.get(t.get(key, ''), '') for key, _t in WIRE_TECH_TITLES]
+        vals += [LEVEL_RU.get(p.get('wireLevel') or '', '')]
+        vals += [
+            ('Да' if k[key] else 'Нет') if key in k else ''
+            for key, _t in WIRE_KEEPS_TITLES
+        ]
+        vals += [p.get('wireNote') or '']
+        for i, v in enumerate(vals, start=1):
+            cell = ws.cell(r, i, v)
+            cell.alignment = Alignment(vertical='top', wrap_text=i > len(base))
+
+    last = max(len(wires) + 3, 400)
+    dv = DataValidation(type='list', formula1='"Да,Нет,Неважно"', allow_blank=True)
+    ws.add_data_validation(dv)
+    dv.add(f'F3:{get_column_letter(p1 + len(tech) - 1)}{last}')
+    dv2 = DataValidation(
+        type='list', formula1='"Полная,Базовая,Ограниченная"', allow_blank=True
+    )
+    ws.add_data_validation(dv2)
+    dv2.add(f'{get_column_letter(p2)}3:{get_column_letter(p2)}{last}')
+    dv3 = DataValidation(type='list', formula1='"Да,Нет"', allow_blank=True)
+    ws.add_data_validation(dv3)
+    dv3.add(
+        f'{get_column_letter(p2 + 1)}3:'
+        f'{get_column_letter(p2 + len(WIRE_KEEPS_TITLES))}{last}'
+    )
+
+    # ---------- Лист 2: машины ----------
+    w2 = wb.create_sheet('Подбор проводки')
+    vcols = [
+        ('Проводок', 10),
+        ('Разброс цен', 13),
+        ('Марка', 16),
+        ('Модель', 20),
+        ('Год от', 9),
+        ('Год по', 9),
+        ('Тип подбора', 16),
+        ('Код проводки (для «Фиксированный»)', 34),
+        ('Обоснование (для своих)', 46),
+        ('Спросить про усилитель', 13),
+        ('Спросить про камеру', 13),
+        ('Спросить про CAN', 13),
+    ]
+    w2.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(vcols))
+    c = w2.cell(1, 1, 'Сверху машины с самым большим разбросом цен — начинайте с них')
+    c.fill, c.font, c.alignment = red, white, mid
+    for i, (title, width) in enumerate(vcols, start=1):
+        cell = w2.cell(2, i, title)
+        cell.font, cell.fill, cell.alignment = white, dark, mid
+        w2.column_dimensions[get_column_letter(i)].width = width
+    w2.row_dimensions[2].height = 34
+    w2.freeze_panes = 'E3'
+
+    have = {(s['brand'], s['model']): s for s in saved}
+    for r, row in enumerate(vehicle_rows(products, brands, scope), start=3):
+        s = have.get((row['brand'], row['model'])) or {}
+        ask = s.get('ask') or {}
+        vals = [
+            row['wires'],
+            row['spread'] or '',
+            row['brand'],
+            row['model'],
+            s.get('yearFrom') or '',
+            s.get('yearTo') or '',
+            MODE_RU.get(s.get('mode') or '', ''),
+            s.get('wireSlug') or '',
+            s.get('reason') or '',
+            'Да' if ask.get('amp') else '',
+            'Да' if ask.get('camera') else '',
+            'Да' if ask.get('can') else '',
+        ]
+        for i, v in enumerate(vals, start=1):
+            cell = w2.cell(r, i, v)
+            cell.alignment = Alignment(vertical='top', wrap_text=i in (4, 9))
+            if i <= 2:
+                cell.font = Font(color='888888', size=9)
+
+    dv4 = DataValidation(
+        type='list', formula1='"Фиксированный,Подбор"', allow_blank=True
+    )
+    w2.add_data_validation(dv4)
+    dv4.add('G3:G3000')
+    dv5 = DataValidation(type='list', formula1='"Да,Нет"', allow_blank=True)
+    w2.add_data_validation(dv5)
+    dv5.add('J3:L3000')
+
+    # ---------- Лист 3: подсказки ----------
+    w3 = wb.create_sheet('Как заполнять')
+    tips = [
+        ('ГЛАВНОЕ', ''),
+        (
+            'Два разных блока',
+            'На листе «Проводки» слева — «С чем работает»: для каких машин проводка '
+            'предназначена. Если не подходит — покупатель её вообще не увидит. '
+            'Справа — «Что останется работать»: товар показываем, но честно пишем, '
+            'что теряется. Не путайте эти блоки.',
+        ),
+        (
+            'Неважно',
+            'Ставьте, когда параметр не влияет на совместимость. Каждое «Неважно» — '
+            'это вопрос, который не придётся задавать покупателю.',
+        ),
+        (
+            'Уровень',
+            'Полная — сохраняет всё нужное. Базовая — магнитола работает, часть '
+            'функций теряется. Ограниченная — существенные ограничения.',
+        ),
+        (
+            'Описание совместимости',
+            'Этот текст УВИДИТ ПОКУПАТЕЛЬ. Пишите по-человечески: «магнитола '
+            'заработает, но климат на экране пропадёт».',
+        ),
+        ('', ''),
+        ('ЛИСТ «ПОДБОР ПРОВОДКИ»', ''),
+        (
+            'Сортировка',
+            'Сверху машины с самым большим разбросом цен между дешёвой и дорогой '
+            'проводкой — там клиенты и уходят. Идите сверху вниз, можно остановиться '
+            'в любой момент.',
+        ),
+        (
+            'Фиксированный',
+            'Знаете точную проводку — впишите её код с листа «Проводки». Вопросов '
+            'покупателю не будет.',
+        ),
+        (
+            'Подбор',
+            'Вариантов несколько. Отметьте «Да» только у тех параметров, которые '
+            'ДЕЙСТВИТЕЛЬНО решают, какую проводку брать.',
+        ),
+        (
+            'Важно про галки',
+            'Галка не значит «в машине есть камера». Галка значит «от камеры '
+            'зависит, какая проводка нужна».',
+        ),
+        (
+            'Годы',
+            'Если по годам проводки разные — сделайте несколько строк на одну '
+            'модель: Civic 2006-2011 и Civic 2012-2015. Пустые годы — правило '
+            'действует на все года.',
+        ),
+        (
+            'Пустые строки',
+            'Незаполненные строки просто пропускаются. Заполняйте столько, '
+            'сколько успеете.',
+        ),
+    ]
+    for r, (a, b) in enumerate(tips, start=1):
+        ca = w3.cell(r, 1, a)
+        cb = w3.cell(r, 2, b)
+        cb.alignment = Alignment(vertical='top', wrap_text=True)
+        if a and not b:
+            ca.fill, ca.font = dark, white
+        else:
+            ca.font = Font(bold=True, size=10)
+        ca.alignment = Alignment(vertical='top')
+        w3.row_dimensions[r].height = 42 if b else 22
+    w3.column_dimensions['A'].width = 28
+    w3.column_dimensions['B'].width = 95
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def parse_wiring_xlsx(data: bytes) -> dict:
+    """
+    Разбираем заполненный файл подбора.
+
+    Строки с ошибками не берём молча — возвращаем список проблем с номером
+    строки, чтобы человек понял, что именно поправить.
+    """
+    from openpyxl import load_workbook
+
+    wb = load_workbook(io.BytesIO(data), data_only=True)
+    wires, cars, problems = [], [], []
+
+    def cell(row, idx):
+        return str(row[idx].value or '').strip() if idx < len(row) else ''
+
+    if 'Проводки' in wb.sheetnames:
+        ws = wb['Проводки']
+        n_base = 5
+        for r, row in enumerate(ws.iter_rows(min_row=3), start=3):
+            slug = cell(row, 0)
+            if not slug:
+                continue
+            tech = {}
+            for i, (key, _t) in enumerate(WIRE_TECH_TITLES):
+                v = cell(row, n_base + i).lower()
+                if v and v in RU_TECH:
+                    tech[key] = RU_TECH[v]
+                elif v:
+                    problems.append(f'Проводки, строка {r}: «{v}» — пишите Да/Нет/Неважно')
+            p2 = n_base + len(WIRE_TECH_TITLES)
+            lvl_raw = cell(row, p2).lower()
+            level = RU_LEVEL.get(lvl_raw, '')
+            if lvl_raw and not level:
+                problems.append(
+                    f'Проводки, строка {r}: уровень «{lvl_raw}» — '
+                    f'пишите Полная/Базовая/Ограниченная'
+                )
+            keeps = {}
+            for i, (key, _t) in enumerate(WIRE_KEEPS_TITLES):
+                v = cell(row, p2 + 1 + i).lower()
+                if v in ('да', 'нет'):
+                    keeps[key] = v == 'да'
+                elif v:
+                    problems.append(f'Проводки, строка {r}: «{v}» — пишите Да или Нет')
+            wires.append(
+                {
+                    'slug': slug,
+                    'tech': tech,
+                    'keeps': keeps,
+                    'level': level,
+                    'note': cell(row, p2 + 1 + len(WIRE_KEEPS_TITLES))[:600],
+                }
+            )
+
+    if 'Подбор проводки' in wb.sheetnames:
+        ws = wb['Подбор проводки']
+        for r, row in enumerate(ws.iter_rows(min_row=3), start=3):
+            brand, model = cell(row, 2), cell(row, 3)
+            mode_raw = cell(row, 6).lower()
+            if not brand or not model or not mode_raw:
+                continue
+            mode = RU_MODE.get(mode_raw, '')
+            if not mode:
+                problems.append(
+                    f'Подбор, строка {r}: тип «{mode_raw}» — '
+                    f'пишите Фиксированный или Подбор'
+                )
+                continue
+
+            def year(idx, default):
+                raw = cell(row, idx)
+                if not raw:
+                    return default
+                try:
+                    return int(float(raw))
+                except ValueError:
+                    problems.append(f'Подбор, строка {r}: год «{raw}» — нужно число')
+                    return default
+
+            wire_slug = cell(row, 7)
+            if mode == 'fixed' and not wire_slug:
+                problems.append(
+                    f'Подбор, строка {r}: для «Фиксированный» нужен код проводки'
+                )
+                continue
+            cars.append(
+                {
+                    'brand': brand,
+                    'model': model,
+                    'yearFrom': year(4, 1990),
+                    'yearTo': year(5, 2100),
+                    'mode': mode,
+                    'wireSlug': wire_slug,
+                    'reason': cell(row, 8)[:600],
+                    'ask': {
+                        'amp': cell(row, 9).lower() == 'да',
+                        'camera': cell(row, 10).lower() == 'да',
+                        'can': cell(row, 11).lower() == 'да',
+                    },
+                }
+            )
+
+    return {'wires': wires, 'cars': cars, 'problems': problems}
 
 
 def parse_brands_xlsx(data: bytes) -> list:
@@ -2164,6 +2624,78 @@ def handler(event: dict, context) -> dict:
             data = build_xlsx(products, brands, categories)
             return resp(200, {'file': base64.b64encode(data).decode('ascii')})
 
+        if action == 'wiring-xlsx':
+            # scope: hot — только машины с большим разбросом цен (по умолчанию),
+            # kit — где собирается комплект, all — вообще все
+            scope = (params.get('scope') or 'hot').lower()
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(f"SELECT * FROM {schema()}.products ORDER BY sort_order, id")
+            products = [row_to_product(r) for r in cur.fetchall()]
+            cur.execute(f"SELECT name, models FROM {schema()}.brands ORDER BY sort_order, id")
+            brands = [{'name': b['name'], 'models': b['models']} for b in cur.fetchall()]
+            cur.execute(f"SELECT * FROM {schema()}.vehicle_wiring ORDER BY brand, model")
+            saved = [
+                {
+                    'brand': s['brand'],
+                    'model': s['model'],
+                    'yearFrom': s['year_from'],
+                    'yearTo': s['year_to'],
+                    'mode': s['mode'],
+                    'wireSlug': s['wire_slug'],
+                    'reason': s['reason'],
+                    'ask': s['ask'] or {},
+                }
+                for s in cur.fetchall()
+            ]
+            cur.close()
+            data = build_wiring_xlsx(products, brands, saved, scope)
+            return resp(200, {'file': base64.b64encode(data).decode('ascii')})
+
+        if action == 'wiring-import' and method == 'POST':
+            raw = base64.b64decode(body.get('file') or '')
+            parsed = parse_wiring_xlsx(raw)
+            cur = conn.cursor()
+            wires = updated = 0
+
+            for w in parsed['wires']:
+                if not (w['tech'] or w['keeps'] or w['level'] or w['note']):
+                    continue
+                cur.execute(
+                    f"UPDATE {schema()}.products SET "
+                    f"wire_tech = {qjson(w['tech'])}, "
+                    f"wire_keeps = {qjson(w['keeps'])}, "
+                    f"wire_level = {q(w['level'])}, "
+                    f"wire_note = {q(w['note'])} "
+                    f"WHERE slug = {q(w['slug'])}"
+                )
+                wires += cur.rowcount
+
+            for c in parsed['cars']:
+                cur.execute(
+                    f"INSERT INTO {schema()}.vehicle_wiring "
+                    f"(brand, model, year_from, year_to, mode, wire_slug, reason, ask) "
+                    f"VALUES ({q(c['brand'])}, {q(c['model'])}, "
+                    f"{qint(c['yearFrom'], 1990)}, {qint(c['yearTo'], 2100)}, "
+                    f"{q(c['mode'])}, {q(c['wireSlug'])}, {q(c['reason'])}, "
+                    f"{qjson(c['ask'])}) "
+                    f"ON CONFLICT (brand, model, year_from, year_to) DO UPDATE SET "
+                    f"mode = EXCLUDED.mode, wire_slug = EXCLUDED.wire_slug, "
+                    f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, "
+                    f"updated_at = NOW()"
+                )
+                updated += 1
+
+            conn.commit()
+            cur.close()
+            return resp(
+                200,
+                {
+                    'wires': wires,
+                    'cars': updated,
+                    'problems': parsed['problems'][:100],
+                },
+            )
+
         if action == 'supplier-scan':
             # Читаем прайс поставщика и сверяем с каталогом по артикулу:
             # что новинка, а что у нас уже есть
@@ -2509,6 +3041,14 @@ def handler(event: dict, context) -> dict:
                 'fit_mode': q(
                     body.get('fitMode') if body.get('fitMode') in FIT_MODES else ''
                 ),
+                'wire_tech': qjson(clean_wire_tech(body.get('wireTech') or {})),
+                'wire_keeps': qjson(clean_wire_keeps(body.get('wireKeeps') or {})),
+                'wire_level': q(
+                    body.get('wireLevel')
+                    if body.get('wireLevel') in WIRE_LEVELS
+                    else ''
+                ),
+                'wire_note': q(str(body.get('wireNote') or '')[:600]),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

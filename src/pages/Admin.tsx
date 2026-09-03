@@ -17,6 +17,7 @@ import GuideEditor, {
 import SettingsPanel from "@/components/admin/SettingsPanel";
 import SupplierPanel from "@/components/admin/SupplierPanel";
 import DataAuditPanel from "@/components/admin/DataAuditPanel";
+import WiringPanel from "@/components/admin/WiringPanel";
 import { auditProducts } from "@/lib/data-audit";
 import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
@@ -433,6 +434,8 @@ const Admin = () => {
             onEdit={setEditing}
           />
         )}
+
+        {tab === "wiring" && <WiringPanel />}
 
         {tab === "audit" && (
           <DataAuditPanel products={products} onEdit={setEditing} />

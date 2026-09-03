@@ -67,6 +67,16 @@ export interface Product {
    * Приходит с сервера уже с учётом умолчания категории.
    */
   fitMode?: FitMode;
+  /**
+   * Подбор проводки. wireTech — для каких машин проводка (по нему прячем
+   * неподходящее), wireKeeps — что останется работать у клиента (по нему
+   * объясняем разницу в цене). Это разные вещи, объединять нельзя.
+   */
+  wireTech?: Record<string, 'yes' | 'no' | 'any'>;
+  wireKeeps?: Record<string, boolean>;
+  wireLevel?: 'full' | 'basic' | 'limited' | '';
+  /** Текст про сохранение функций — его видит покупатель */
+  wireNote?: string;
   years: [number, number];
   badge?: string;
   images?: string[];
