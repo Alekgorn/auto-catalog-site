@@ -24,8 +24,6 @@ const ComparePage = lazy(() => import('./pages/Compare'));
 /* Присланная сборка: страницу открывают по ссылке из переписки, поэтому
    заранее её никто не собирает и в общий код тянуть незачем */
 const SharedKitPage = lazy(() => import('./pages/SharedKit'));
-/* Макет блока «Подключение» на согласование — временная страница */
-const MockWiringPage = lazy(() => import('./pages/MockWiring'));
 
 /** Пока грузится страница — короткая заглушка вместо пустоты */
 const Loading = () => (
@@ -59,14 +57,6 @@ const AppRoutes = () => (
       element={
         <Suspense fallback={<Loading />}>
           <SharedKitPage />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/maket-podklyuchenie"
-      element={
-        <Suspense fallback={<Loading />}>
-          <MockWiringPage />
         </Suspense>
       }
     />

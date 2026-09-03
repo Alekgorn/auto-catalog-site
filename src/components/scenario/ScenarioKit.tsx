@@ -3,7 +3,15 @@ import KitRecommend from "@/components/kit/KitRecommend";
 import { Product, Vehicle } from "@/data/catalog";
 import { Scenario } from "@/data/scenarios";
 import KitNoFrames from "@/components/kit/KitNoFrames";
-import { FRAMES_CATEGORY, hasFramesForVehicle } from "@/lib/kit-filter";
+import KitWiring from "@/components/kit/KitWiring";
+import { useCatalog } from "@/context/CatalogContext";
+import { modelBodyTypes } from "@/data/catalog";
+import { pickWires } from "@/lib/wire-pick";
+import {
+  FRAMES_CATEGORY,
+  WIRES_CATEGORY,
+  hasFramesForVehicle,
+} from "@/lib/kit-filter";
 
 interface Props {
   /** Шаги сборки комплекта — есть не у каждого сценария */
@@ -59,6 +67,7 @@ const ScenarioKit = ({
   onNeedLead,
   onSkip,
 }: Props) => {
+  const { brands } = useCatalog();
   /*
    * Комплект держится на переходной рамке: без неё магнитоле некуда встать.
    * Если под выбранную машину рамок нет, выбирать нечего ни на одном шаге —
@@ -108,9 +117,34 @@ const ScenarioKit = ({
 
   return (
   <>
-    {kit.map((step, i) => (
+    {kit.map((step, i) => {
+      /* Проводки размечены — показываем умный подбор вместо списка
+         визуально похожих позиций. Не размечены — всё как раньше. */
+      const smart =
+        step.category === WIRES_CATEGORY &&
+        vehicle &&
+        !stepLocked(i) &&
+        !pickWires(
+          products.filter((p) => p.category === step.category),
+          vehicle,
+          {},
+          modelBodyTypes(brands, vehicle.brand, vehicle.model),
+        ).fallback;
+
+      return (
       <div key={step.category}>
         {i > 0 && <div className="rule-hair" />}
+        {smart ? (
+          <section id={stepId(i)} className="scroll-mt-24 py-11 md:py-14">
+            <KitWiring
+              products={products.filter((p) => p.category === step.category)}
+              vehicle={vehicle}
+              modelBodies={modelBodyTypes(brands, vehicle!.brand, vehicle!.model)}
+              pickedId={picks[step.category]}
+              onPick={onPick}
+            />
+          </section>
+        ) : (
         <KitSection
           step={step}
           products={products}
@@ -133,8 +167,10 @@ const ScenarioKit = ({
           skipped={!!skipped[step.category]}
           onSkip={(skip) => onSkip(i, step.category, skip)}
         />
+        )}
       </div>
-    ))}
+      );
+    })}
     <KitRecommend
       products={products}
       vehicle={vehicle}
