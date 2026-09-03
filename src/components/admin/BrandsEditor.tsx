@@ -3,7 +3,6 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { compareNames } from '@/lib/slug';
-import BrandBodiesEditor from '@/components/admin/BrandBodiesEditor';
 import BrandWiringEditor from '@/components/admin/BrandWiringEditor';
 import { BodyType } from '@/data/catalog';
 
@@ -25,7 +24,6 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
   const [list, setList] = useState<AdminBrand[]>(brands);
   const [busy, setBusy] = useState(false);
   /** У какой марки раскрыт список кузовов */
-  const [openBodies, setOpenBodies] = useState<number | null>(null);
   /** У какой марки раскрыт подбор проводки */
   const [openWiring, setOpenWiring] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -176,42 +174,6 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
             </div>
 
             <div className="md:col-span-12">
-              <button
-                onClick={() => setOpenBodies(openBodies === i ? null : i)}
-                className="flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-              >
-                <Icon
-                  name={openBodies === i ? 'ChevronDown' : 'ChevronRight'}
-                  size={13}
-                />
-                Типы кузова
-                {(() => {
-                  const done = b.models.filter(
-                    (m) => b.modelBodies?.[m]?.length,
-                  ).length;
-                  if (!b.models.length) return null;
-                  return done === b.models.length ? (
-                    <span className="normal-case tracking-normal opacity-70">
-                      · все {done}
-                    </span>
-                  ) : (
-                    <span className="normal-case tracking-normal text-primary">
-                      · {done} из {b.models.length}
-                    </span>
-                  );
-                })()}
-              </button>
-
-              {openBodies === i && (
-                <div className="mt-3 border-l-2 border-border pl-4">
-                  <BrandBodiesEditor
-                    models={b.models.filter(Boolean)}
-                    bodies={b.modelBodies ?? {}}
-                    onChange={(next) => update(i, { ...b, modelBodies: next })}
-                  />
-                </div>
-              )}
-
               <button
                 onClick={() => setOpenWiring(openWiring === i ? null : i)}
                 className="mt-2 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"

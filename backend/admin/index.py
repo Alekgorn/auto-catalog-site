@@ -2586,15 +2586,16 @@ def handler(event: dict, context) -> dict:
             cur.close()
 
         if action == 'vehicle-wiring' and method == 'GET':
-            # Настройки подбора проводки по машинам — для вкладки «Марки»
+            # Настройки подбора проводки — для вкладки «Марки»
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
-                f"SELECT brand, model, year_from, year_to, mode, wire_slug, "
-                f"reason, ask, wheel FROM {schema()}.vehicle_wiring "
-                f"ORDER BY brand, model"
+                f"SELECT id, brand, model, year_from, year_to, mode, wire_slug, "
+                f"reason, ask, wheel, bodies FROM {schema()}.vehicle_wiring "
+                f"ORDER BY brand, model, year_from"
             )
             rows = [
                 {
+                    'id': r['id'],
                     'brand': r['brand'],
                     'model': r['model'],
                     'yearFrom': r['year_from'],
@@ -2604,10 +2605,10 @@ def handler(event: dict, context) -> dict:
                     'reason': r['reason'],
                     'ask': r['ask'] or {},
                     'wheel': r['wheel'] or '',
+                    'bodies': r['bodies'] or [],
                 }
                 for r in cur.fetchall()
             ]
-            # Список проводок для выпадающего выбора
             cur.execute(
                 f"SELECT slug, name, price FROM {schema()}.products "
                 f"WHERE category = {q(WIRES_CATEGORY)} AND is_active "
@@ -2620,45 +2621,64 @@ def handler(event: dict, context) -> dict:
             cur.close()
             return resp(200, {'rows': rows, 'wires': wires})
 
-        if action == 'vehicle-wiring' and method == 'PUT':
-            # Одна машина за раз: правка точечная, всю таблицу не трогаем
+        if action == 'vehicle-wiring' and method == 'DELETE':
+            rid = qint(body.get('id'))
+            if rid == 'NULL':
+                return resp(400, {'error': 'Не указана строка'})
+            cur = conn.cursor()
+            cur.execute(
+                f"DELETE FROM {schema()}.vehicle_wiring WHERE id = {rid}"
+            )
+            conn.commit()
+            cur.close()
+            return resp(200, {'ok': True})
+
+        if action == 'vehicle-wiring' and method in ('PUT', 'POST'):
+            # Одно поколение машины за раз. У модели их может быть несколько:
+            # Civic до 2011 — хэтчбек, после — седан, и проводки разные
             brand = str(body.get('brand') or '').strip()
             model = str(body.get('model') or '').strip()
             if not brand or not model:
                 return resp(400, {'error': 'Не указана машина'})
             mode = body.get('mode')
-            cur = conn.cursor()
-            if not mode:
-                # Пустой режим — настройка снята, строка не нужна
-                cur.execute(
-                    f"DELETE FROM {schema()}.vehicle_wiring "
-                    f"WHERE brand = {q(brand)} AND model = {q(model)}"
-                )
-                conn.commit()
-                cur.close()
-                return resp(200, {'ok': True, 'removed': True})
             if mode not in WIRE_MODES:
                 return resp(400, {'error': 'Неизвестный режим подбора'})
             ask = body.get('ask') or {}
-            cur.execute(
-                f"INSERT INTO {schema()}.vehicle_wiring "
-                f"(brand, model, year_from, year_to, mode, wire_slug, reason, "
-                f"ask, wheel) "
-                f"VALUES ({q(brand)}, {q(model)}, "
-                f"{qint(body.get('yearFrom'), 1990)}, "
-                f"{qint(body.get('yearTo'), 2100)}, {q(mode)}, "
-                f"{q(str(body.get('wireSlug') or '')[:160])}, "
-                f"{q(str(body.get('reason') or '')[:600])}, "
-                f"{qjson({k: bool(ask.get(k)) for k in ('amp', 'camera', 'can')})}, "
-                f"{q(body.get('wheel') if body.get('wheel') in WHEEL_SIDES else '')}) "
-                f"ON CONFLICT (brand, model, year_from, year_to) DO UPDATE SET "
-                f"mode = EXCLUDED.mode, wire_slug = EXCLUDED.wire_slug, "
-                f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, "
-                f"wheel = EXCLUDED.wheel, updated_at = NOW()"
+            bodies = [
+                b for b in (body.get('bodies') or []) if b in BODY_TYPES
+            ]
+            fields = (
+                f"brand = {q(brand)}, model = {q(model)}, "
+                f"year_from = {qint(body.get('yearFrom'), 1990)}, "
+                f"year_to = {qint(body.get('yearTo'), 2100)}, "
+                f"mode = {q(mode)}, "
+                f"wire_slug = {q(str(body.get('wireSlug') or '')[:160])}, "
+                f"reason = {q(str(body.get('reason') or '')[:600])}, "
+                f"ask = {qjson({k: bool(ask.get(k)) for k in ('amp', 'camera', 'can')})}, "
+                f"wheel = {q(body.get('wheel') if body.get('wheel') in WHEEL_SIDES else '')}, "
+                f"bodies = {qjson(bodies)}, updated_at = NOW()"
             )
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            rid = qint(body.get('id'))
+            if rid != 'NULL':
+                cur.execute(
+                    f"UPDATE {schema()}.vehicle_wiring SET {fields} "
+                    f"WHERE id = {rid} RETURNING id"
+                )
+            else:
+                cur.execute(
+                    f"INSERT INTO {schema()}.vehicle_wiring (brand, model) "
+                    f"VALUES ({q(brand)}, {q(model)}) RETURNING id"
+                )
+                new_id = cur.fetchone()['id']
+                cur.execute(
+                    f"UPDATE {schema()}.vehicle_wiring SET {fields} "
+                    f"WHERE id = {new_id} RETURNING id"
+                )
+            row = cur.fetchone()
             conn.commit()
             cur.close()
-            return resp(200, {'ok': True})
+            return resp(200, {'ok': True, 'id': row['id'] if row else None})
 
         if action == 'brands' and method == 'PUT':
             brands = body.get('brands', [])
@@ -2848,18 +2868,35 @@ def handler(event: dict, context) -> dict:
                 wires += cur.rowcount
 
             for c in parsed['cars']:
+                # Строка уже есть на эти годы — обновляем, иначе добавляем.
+                # Ключа в БД больше нет: у модели бывает несколько поколений
                 cur.execute(
-                    f"INSERT INTO {schema()}.vehicle_wiring "
-                    f"(brand, model, year_from, year_to, mode, wire_slug, reason, ask) "
-                    f"VALUES ({q(c['brand'])}, {q(c['model'])}, "
-                    f"{qint(c['yearFrom'], 1990)}, {qint(c['yearTo'], 2100)}, "
-                    f"{q(c['mode'])}, {q(c['wireSlug'])}, {q(c['reason'])}, "
-                    f"{qjson(c['ask'])}) "
-                    f"ON CONFLICT (brand, model, year_from, year_to) DO UPDATE SET "
-                    f"mode = EXCLUDED.mode, wire_slug = EXCLUDED.wire_slug, "
-                    f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, "
-                    f"updated_at = NOW()"
+                    f"SELECT id FROM {schema()}.vehicle_wiring "
+                    f"WHERE brand = {q(c['brand'])} AND model = {q(c['model'])} "
+                    f"AND year_from = {qint(c['yearFrom'], 1990)} "
+                    f"AND year_to = {qint(c['yearTo'], 2100)} LIMIT 1"
                 )
+                found = cur.fetchone()
+                sets = (
+                    f"mode = {q(c['mode'])}, "
+                    f"wire_slug = {q(c['wireSlug'])}, "
+                    f"reason = {q(c['reason'])}, "
+                    f"ask = {qjson(c['ask'])}, updated_at = NOW()"
+                )
+                if found:
+                    cur.execute(
+                        f"UPDATE {schema()}.vehicle_wiring SET {sets} "
+                        f"WHERE id = {found[0]}"
+                    )
+                else:
+                    cur.execute(
+                        f"INSERT INTO {schema()}.vehicle_wiring "
+                        f"(brand, model, year_from, year_to, mode, wire_slug, "
+                        f"reason, ask) VALUES ({q(c['brand'])}, {q(c['model'])}, "
+                        f"{qint(c['yearFrom'], 1990)}, {qint(c['yearTo'], 2100)}, "
+                        f"{q(c['mode'])}, {q(c['wireSlug'])}, {q(c['reason'])}, "
+                        f"{qjson(c['ask'])})"
+                    )
                 updated += 1
 
             conn.commit()
