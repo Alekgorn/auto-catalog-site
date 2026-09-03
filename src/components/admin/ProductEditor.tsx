@@ -7,6 +7,7 @@ import { AdminProduct, emptyProduct } from '@/components/admin/product-editor/pr
 import ProductMainTab from '@/components/admin/product-editor/ProductMainTab';
 import ProductContentTab from '@/components/admin/product-editor/ProductContentTab';
 import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
+import ProductWiringTab from './product-editor/ProductWiringTab';
 import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
 import { keepOpenOnZoom } from '@/components/admin/ImageZoom';
 import { findFitKey, hasFitModel, sameFit } from '@/lib/fits-match';
@@ -46,11 +47,15 @@ const ProductEditor = ({
     extra: product.extra ?? [],
     extraTitle: product.extraTitle ?? '',
     fits: product.fits ?? {},
+    wireTech: product.wireTech ?? {},
+    wireKeeps: product.wireKeeps ?? {},
+    wireLevel: product.wireLevel ?? '',
+    wireNote: product.wireNote ?? '',
   });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [section, setSection] = useState<
-    'main' | 'content' | 'notes' | 'extra' | 'fits'
+    'main' | 'content' | 'notes' | 'extra' | 'fits' | 'wiring'
   >(
     'main',
   );
@@ -201,6 +206,7 @@ const ProductEditor = ({
               ['notes', 'Особенности'],
               ['extra', 'Свой раздел'],
               ['fits', 'Совместимость'],
+              ['wiring', 'Подключение'],
             ] as const
           ).map(([key, text]) => (
             <button
@@ -300,6 +306,8 @@ const ProductEditor = ({
               </div>
             </div>
           )}
+
+          {section === 'wiring' && <ProductWiringTab form={form} set={set} />}
 
           {section === 'fits' && (
             <ProductFitsTab
