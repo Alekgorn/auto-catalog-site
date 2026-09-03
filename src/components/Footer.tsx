@@ -187,8 +187,21 @@ const Footer = () => {
           © 2026 Штатно · {SELLER.shortName} · ИНН {SELLER.inn} · ОГРНИП{' '}
           {SELLER.ogrnip}
         </div>
-        <div className="mt-2 md:col-span-5 md:mt-0 md:text-right">
-          Цены на сайте не являются публичной офертой
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 md:col-span-5 md:mt-0 md:justify-end">
+          <Link
+            to="/oferta"
+            onClick={() => window.scrollTo({ top: 0 })}
+            className="transition-colors hover:text-primary"
+          >
+            Оферта
+          </Link>
+          <Link
+            to="/privacy"
+            onClick={() => window.scrollTo({ top: 0 })}
+            className="transition-colors hover:text-primary"
+          >
+            Обработка данных
+          </Link>
         </div>
       </div>
     </footer>

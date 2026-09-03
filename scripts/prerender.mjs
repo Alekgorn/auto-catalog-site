@@ -384,7 +384,7 @@ const applySeoToHtml = (html, seo, url) => {
 
 /** Убираем ранее сгенерированные страницы, чтобы не копить мусор. */
 const cleanOld = async () => {
-  for (const dir of ['product', 'guides', 'catalog', 'brand']) {
+  for (const dir of ['product', 'guides', 'catalog', 'brand', 'oferta', 'privacy']) {
     await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
   }
   // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
@@ -462,6 +462,11 @@ const main = async () => {
   const routes = [
     '/',
     '/guides',
+    // Оферта и политика данных: на них ссылается подвал каждой страницы
+    // и галочка согласия в формах — без предрендера поисковик и
+    // модерация Директа увидят пустую страницу
+    '/oferta',
+    '/privacy',
     // Страницы «подбор по задаче»: на них ведут ссылки с главной и из меню,
     // но раньше они не готовились заранее — поисковик видел пустую страницу
     ...(scenarioSlugs ?? []).map((slug) => `/scenario/${slug}`),

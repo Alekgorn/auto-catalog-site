@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import ConsentCheck from '@/components/ConsentCheck';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Product, Vehicle, formatPrice, productSku } from '@/data/catalog';
@@ -16,12 +17,15 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
   const { toast } = useToast();
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentError, setConsentError] = useState(false);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
     if (open) {
       setError(null);
+      setConsentError(false);
     }
   }, [open]);
 
@@ -29,6 +33,12 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
     e.preventDefault();
     if (name.trim().length < 2) return setError('Укажите имя');
     if (phone.replace(/\D/g, '').length < 10) return setError('Укажите телефон');
+    // Без согласия данные принимать нельзя — это требование закона
+    if (!consent) {
+      setError(null);
+      return setConsentError(true);
+    }
+    setConsentError(false);
     setError(null);
     setSending(true);
 
@@ -57,6 +67,7 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
     });
     setName('');
     setPhone('');
+    setConsent(false);
   };
 
   const inputClass =
@@ -121,10 +132,22 @@ const RequestDialog = ({ open, onOpenChange, product, vehicle }: Props) => {
               />
             </div>
             {error && <div className="mt-3 text-[0.8rem] text-primary">{error}</div>}
+
+            <ConsentCheck
+              id="request"
+              checked={consent}
+              onChange={(v) => {
+                setConsent(v);
+                if (v) setConsentError(false);
+              }}
+              error={consentError}
+              className="mt-6"
+            />
+
             <button
               type="submit"
               disabled={sending}
-              className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+              className="mt-5 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
             >
               {sending ? 'Отправляем…' : 'Отправить'}
               <Icon name="ArrowRight" size={18} />

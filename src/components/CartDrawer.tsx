@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
+import ConsentCheck from '@/components/ConsentCheck';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/context/CartContext';
@@ -41,7 +42,9 @@ const CartDrawer = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [consentError, setConsentError] = useState(false);
   const [sending, setSending] = useState(false);
 
   const inputClass =
@@ -59,6 +62,12 @@ const CartDrawer = () => {
     e.preventDefault();
     if (name.trim().length < 2) return setError('Укажите имя');
     if (phone.replace(/\D/g, '').length < 10) return setError('Укажите телефон');
+    // Без согласия данные принимать нельзя — это требование закона
+    if (!consent) {
+      setError(null);
+      return setConsentError(true);
+    }
+    setConsentError(false);
     setError(null);
     setSending(true);
 
@@ -363,10 +372,22 @@ const CartDrawer = () => {
                 />
               </div>
               {error && <div className="mt-3 text-[0.8rem] text-primary">{error}</div>}
+
+              <ConsentCheck
+                id="cart"
+                checked={consent}
+                onChange={(v) => {
+                  setConsent(v);
+                  if (v) setConsentError(false);
+                }}
+                error={consentError}
+                className="mt-6"
+              />
+
               <button
                 type="submit"
                 disabled={sending}
-                className="mt-7 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+                className="mt-5 flex w-full items-center justify-between bg-foreground px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-background transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
               >
                 {sending ? 'Отправляем…' : 'Отправить заказ'}
                 <Icon name="ArrowRight" size={18} />
