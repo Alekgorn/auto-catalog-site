@@ -968,6 +968,25 @@ BODY_RU = {
     'cabrio': 'Кабриолет',
 }
 RU_BODY = {v.lower(): k for k, v in BODY_RU.items()}
+# Живые написания: «хэтчбэк», «хетчбек», «джип» — человек пишет как привык,
+# а файл из-за одной буквы ругаться не должен
+RU_BODY.update(
+    {
+        'хэтчбэк': 'hatchback',
+        'хетчбек': 'hatchback',
+        'хетчбэк': 'hatchback',
+        'хэтчбек 5 дв': 'hatchback',
+        'хэтчбэк 5 дв': 'hatchback',
+        'лифтбэк': 'liftback',
+        'вагон': 'wagon',
+        'кроссовер': 'suv',
+        'джип': 'suv',
+        'внедорожник/кроссовер': 'suv',
+        'минивен': 'minivan',
+        'вэн': 'van',
+        'кабрио': 'cabrio',
+    }
+)
 
 LEVEL_RU = {'full': 'Полная', 'basic': 'Базовая', 'limited': 'Ограниченная'}
 RU_LEVEL = {v.lower(): k for k, v in LEVEL_RU.items()}
@@ -1114,6 +1133,17 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
     dv = DataValidation(type='list', formula1='"Да,Нет,Неважно"', allow_blank=True)
     ws.add_data_validation(dv)
     dv.add(f'F3:{get_column_letter(p1 + len(tech) - 1)}{last}')
+    # Один кузов выбирается из списка. Несколько (редкий случай) — руками
+    # через запятую, поэтому запрет на ввод своего значения не ставим
+    dv_body = DataValidation(
+        type='list',
+        formula1='"' + ','.join(BODY_RU.values()) + '"',
+        allow_blank=True,
+        showErrorMessage=False,
+    )
+    ws.add_data_validation(dv_body)
+    dv_body.add(f'{get_column_letter(p2)}3:{get_column_letter(p2)}{last}')
+
     dv2 = DataValidation(
         type='list', formula1='"Полная,Базовая,Ограниченная"', allow_blank=True
     )
