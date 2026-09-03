@@ -17,6 +17,33 @@ export interface WireQuestion {
   bodies?: BodyType[];
 }
 
+/** Настройка подбора для машины — из вкладки «Марки» */
+export interface VehicleWiring {
+  brand: string;
+  model: string;
+  years: [number, number];
+  mode: 'fixed' | 'select';
+  wireSlug: string;
+  ask: Record<string, boolean>;
+}
+
+/** Настройка для конкретной машины: марка, модель и попадание в годы */
+export const findWiring = (
+  list: VehicleWiring[],
+  vehicle: Vehicle | null,
+): VehicleWiring | null => {
+  if (!vehicle) return null;
+  return (
+    list.find(
+      (v) =>
+        v.brand.toLowerCase() === vehicle.brand.toLowerCase() &&
+        v.model.toLowerCase() === vehicle.model.toLowerCase() &&
+        vehicle.year >= v.years[0] &&
+        vehicle.year <= v.years[1],
+    ) ?? null
+  );
+};
+
 export interface WirePick {
   /** Полностью размеченные варианты: их показываем по-новому */
   full: Product[];
@@ -105,6 +132,7 @@ export const pickWires = (
   vehicle: Vehicle | null,
   answers: WireAnswers,
   modelBodies: BodyType[] = [],
+  wiring: VehicleWiring | null = null,
 ): WirePick => {
   const empty: WirePick = {
     full: [],
@@ -115,6 +143,24 @@ export const pickWires = (
   if (!vehicle) return empty;
 
   const fits = products.filter((p) => isCompatible(p, vehicle));
+
+  /*
+   * Машина помечена как «фиксированная» — проводка известна точно.
+   * Спрашивать про усилитель и CAN-шину незачем: решение уже принято
+   * человеком, который разбирается. Каждый лишний вопрос теряет покупателя.
+   */
+  if (wiring?.mode === 'fixed' && wiring.wireSlug) {
+    const one = fits.find((p) => p.id === wiring.wireSlug);
+    if (one) {
+      return {
+        full: [one],
+        budget: fits.filter((p) => p.id !== one.id && isMarked(p)),
+        question: null,
+        fallback: false,
+      };
+    }
+  }
+
   const marked = fits.filter(isMarked);
   // Ни одного размеченного варианта — показывать нечего, отдаём старый список
   if (!marked.length) return empty;
@@ -143,7 +189,11 @@ export const pickWires = (
     };
   } else {
     const next = (['camera', 'amp', 'can'] as const).find(
-      (k) => answers[k] === undefined && splits(left, k),
+      (k) =>
+        answers[k] === undefined &&
+        splits(left, k) &&
+        // Режим «Подбор»: спрашиваем только про то, что отмечено в админке
+        (wiring?.mode !== 'select' || !!wiring.ask?.[k]),
     );
     if (next) question = { id: next, ...QUESTIONS[next] };
   }

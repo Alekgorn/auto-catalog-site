@@ -6,6 +6,7 @@ import {
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
 } from '@/data/catalog';
+import { VehicleWiring } from '@/lib/wire-pick';
 import { CATALOG_URL } from '@/lib/api';
 import { useDealer } from '@/context/DealerContext';
 import { compareNames } from '@/lib/slug';
@@ -27,6 +28,7 @@ import {
 export interface PrerenderData {
   products?: Product[];
   brands?: Brand[];
+  vehicleWiring?: VehicleWiring[];
   categories?: string[];
   categorySpecs?: Record<string, string[]>;
   guides?: Guide[];
@@ -55,6 +57,8 @@ interface CatalogValue {
    */
   allProducts: Product[];
   brands: Brand[];
+  /** Настройки подбора проводки по машинам — из вкладки «Марки» */
+  vehicleWiring: VehicleWiring[];
   guides: Guide[];
   categories: string[];
   categorySpecs: Record<string, string[]>;
@@ -198,6 +202,9 @@ export const CatalogProvider = ({
   const [brands, setBrands] = useState<Brand[]>(
     seed?.brands?.length ? seed.brands : FALLBACK_BRANDS,
   );
+  const [vehicleWiring, setVehicleWiring] = useState<VehicleWiring[]>(
+    seed?.vehicleWiring ?? [],
+  );
   const [guides, setGuides] = useState<Guide[]>(seed?.guides ?? []);
   const [cardFields, setCardFields] = useState<string[]>(
     seed?.settings?.card_fields?.length
@@ -271,6 +278,9 @@ export const CatalogProvider = ({
         if (cancelled) return;
         if (Array.isArray(data.products) && data.products.length) {
           setProducts(data.products);
+        }
+        if (Array.isArray(data.vehicleWiring)) {
+          setVehicleWiring(data.vehicleWiring);
         }
         if (Array.isArray(data.brands) && data.brands.length) {
           // Марки и модели — по алфавиту, чтобы работала прокрутка по буквам
@@ -352,6 +362,7 @@ export const CatalogProvider = ({
     products: visibleProducts,
     allProducts: products,
     brands,
+    vehicleWiring,
     guides,
     categories,
     categorySpecs,

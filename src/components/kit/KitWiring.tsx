@@ -9,7 +9,12 @@ import {
   productImages,
 } from '@/data/catalog';
 import PhotoViewer from '@/components/PhotoViewer';
-import { pickWires, WireAnswers, KEEP_LABELS } from '@/lib/wire-pick';
+import {
+  pickWires,
+  WireAnswers,
+  KEEP_LABELS,
+  VehicleWiring,
+} from '@/lib/wire-pick';
 
 interface Props {
   /** Товары раздела проводок */
@@ -17,6 +22,8 @@ interface Props {
   vehicle: Vehicle | null;
   /** Кузова, которые бывают у этой модели — из справочника марок */
   modelBodies: BodyType[];
+  /** Настройка машины: фиксированная проводка или какие вопросы задавать */
+  wiring?: VehicleWiring | null;
   pickedId?: string;
   onPick: (product: Product) => void;
 }
@@ -157,6 +164,7 @@ const KitWiring = ({
   products,
   vehicle,
   modelBodies,
+  wiring,
   pickedId,
   onPick,
 }: Props) => {
@@ -165,8 +173,8 @@ const KitWiring = ({
   const [warnFor, setWarnFor] = useState<string | null>(null);
 
   const res = useMemo(
-    () => pickWires(products, vehicle, answers, modelBodies),
-    [products, vehicle, answers, modelBodies],
+    () => pickWires(products, vehicle, answers, modelBodies, wiring),
+    [products, vehicle, answers, modelBodies, wiring],
   );
 
   // Разметки нет — пусть работает привычный список
