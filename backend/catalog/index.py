@@ -33,7 +33,7 @@ def handler(event: dict, context) -> dict:
             f"SELECT p.slug, p.sku, p.name, p.category, p.subcategory, p.price, p.old_price, p.pro_price, p.ozon_url, p.wb_url, p.install, p.warranty, "
             f"p.year_from, p.year_to, p.badge, p.images, p.video_url, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
             # Подбор проводки: для каких машин и что сохраняет
-            f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, p.wire_bodies, "
+            f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, p.wire_bodies, p.wire_wheel, "
             # Тип подбора: своё значение товара важнее умолчания категории
             f"COALESCE(NULLIF(p.fit_mode, ''), c.fit_mode, 'universal') AS fit_mode "
             f"FROM {schema}.products p LEFT JOIN {schema}.categories c ON c.name = p.category "
@@ -71,6 +71,7 @@ def handler(event: dict, context) -> dict:
                 'wireLevel': r['wire_level'] or '',
                 'wireNote': r['wire_note'] or '',
                 'wireBodies': r['wire_bodies'] or [],
+                'wireWheel': r['wire_wheel'] or '',
                 'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
                 'popularity': r['popularity'],
                 'stock': r['stock_qty'],
@@ -95,7 +96,7 @@ def handler(event: dict, context) -> dict:
         # Настройки подбора проводки по машинам: где проводка известна точно,
         # покупателю вопросов не задаём
         cur.execute(
-            f"SELECT brand, model, year_from, year_to, mode, wire_slug, ask "
+            f"SELECT brand, model, year_from, year_to, mode, wire_slug, ask, wheel "
             f"FROM {schema}.vehicle_wiring"
         )
         vehicle_wiring = [
@@ -106,6 +107,7 @@ def handler(event: dict, context) -> dict:
                 'mode': v['mode'],
                 'wireSlug': v['wire_slug'],
                 'ask': v['ask'] or {},
+                'wheel': v['wheel'] or '',
             }
             for v in cur.fetchall()
         ]

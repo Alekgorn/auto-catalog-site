@@ -12,6 +12,8 @@ export interface VehicleWiring {
   wireSlug: string;
   reason: string;
   ask: Record<string, boolean>;
+  /** Сторона руля машины. Пусто — встречаются оба варианта */
+  wheel?: '' | 'left' | 'right';
 }
 
 interface WireOption {
@@ -40,6 +42,7 @@ const empty = (brand: string, model: string): VehicleWiring => ({
   wireSlug: '',
   reason: '',
   ask: {},
+  wheel: '',
 });
 
 /**
@@ -205,6 +208,31 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
                         className="w-28 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
                       />
                     </label>
+                  </div>
+
+                  <div>
+                    <span className="eyebrow mb-1 block">Руль</span>
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        [
+                          ['', 'Любой'],
+                          ['left', 'Левый'],
+                          ['right', 'Правый'],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id || 'any'}
+                          onClick={() => set(model, { wheel: id })}
+                          className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                            (row.wheel || '') === id
+                              ? 'bg-foreground text-background'
+                              : 'border border-border hover:border-foreground'
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {row.mode === 'fixed' && (

@@ -25,6 +25,11 @@ export const WIRE_KEEPS: { id: string; label: string }[] = [
   { id: 'parktronic', label: 'Парктроники' },
 ];
 
+export const WHEEL_SIDES: { id: 'left' | 'right'; label: string }[] = [
+  { id: 'left', label: 'Левый руль' },
+  { id: 'right', label: 'Правый руль' },
+];
+
 export const WIRE_LEVELS: { id: WireLevel; label: string; hint: string }[] = [
   { id: 'full', label: 'Полная', hint: 'Сохраняет всё нужное' },
   { id: 'basic', label: 'Базовая', hint: 'Часть функций теряется' },
@@ -77,6 +82,8 @@ export interface AdminProduct {
   wireLevel?: '' | WireLevel;
   /** Кузова, на которые встаёт проводка. Пусто — любой */
   wireBodies?: BodyType[];
+  /** Сторона руля. Пусто — подходит любой */
+  wireWheel?: '' | 'left' | 'right';
   /** Текст про потерю функций — его видит покупатель */
   wireNote?: string;
   /** Сколько штук на складе. 0 — только под заказ */
@@ -118,6 +125,7 @@ export const emptyProduct = (): AdminProduct => ({
   wireKeeps: {},
   wireLevel: '',
   wireBodies: [],
+  wireWheel: '',
   wireNote: '',
   sortOrder: 100,
   isActive: true,

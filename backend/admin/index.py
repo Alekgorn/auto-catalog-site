@@ -55,6 +55,11 @@ WIRE_TECH_VALUES = ('yes', 'no', 'any')
 # limited — существенные ограничения
 WIRE_LEVELS = ('full', 'basic', 'limited')
 
+# Сторона руля. Пусто — товар подходит и левому, и правому
+WHEEL_SIDES = ('left', 'right')
+WHEEL_RU = {'left': 'Левый', 'right': 'Правый'}
+RU_WHEEL = {'левый': 'left', 'правый': 'right', 'левый руль': 'left', 'правый руль': 'right'}
+
 # fixed — проводка для машины известна точно, вопросов не задаём
 # select — вариантов несколько, уточняем по отмеченным параметрам
 WIRE_MODES = ('fixed', 'select')
@@ -478,6 +483,7 @@ def row_to_product(r: dict) -> dict:
         'wireLevel': r.get('wire_level') or '',
         # Пусто — проводка встаёт на любой кузов
         'wireBodies': r.get('wire_bodies') or [],
+        'wireWheel': r.get('wire_wheel') or '',
         'wireNote': r.get('wire_note') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
@@ -1079,7 +1085,11 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         ('Год по', 8),
     ]
     tech = [(t, 12) for _k, t in WIRE_TECH_TITLES]
-    keeps = [('Кузов (пусто — любой)', 22), ('Уровень', 14)] + [
+    keeps = [
+        ('Кузов (пусто — любой)', 22),
+        ('Руль (пусто — любой)', 20),
+        ('Уровень', 14),
+    ] + [
         (t, 17) for _k, t in WIRE_KEEPS_TITLES
     ]
     tail = [('Описание совместимости (видит покупатель)', 60)]
@@ -1119,6 +1129,7 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         ]
         vals += [TECH_RU.get(t.get(key, ''), '') for key, _t in WIRE_TECH_TITLES]
         vals += [', '.join(BODY_RU.get(b, b) for b in (p.get('wireBodies') or []))]
+        vals += [WHEEL_RU.get(p.get('wireWheel') or '', '')]
         vals += [LEVEL_RU.get(p.get('wireLevel') or '', '')]
         vals += [
             ('Да' if k[key] else 'Нет') if key in k else ''
@@ -1148,12 +1159,18 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         type='list', formula1='"Полная,Базовая,Ограниченная"', allow_blank=True
     )
     ws.add_data_validation(dv2)
-    dv2.add(f'{get_column_letter(p2 + 1)}3:{get_column_letter(p2 + 1)}{last}')
+    dv_wheel = DataValidation(
+        type='list', formula1='"Левый,Правый"', allow_blank=True
+    )
+    ws.add_data_validation(dv_wheel)
+    dv_wheel.add(f'{get_column_letter(p2 + 1)}3:{get_column_letter(p2 + 1)}{last}')
+
+    dv2.add(f'{get_column_letter(p2 + 2)}3:{get_column_letter(p2 + 2)}{last}')
     dv3 = DataValidation(type='list', formula1='"Да,Нет"', allow_blank=True)
     ws.add_data_validation(dv3)
     dv3.add(
-        f'{get_column_letter(p2 + 2)}3:'
-        f'{get_column_letter(p2 + 1 + len(WIRE_KEEPS_TITLES))}{last}'
+        f'{get_column_letter(p2 + 3)}3:'
+        f'{get_column_letter(p2 + 2 + len(WIRE_KEEPS_TITLES))}{last}'
     )
 
     # ---------- Лист 2: машины ----------
@@ -1343,7 +1360,13 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                     problems.append(
                         f'Проводки, строка {r}: кузов «{part.strip()}» неизвестен'
                     )
-            lvl_raw = cell(row, p2 + 1).lower()
+            wheel_raw = cell(row, p2 + 1).lower()
+            wheel = RU_WHEEL.get(wheel_raw, '')
+            if wheel_raw and not wheel:
+                problems.append(
+                    f'Проводки, строка {r}: руль «{wheel_raw}» — пишите Левый или Правый'
+                )
+            lvl_raw = cell(row, p2 + 2).lower()
             level = RU_LEVEL.get(lvl_raw, '')
             if lvl_raw and not level:
                 problems.append(
@@ -1352,7 +1375,7 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                 )
             keeps = {}
             for i, (key, _t) in enumerate(WIRE_KEEPS_TITLES):
-                v = cell(row, p2 + 2 + i).lower()
+                v = cell(row, p2 + 3 + i).lower()
                 if v in ('да', 'нет'):
                     keeps[key] = v == 'да'
                 elif v:
@@ -1364,7 +1387,8 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                     'keeps': keeps,
                     'level': level,
                     'bodies': bodies,
-                    'note': cell(row, p2 + 2 + len(WIRE_KEEPS_TITLES))[:600],
+                    'wheel': wheel,
+                    'note': cell(row, p2 + 3 + len(WIRE_KEEPS_TITLES))[:600],
                 }
             )
 
@@ -2566,7 +2590,8 @@ def handler(event: dict, context) -> dict:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
                 f"SELECT brand, model, year_from, year_to, mode, wire_slug, "
-                f"reason, ask FROM {schema()}.vehicle_wiring ORDER BY brand, model"
+                f"reason, ask, wheel FROM {schema()}.vehicle_wiring "
+                f"ORDER BY brand, model"
             )
             rows = [
                 {
@@ -2578,6 +2603,7 @@ def handler(event: dict, context) -> dict:
                     'wireSlug': r['wire_slug'],
                     'reason': r['reason'],
                     'ask': r['ask'] or {},
+                    'wheel': r['wheel'] or '',
                 }
                 for r in cur.fetchall()
             ]
@@ -2616,16 +2642,19 @@ def handler(event: dict, context) -> dict:
             ask = body.get('ask') or {}
             cur.execute(
                 f"INSERT INTO {schema()}.vehicle_wiring "
-                f"(brand, model, year_from, year_to, mode, wire_slug, reason, ask) "
+                f"(brand, model, year_from, year_to, mode, wire_slug, reason, "
+                f"ask, wheel) "
                 f"VALUES ({q(brand)}, {q(model)}, "
                 f"{qint(body.get('yearFrom'), 1990)}, "
                 f"{qint(body.get('yearTo'), 2100)}, {q(mode)}, "
                 f"{q(str(body.get('wireSlug') or '')[:160])}, "
                 f"{q(str(body.get('reason') or '')[:600])}, "
-                f"{qjson({k: bool(ask.get(k)) for k in ('amp', 'camera', 'can')})}) "
+                f"{qjson({k: bool(ask.get(k)) for k in ('amp', 'camera', 'can')})}, "
+                f"{q(body.get('wheel') if body.get('wheel') in WHEEL_SIDES else '')}) "
                 f"ON CONFLICT (brand, model, year_from, year_to) DO UPDATE SET "
                 f"mode = EXCLUDED.mode, wire_slug = EXCLUDED.wire_slug, "
-                f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, updated_at = NOW()"
+                f"reason = EXCLUDED.reason, ask = EXCLUDED.ask, "
+                f"wheel = EXCLUDED.wheel, updated_at = NOW()"
             )
             conn.commit()
             cur.close()
@@ -2798,7 +2827,12 @@ def handler(event: dict, context) -> dict:
 
             for w in parsed['wires']:
                 if not (
-                    w['tech'] or w['keeps'] or w['level'] or w['note'] or w['bodies']
+                    w['tech']
+                    or w['keeps']
+                    or w['level']
+                    or w['note']
+                    or w['bodies']
+                    or w['wheel']
                 ):
                     continue
                 cur.execute(
@@ -2807,7 +2841,8 @@ def handler(event: dict, context) -> dict:
                     f"wire_keeps = {qjson(w['keeps'])}, "
                     f"wire_level = {q(w['level'])}, "
                     f"wire_note = {q(w['note'])}, "
-                    f"wire_bodies = {qjson(w['bodies'])} "
+                    f"wire_bodies = {qjson(w['bodies'])}, "
+                    f"wire_wheel = {q(w['wheel'])} "
                     f"WHERE slug = {q(w['slug'])}"
                 )
                 wires += cur.rowcount
@@ -3193,6 +3228,11 @@ def handler(event: dict, context) -> dict:
                 'wire_note': q(str(body.get('wireNote') or '')[:600]),
                 'wire_bodies': qjson(
                     [b for b in (body.get('wireBodies') or []) if b in BODY_TYPES]
+                ),
+                'wire_wheel': q(
+                    body.get('wireWheel')
+                    if body.get('wireWheel') in WHEEL_SIDES
+                    else ''
                 ),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),

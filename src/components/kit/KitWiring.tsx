@@ -24,6 +24,8 @@ interface Props {
   modelBodies: BodyType[];
   /** Настройка машины: фиксированная проводка или какие вопросы задавать */
   wiring?: VehicleWiring | null;
+  /** Выбранная рамка — по ней узнаём кузов, не спрашивая покупателя */
+  frame?: Product | null;
   pickedId?: string;
   onPick: (product: Product) => void;
 }
@@ -165,6 +167,7 @@ const KitWiring = ({
   vehicle,
   modelBodies,
   wiring,
+  frame,
   pickedId,
   onPick,
 }: Props) => {
@@ -173,8 +176,8 @@ const KitWiring = ({
   const [warnFor, setWarnFor] = useState<string | null>(null);
 
   const res = useMemo(
-    () => pickWires(products, vehicle, answers, modelBodies, wiring),
-    [products, vehicle, answers, modelBodies, wiring],
+    () => pickWires(products, vehicle, answers, modelBodies, wiring, frame),
+    [products, vehicle, answers, modelBodies, wiring, frame],
   );
 
   // Разметки нет — пусть работает привычный список
@@ -269,13 +272,28 @@ const KitWiring = ({
       ) : (
         <div className="mt-5 space-y-4">
           {res.full.map((w, i) => (
-            <WireCard
-              key={w.id}
-              wire={w}
-              recommended={i === 0}
-              picked={pickedId === w.id}
-              onPick={() => onPick(w)}
-            />
+            <div key={w.id} className="space-y-2">
+              <WireCard
+                wire={w}
+                recommended={i === 0}
+                picked={pickedId === w.id}
+                onPick={() => onPick(w)}
+              />
+              {/* Почему именно эта проводка — иначе цена выглядит
+                  прихотью продавца, а не необходимостью */}
+              {i === 0 && (w.wireNote || wiring?.reason) && (
+                <div className="flex items-start gap-2 border-l-2 border-foreground bg-secondary/40 px-4 py-3">
+                  <Icon
+                    name="Info"
+                    size={16}
+                    className="mt-0.5 shrink-0 text-muted-foreground"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    {w.wireNote || wiring?.reason}
+                  </p>
+                </div>
+              )}
+            </div>
           ))}
 
           {res.budget.length > 0 &&
