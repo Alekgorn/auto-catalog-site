@@ -1,4 +1,4 @@
-import { GuideBlock, FitMode } from '@/data/catalog';
+import { GuideBlock, FitMode, BodyType } from '@/data/catalog';
 import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
 
 /** yes — для машин с этим, no — для машин без, any — не влияет на подбор */
@@ -75,6 +75,8 @@ export interface AdminProduct {
   wireTech?: Record<string, WireTechValue>;
   wireKeeps?: Record<string, boolean>;
   wireLevel?: '' | WireLevel;
+  /** Кузова, на которые встаёт проводка. Пусто — любой */
+  wireBodies?: BodyType[];
   /** Текст про потерю функций — его видит покупатель */
   wireNote?: string;
   /** Сколько штук на складе. 0 — только под заказ */
@@ -115,6 +117,7 @@ export const emptyProduct = (): AdminProduct => ({
   wireTech: {},
   wireKeeps: {},
   wireLevel: '',
+  wireBodies: [],
   wireNote: '',
   sortOrder: 100,
   isActive: true,

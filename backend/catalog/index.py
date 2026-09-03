@@ -33,7 +33,7 @@ def handler(event: dict, context) -> dict:
             f"SELECT p.slug, p.sku, p.name, p.category, p.subcategory, p.price, p.old_price, p.pro_price, p.ozon_url, p.wb_url, p.install, p.warranty, "
             f"p.year_from, p.year_to, p.badge, p.images, p.video_url, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
             # Подбор проводки: для каких машин и что сохраняет
-            f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, "
+            f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, p.wire_bodies, "
             # Тип подбора: своё значение товара важнее умолчания категории
             f"COALESCE(NULLIF(p.fit_mode, ''), c.fit_mode, 'universal') AS fit_mode "
             f"FROM {schema}.products p LEFT JOIN {schema}.categories c ON c.name = p.category "
@@ -70,6 +70,7 @@ def handler(event: dict, context) -> dict:
                 'wireKeeps': r['wire_keeps'] or {},
                 'wireLevel': r['wire_level'] or '',
                 'wireNote': r['wire_note'] or '',
+                'wireBodies': r['wire_bodies'] or [],
                 'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
                 'popularity': r['popularity'],
                 'stock': r['stock_qty'],

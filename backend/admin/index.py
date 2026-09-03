@@ -476,6 +476,8 @@ def row_to_product(r: dict) -> dict:
         'wireTech': r.get('wire_tech') or {},
         'wireKeeps': r.get('wire_keeps') or {},
         'wireLevel': r.get('wire_level') or '',
+        # Пусто — проводка встаёт на любой кузов
+        'wireBodies': r.get('wire_bodies') or [],
         'wireNote': r.get('wire_note') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
@@ -953,6 +955,20 @@ WIRE_KEEPS_TITLES = [
     ('amp', 'Сохраняет усилитель'),
     ('parktronic', 'Сохраняет парктроники'),
 ]
+BODY_RU = {
+    'sedan': 'Седан',
+    'hatchback': 'Хэтчбек',
+    'liftback': 'Лифтбек',
+    'wagon': 'Универсал',
+    'suv': 'Внедорожник',
+    'pickup': 'Пикап',
+    'minivan': 'Минивэн',
+    'van': 'Фургон',
+    'coupe': 'Купе',
+    'cabrio': 'Кабриолет',
+}
+RU_BODY = {v.lower(): k for k, v in BODY_RU.items()}
+
 LEVEL_RU = {'full': 'Полная', 'basic': 'Базовая', 'limited': 'Ограниченная'}
 RU_LEVEL = {v.lower(): k for k, v in LEVEL_RU.items()}
 TECH_RU = {'yes': 'Да', 'no': 'Нет', 'any': 'Неважно'}
@@ -1044,7 +1060,9 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         ('Год по', 8),
     ]
     tech = [(t, 12) for _k, t in WIRE_TECH_TITLES]
-    keeps = [('Уровень', 14)] + [(t, 17) for _k, t in WIRE_KEEPS_TITLES]
+    keeps = [('Кузов (пусто — любой)', 22), ('Уровень', 14)] + [
+        (t, 17) for _k, t in WIRE_KEEPS_TITLES
+    ]
     tail = [('Описание совместимости (видит покупатель)', 60)]
 
     ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(base))
@@ -1081,6 +1099,7 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
             p.get('yearTo', ''),
         ]
         vals += [TECH_RU.get(t.get(key, ''), '') for key, _t in WIRE_TECH_TITLES]
+        vals += [', '.join(BODY_RU.get(b, b) for b in (p.get('wireBodies') or []))]
         vals += [LEVEL_RU.get(p.get('wireLevel') or '', '')]
         vals += [
             ('Да' if k[key] else 'Нет') if key in k else ''
@@ -1099,12 +1118,12 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         type='list', formula1='"Полная,Базовая,Ограниченная"', allow_blank=True
     )
     ws.add_data_validation(dv2)
-    dv2.add(f'{get_column_letter(p2)}3:{get_column_letter(p2)}{last}')
+    dv2.add(f'{get_column_letter(p2 + 1)}3:{get_column_letter(p2 + 1)}{last}')
     dv3 = DataValidation(type='list', formula1='"Да,Нет"', allow_blank=True)
     ws.add_data_validation(dv3)
     dv3.add(
-        f'{get_column_letter(p2 + 1)}3:'
-        f'{get_column_letter(p2 + len(WIRE_KEEPS_TITLES))}{last}'
+        f'{get_column_letter(p2 + 2)}3:'
+        f'{get_column_letter(p2 + 1 + len(WIRE_KEEPS_TITLES))}{last}'
     )
 
     # ---------- Лист 2: машины ----------
@@ -1181,6 +1200,13 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
             'Неважно',
             'Ставьте, когда параметр не влияет на совместимость. Каждое «Неважно» — '
             'это вопрос, который не придётся задавать покупателю.',
+        ),
+        (
+            'Кузов',
+            'Заполняйте, только если проводка встаёт не на все кузова. Пусто — '
+            'подходит любому. Несколько кузовов пишите через запятую: '
+            '«Седан, Универсал». У машин кузова уже размечены, так что система '
+            'сама поймёт, когда спросить покупателя.',
         ),
         (
             'Уровень',
@@ -1275,7 +1301,19 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                 elif v:
                     problems.append(f'Проводки, строка {r}: «{v}» — пишите Да/Нет/Неважно')
             p2 = n_base + len(WIRE_TECH_TITLES)
-            lvl_raw = cell(row, p2).lower()
+            # Кузова через запятую. Пусто — проводка встаёт на любой
+            bodies = []
+            for part in cell(row, p2).split(','):
+                name = part.strip().lower()
+                if not name:
+                    continue
+                if name in RU_BODY:
+                    bodies.append(RU_BODY[name])
+                else:
+                    problems.append(
+                        f'Проводки, строка {r}: кузов «{part.strip()}» неизвестен'
+                    )
+            lvl_raw = cell(row, p2 + 1).lower()
             level = RU_LEVEL.get(lvl_raw, '')
             if lvl_raw and not level:
                 problems.append(
@@ -1284,7 +1322,7 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                 )
             keeps = {}
             for i, (key, _t) in enumerate(WIRE_KEEPS_TITLES):
-                v = cell(row, p2 + 1 + i).lower()
+                v = cell(row, p2 + 2 + i).lower()
                 if v in ('да', 'нет'):
                     keeps[key] = v == 'да'
                 elif v:
@@ -1295,7 +1333,8 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                     'tech': tech,
                     'keeps': keeps,
                     'level': level,
-                    'note': cell(row, p2 + 1 + len(WIRE_KEEPS_TITLES))[:600],
+                    'bodies': bodies,
+                    'note': cell(row, p2 + 2 + len(WIRE_KEEPS_TITLES))[:600],
                 }
             )
 
@@ -2658,14 +2697,17 @@ def handler(event: dict, context) -> dict:
             wires = updated = 0
 
             for w in parsed['wires']:
-                if not (w['tech'] or w['keeps'] or w['level'] or w['note']):
+                if not (
+                    w['tech'] or w['keeps'] or w['level'] or w['note'] or w['bodies']
+                ):
                     continue
                 cur.execute(
                     f"UPDATE {schema()}.products SET "
                     f"wire_tech = {qjson(w['tech'])}, "
                     f"wire_keeps = {qjson(w['keeps'])}, "
                     f"wire_level = {q(w['level'])}, "
-                    f"wire_note = {q(w['note'])} "
+                    f"wire_note = {q(w['note'])}, "
+                    f"wire_bodies = {qjson(w['bodies'])} "
                     f"WHERE slug = {q(w['slug'])}"
                 )
                 wires += cur.rowcount
@@ -3049,6 +3091,9 @@ def handler(event: dict, context) -> dict:
                     else ''
                 ),
                 'wire_note': q(str(body.get('wireNote') or '')[:600]),
+                'wire_bodies': qjson(
+                    [b for b in (body.get('wireBodies') or []) if b in BODY_TYPES]
+                ),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

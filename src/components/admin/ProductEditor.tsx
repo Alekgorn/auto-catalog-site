@@ -50,6 +50,7 @@ const ProductEditor = ({
     wireTech: product.wireTech ?? {},
     wireKeeps: product.wireKeeps ?? {},
     wireLevel: product.wireLevel ?? '',
+    wireBodies: product.wireBodies ?? [],
     wireNote: product.wireNote ?? '',
   });
   const [uploading, setUploading] = useState(false);

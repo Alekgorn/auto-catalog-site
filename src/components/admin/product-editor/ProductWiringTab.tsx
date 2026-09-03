@@ -1,4 +1,5 @@
 import Icon from '@/components/ui/icon';
+import { BODY_TYPES } from '@/data/catalog';
 import {
   AdminProduct,
   SetField,
@@ -102,6 +103,47 @@ const ProductWiringTab = ({ form, set }: Props) => {
             </div>
           ))}
         </div>
+      </div>
+
+      <div>
+        <div className="font-head text-sm font-bold uppercase tracking-tight">
+          Кузов
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Отмечайте, только если проводка встаёт не на все кузова. Ничего не
+          отмечено — подходит любому. У машин кузова уже размечены, поэтому
+          покупателя спросим сами и только когда это решает.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {BODY_TYPES.map((b) => {
+            const on = (form.wireBodies || []).includes(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => {
+                  const cur = form.wireBodies || [];
+                  set(
+                    'wireBodies',
+                    on ? cur.filter((x) => x !== b.id) : [...cur, b.id],
+                  );
+                }}
+                className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                  on
+                    ? 'bg-foreground text-background'
+                    : 'border border-border hover:border-foreground'
+                }`}
+              >
+                {b.label}
+              </button>
+            );
+          })}
+        </div>
+        {(form.wireBodies || []).length === 0 && (
+          <p className="mt-2 text-sm text-success">
+            Сейчас: подходит на любой кузов
+          </p>
+        )}
       </div>
 
       <div>

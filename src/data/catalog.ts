@@ -75,6 +75,8 @@ export interface Product {
   wireTech?: Record<string, 'yes' | 'no' | 'any'>;
   wireKeeps?: Record<string, boolean>;
   wireLevel?: 'full' | 'basic' | 'limited' | '';
+  /** Кузова, на которые встаёт проводка. Пусто — подходит любому */
+  wireBodies?: BodyType[];
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];
