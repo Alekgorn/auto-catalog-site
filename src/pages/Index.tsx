@@ -12,6 +12,7 @@ import RequestDialog from "@/components/RequestDialog";
 import { Product, Vehicle } from "@/data/catalog";
 import { loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
+import { SELLER } from "@/lib/site-settings";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
 
@@ -56,6 +57,12 @@ const Index = () => {
         addressCountry: "RU",
       },
       openingHours: "Mo-Sa 09:00-20:00",
+      // Реквизиты продавца — поисковики считают их признаком
+      // настоящего магазина, а не витрины-однодневки
+      legalName: SELLER.legalName,
+      taxID: SELLER.inn,
+      vatID: SELLER.inn,
+      identifier: SELLER.ogrnip,
     },
   });
 
