@@ -83,10 +83,10 @@ export interface FaqItem {
 }
 
 export const DEFAULT_CONTACTS: SiteContacts = {
-  phone: '8 800 333-44-55',
-  email: 'zakaz@shtatno.ru',
-  address: 'Москва, Кировоградская, 24, стр. 3',
-  hours: 'Пн–Сб, 09:00 — 20:00',
+  phone: '+7 911 963-96-71',
+  email: 'unosound@yandex.ru',
+  address: 'Санкт-Петербург',
+  hours: 'Пн–Пт, 10:00 — 18:00. Сб-Вс - по запросам',
   telegram: 'https://t.me/Alekgorn',
   whatsapp: '',
   max: '+79119639671',

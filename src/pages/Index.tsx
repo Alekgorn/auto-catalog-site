@@ -18,7 +18,7 @@ import { useCatalog } from "@/context/CatalogContext";
 
 const Index = () => {
   const location = useLocation();
-  const { brands: BRANDS } = useCatalog();
+  const { brands: BRANDS, contacts } = useCatalog();
   const saved = loadVehicle();
 
   /**
@@ -48,15 +48,20 @@ const Index = () => {
       url: SITE_URL,
       description:
         "Автоэлектроника и комплектующие: Android-магнитолы, камеры, регистраторы, переходные жгуты и рамки.",
-      telephone: "+7 800 333-44-55",
-      email: "zakaz@shtatno.ru",
+      /*
+       * Контакты берём из настроек, а не вписываем сюда руками: поисковик
+       * сверяет разметку с тем, что видит на странице, и расхождение
+       * считает признаком недостоверного магазина. Раньше здесь остались
+       * демо-данные (Москва, 8 800) и спорили с настоящими в подвале
+       */
+      telephone: contacts.phone,
+      email: contacts.email,
       address: {
         "@type": "PostalAddress",
-        addressLocality: "Москва",
-        streetAddress: "Кировоградская, 24, стр. 3",
+        addressLocality: contacts.address,
         addressCountry: "RU",
       },
-      openingHours: "Mo-Sa 09:00-20:00",
+      openingHours: "Mo-Fr 10:00-18:00",
       // Реквизиты продавца — поисковики считают их признаком
       // настоящего магазина, а не витрины-однодневки
       legalName: SELLER.legalName,
