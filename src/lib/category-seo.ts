@@ -124,11 +124,16 @@ export const categoryDescription = (
   // Общие слова — в самый конец, они одинаковы у всех разделов
   parts.push('Подбор по марке и модели, доставка по России.');
 
-  const text = parts.join(' ').replace(/\s+/g, ' ').trim();
-
-  // Поисковик показывает около 160 знаков — режем по границе предложения
-  if (text.length <= 160) return text;
-  const cut = text.slice(0, 160);
-  const dot = cut.lastIndexOf('.');
-  return dot > 90 ? cut.slice(0, dot + 1) : `${cut.trim()}…`;
+  /*
+   * Набираем предложениями, пока помещаемся в 160 знаков, которые
+   * показывает поисковик. Обрезка «по живому» оставляла хвосты вроде
+   * «переходники для подключения магни…» — лучше опустить фразу целиком.
+   */
+  let text = '';
+  for (const part of parts) {
+    const next = text ? `${text} ${part}` : part;
+    if (next.length > 160) break;
+    text = next;
+  }
+  return (text || parts[0]).replace(/\s+/g, ' ').trim();
 };
