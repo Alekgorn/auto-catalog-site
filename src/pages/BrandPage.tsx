@@ -11,6 +11,7 @@ import CategorySection, {
 import NotFound from "@/pages/NotFound";
 import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
+import { brandTitle, brandDescription } from "@/lib/brand-seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
 import { findFitModels } from "@/lib/fits-match";
@@ -70,10 +71,10 @@ const BrandPage = () => {
   useSeo(
     brand
       ? {
-          title: `Автоэлектроника для ${brand.name} — магнитолы, камеры, жгуты | ШТАТНО`,
-          description: `Оборудование для ${brand.name}: ${items.length} позиций для моделей ${brand.models
-            .slice(0, 4)
-            .join(", ")}. Совместимость проверена по штатным разъёмам.`,
+          // Собираем по товарам самой марки: количество, ходовые модели,
+          // вилка цен. Иначе у всех марок один и тот же текст
+          title: brandTitle(brand.name, items),
+          description: brandDescription(brand.name, items),
           canonical: `${SITE_URL}/brand/${slug}`,
           jsonLd: [
             crumbsJsonLd([
