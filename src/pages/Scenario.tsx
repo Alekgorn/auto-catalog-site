@@ -22,6 +22,7 @@ import {
 import { SCENARIOS, findScenario } from "@/data/scenarios";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
+import { scenarioTitle, scenarioDescription } from "@/lib/scenario-seo";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
 import { smartSearch, SearchHit } from "@/lib/smart-search";
@@ -400,8 +401,13 @@ const ScenarioPage = () => {
   useSeo(
     scenario
       ? {
-          title: `${scenario.heading} · ШТАТНО`,
-          description: scenario.intro.slice(0, 300),
+          // К живой фразе добавляем цифры сценария: по ним страница
+          // находится и по товарным запросам, а не только по образным
+          title: scenarioTitle(scenario.heading, found.map((h) => h.product)),
+          description: scenarioDescription(
+            scenario.intro,
+            found.map((h) => h.product),
+          ),
           canonical: `${SITE_URL}/scenario/${scenario.slug}`,
           // Разметка вопросов — поисковики показывают их прямо в выдаче
           jsonLd: [
