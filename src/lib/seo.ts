@@ -9,6 +9,18 @@ export interface SeoData {
   jsonLd?: Record<string, unknown> | Record<string, unknown>[] | null;
 }
 
+/**
+ * До какой даты цена считается действительной. Без этого поля поисковик
+ * считает цену протухшей и может не показать её в сниппете. Берём месяц
+ * вперёд: прайс обновляется чаще, а страницы пересобираются при каждой
+ * выгрузке, так что дата всегда свежая.
+ */
+export const priceValidUntil = () => {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  return d.toISOString().slice(0, 10);
+};
+
 /** Собранное при сборке SEO — читается генератором статики. */
 const collected = new Map<string, SeoData>();
 
