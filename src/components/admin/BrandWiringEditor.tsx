@@ -70,6 +70,7 @@ const GenerationForm = ({
   onEdit,
   onSave,
   onRemove,
+  onCopy,
 }: {
   r: VehicleWiring;
   wires: WireOption[];
@@ -77,8 +78,16 @@ const GenerationForm = ({
   onEdit: (patch: Partial<VehicleWiring>) => void;
   onSave: () => void;
   onRemove: () => void;
+  /** Есть только у сохранённых строк — новую копировать незачем */
+  onCopy?: () => void;
 }) => {
   const [wireSearch, setWireSearch] = useState('');
+  const [fromText, setFromText] = useState(
+    r.yearFrom > 1990 ? String(r.yearFrom) : '',
+  );
+  const [toText, setToText] = useState(
+    r.yearTo < 2100 ? String(r.yearTo) : '',
+  );
   const picked = wires.find((w) => w.slug === r.wireSlug);
   const found = wireSearch.trim()
     ? wires
@@ -113,28 +122,34 @@ const GenerationForm = ({
           ))}
         </div>
 
+        {/* Год храним строкой, пока его печатают: «2» — это ещё не 2012,
+            а проверка на диапазон стирала бы поле после первой цифры */}
         <div className="flex flex-wrap items-end gap-4">
           <label className="block">
             <span className="eyebrow mb-1 block">Год от</span>
             <input
-              type="number"
-              value={r.yearFrom > 1990 ? r.yearFrom : ''}
+              inputMode="numeric"
+              value={fromText}
               placeholder="любой"
-              onChange={(e) =>
-                onEdit({ yearFrom: Number(e.target.value) || 1990 })
-              }
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setFromText(raw);
+                onEdit({ yearFrom: raw.length === 4 ? Number(raw) : 1990 });
+              }}
               className="w-24 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
             />
           </label>
           <label className="block">
             <span className="eyebrow mb-1 block">Год по</span>
             <input
-              type="number"
-              value={r.yearTo < 2100 ? r.yearTo : ''}
+              inputMode="numeric"
+              value={toText}
               placeholder="по сей день"
-              onChange={(e) =>
-                onEdit({ yearTo: Number(e.target.value) || 2100 })
-              }
+              onChange={(e) => {
+                const raw = e.target.value.replace(/\D/g, '').slice(0, 4);
+                setToText(raw);
+                onEdit({ yearTo: raw.length === 4 ? Number(raw) : 2100 });
+              }}
               className="w-28 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
             />
           </label>
@@ -301,6 +316,16 @@ const GenerationForm = ({
           >
             {busy ? 'Сохраняем…' : 'Сохранить'}
           </button>
+          {onCopy && (
+            <button
+              onClick={onCopy}
+              disabled={busy}
+              className="flex items-center gap-1.5 border border-border px-4 py-2 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-foreground"
+            >
+              <Icon name="Copy" size={14} />
+              Скопировать
+            </button>
+          )}
           <button
             onClick={onRemove}
             disabled={busy}
@@ -503,6 +528,22 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
                         onEdit={(patch) => edit(model, row, patch)}
                         onSave={() => save(model, current(model, row))}
                         onRemove={() => remove(model, row.id)}
+                        onCopy={() => {
+                          /* Копия без id — сохранится как новая строка.
+                             Годы обнуляем: два поколения с одним периодом
+                             не бывают, и это первое, что надо поменять */
+                          const src = current(model, row);
+                          setDraft((d) => ({
+                            ...d,
+                            [key(model, undefined)]: {
+                              ...src,
+                              id: undefined,
+                              yearFrom: 1990,
+                              yearTo: 2100,
+                            },
+                          }));
+                          setOpenModel(model);
+                        }}
                       />
                     </div>
                   ))}
