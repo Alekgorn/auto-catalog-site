@@ -6,6 +6,7 @@ import { sendOrder } from '@/lib/api';
 import { loadVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
 import { maxHref, telHref, tgHref, SELLER } from '@/lib/site-settings';
+import ConsentCheck from '@/components/ConsentCheck';
 
 const Contacts = () => {
   const { toast } = useToast();
@@ -20,15 +21,22 @@ const Contacts = () => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [comment, setComment] = useState('');
-  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [consent, setConsent] = useState(false);
+  const [errors, setErrors] = useState<{
+    name?: string;
+    phone?: string;
+    consent?: boolean;
+  }>({});
   const [sending, setSending] = useState(false);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const next: { name?: string; phone?: string } = {};
+    const next: { name?: string; phone?: string; consent?: boolean } = {};
     if (name.trim().length < 2) next.name = 'Укажите имя';
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 10) next.phone = 'Телефон из 10–11 цифр';
+    // Без согласия данные принимать нельзя — это требование закона
+    if (!consent) next.consent = true;
     setErrors(next);
     if (Object.keys(next).length) return;
 
@@ -56,6 +64,7 @@ const Contacts = () => {
     setName('');
     setPhone('');
     setComment('');
+    setConsent(false);
   };
 
   const inputClass =
@@ -178,17 +187,22 @@ const Contacts = () => {
             />
           </div>
 
+          <ConsentCheck
+            id="contacts"
+            checked={consent}
+            onChange={setConsent}
+            error={errors.consent}
+            className="mt-8"
+          />
+
           <button
             type="submit"
             disabled={sending}
-            className="mt-8 flex w-full items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-60"
+            className="mt-6 flex w-full items-center justify-between bg-primary px-6 py-5 font-head text-base font-bold uppercase tracking-[0.02em] text-primary-foreground transition-colors hover:bg-foreground disabled:opacity-60"
           >
             {sending ? 'Отправляем…' : 'Отправить заявку'}
             <Icon name="ArrowRight" size={20} />
           </button>
-          <p className="mt-4 text-[0.78rem] leading-relaxed text-muted-foreground">
-            Нажимая кнопку, вы соглашаетесь на обработку персональных данных.
-          </p>
         </form>
       </div>
     </section>

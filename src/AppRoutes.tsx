@@ -8,6 +8,7 @@ import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import GuidePage from './pages/GuidePage';
 import ScenarioPage from './pages/Scenario';
+import LegalPage from './pages/LegalPage';
 
 /**
  * Админка и поиск грузятся отдельно, по требованию.
@@ -64,6 +65,9 @@ const AppRoutes = () => (
     <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />
     <Route path="/guides/:slug" element={<GuidePage />} />
+    {/* Оферта и политика данных — обе страницы рисует один компонент */}
+    <Route path="/oferta" element={<LegalPage />} />
+    <Route path="/privacy" element={<LegalPage />} />
     <Route
       path="/admin"
       element={
