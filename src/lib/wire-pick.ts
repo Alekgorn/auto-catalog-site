@@ -25,6 +25,10 @@ export interface VehicleWiring {
   mode: 'fixed' | 'select';
   wireSlug: string;
   ask: Record<string, boolean>;
+  /** Сторона руля машины. Пусто — бывают оба варианта */
+  wheel?: '' | 'left' | 'right';
+  /** Почему выбрана эта проводка — показываем покупателю */
+  reason?: string;
 }
 
 /** Настройка для конкретной машины: марка, модель и попадание в годы */
@@ -73,6 +77,18 @@ const QUESTIONS: Record<string, { title: string; hint: string }> = {
   },
 };
 
+/**
+ * Кузов, который выдала выбранная рамка.
+ *
+ * Рамку человек выбирает раньше проводки, и она привязана к панели —
+ * а панель у хэтчбека и седана разная. Значит по рамке кузов уже известен,
+ * и спрашивать о нём второй раз незачем.
+ */
+export const bodyFromFrame = (frame?: Product | null): BodyType | null => {
+  const list = frame?.wireBodies || [];
+  return list.length === 1 ? list[0] : null;
+};
+
 /** Подходит ли проводка машине по кузову */
 const bodyOk = (p: Product, body?: BodyType | null): boolean => {
   const list = p.wireBodies || [];
@@ -80,6 +96,10 @@ const bodyOk = (p: Product, body?: BodyType | null): boolean => {
   if (!body) return true;
   return list.includes(body);
 };
+
+/** Руль: товар без пометки подходит любому */
+const wheelOk = (p: Product, wheel?: '' | 'left' | 'right' | null): boolean =>
+  !p.wireWheel || !wheel || p.wireWheel === wheel;
 
 /** Сверяем ответ покупателя с требованием проводки */
 const techOk = (p: Product, key: string, answer?: boolean | null): boolean => {
@@ -133,6 +153,7 @@ export const pickWires = (
   answers: WireAnswers,
   modelBodies: BodyType[] = [],
   wiring: VehicleWiring | null = null,
+  frame?: Product | null,
 ): WirePick => {
   const empty: WirePick = {
     full: [],
@@ -142,7 +163,10 @@ export const pickWires = (
   };
   if (!vehicle) return empty;
 
-  const fits = products.filter((p) => isCompatible(p, vehicle));
+  // Руль машины отсекает часть проводок независимо от прочего
+  const fits = products.filter(
+    (p) => isCompatible(p, vehicle) && wheelOk(p, wiring?.wheel),
+  );
 
   /*
    * Машина помечена как «фиксированная» — проводка известна точно.
@@ -165,9 +189,12 @@ export const pickWires = (
   // Ни одного размеченного варианта — показывать нечего, отдаём старый список
   if (!marked.length) return empty;
 
+  // Кузов знаем из рамки — вопрос покупателю не нужен
+  const knownBody = answers.body ?? bodyFromFrame(frame);
+
   let left = marked.filter(
     (p) =>
-      bodyOk(p, answers.body) &&
+      bodyOk(p, knownBody) &&
       techOk(p, 'amp', answers.amp) &&
       techOk(p, 'camera', answers.camera) &&
       techOk(p, 'can', answers.can),
@@ -180,7 +207,7 @@ export const pickWires = (
     (b) => !modelBodies.length || modelBodies.includes(b),
   );
   let question: WireQuestion | null = null;
-  if (bodies.length > 1 && !answers.body) {
+  if (bodies.length > 1 && !knownBody) {
     question = {
       id: 'body',
       title: 'Какой у вас кузов?',

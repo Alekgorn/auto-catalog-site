@@ -6,6 +6,7 @@ import {
   WIRE_TECH,
   WIRE_KEEPS,
   WIRE_LEVELS,
+  WHEEL_SIDES,
   WireTechValue,
   WireLevel,
   label,
@@ -63,7 +64,7 @@ const ProductWiringTab = ({ form, set }: Props) => {
           className="mt-0.5 shrink-0 text-muted-foreground"
         />
         <p className="text-sm text-muted-foreground">
-          Заполняется у проводок и переходников. Первый блок решает,{' '}
+          Заполняется у проводок и рамок. Первый блок решает,{' '}
           <b>кому товар не показывать</b>. Второй — <b>что написать тому</b>,
           кому показали.
         </p>
@@ -143,6 +144,37 @@ const ProductWiringTab = ({ form, set }: Props) => {
           <p className="mt-2 text-sm text-success">
             Сейчас: подходит на любой кузов
           </p>
+        )}
+      </div>
+
+      <div>
+        <div className="font-head text-sm font-bold uppercase tracking-tight">
+          Сторона руля
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Отмечайте, только если товар подходит не всем. Ничего не выбрано —
+          подходит и левому, и правому.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {WHEEL_SIDES.map((w) => (
+            <button
+              key={w.id}
+              type="button"
+              onClick={() =>
+                set('wireWheel', form.wireWheel === w.id ? '' : w.id)
+              }
+              className={`px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                form.wireWheel === w.id
+                  ? 'bg-foreground text-background'
+                  : 'border border-border hover:border-foreground'
+              }`}
+            >
+              {w.label}
+            </button>
+          ))}
+        </div>
+        {!form.wireWheel && (
+          <p className="mt-2 text-sm text-success">Сейчас: подходит любому</p>
         )}
       </div>
 

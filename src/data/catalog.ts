@@ -77,6 +77,8 @@ export interface Product {
   wireLevel?: 'full' | 'basic' | 'limited' | '';
   /** Кузова, на которые встаёт проводка. Пусто — подходит любому */
   wireBodies?: BodyType[];
+  /** Сторона руля: left | right. Пусто — подходит любой */
+  wireWheel?: 'left' | 'right' | '';
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];

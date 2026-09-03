@@ -142,6 +142,9 @@ const ScenarioKit = ({
               vehicle={vehicle}
               modelBodies={modelBodyTypes(brands, vehicle!.brand, vehicle!.model)}
               wiring={findWiring(vehicleWiring, vehicle!)}
+              frame={products.find(
+                (p) => p.id === picks[FRAMES_CATEGORY],
+              )}
               pickedId={picks[step.category]}
               onPick={onPick}
             />
