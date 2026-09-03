@@ -29,7 +29,7 @@ import {
   FREE_ALL_FROM,
   FREE_FROM,
 } from "@/lib/delivery";
-import { SITE_URL } from "@/lib/seo";
+import { SITE_URL, priceValidUntil } from "@/lib/seo";
 import { seoTitle, seoDescription } from "@/lib/product-seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
@@ -131,12 +131,52 @@ const Product = () => {
           image: shots,
           description: summary,
           brand: { "@type": "Brand", name: "ШТАТНО" },
+          // Артикул производителя: по нему поисковик связывает карточку
+          // с такими же товарами на других площадках
+          mpn: productSku(product),
           offers: {
             "@type": "Offer",
             price: product.price,
             priceCurrency: "RUB",
-            availability: "https://schema.org/InStock",
+            /*
+             * Наличие берём со склада, а не пишем всем подряд «в наличии».
+             * Поисковик сверяет разметку со страницей: там у товара под
+             * заказ стоит срок поставки, и обещание «есть сейчас» в
+             * разметке читается как недостоверные данные о товаре
+             */
+            availability:
+              (product.stock ?? 0) > 0
+                ? "https://schema.org/InStock"
+                : "https://schema.org/PreOrder",
+            itemCondition: "https://schema.org/NewCondition",
+            // Цена без срока годности считается устаревшей и сниппет с ней
+            // могут не показать — держим её действительной на месяц вперёд
+            priceValidUntil: priceValidUntil(),
             url,
+            seller: { "@type": "Organization", name: "ШТАТНО" },
+            // Бесплатная доставка от порога — поисковик показывает это
+            // прямо в сниппете, рядом с ценой
+            shippingDetails: {
+              "@type": "OfferShippingDetails",
+              shippingRate: {
+                "@type": "MonetaryAmount",
+                value: 0,
+                currency: "RUB",
+              },
+              shippingDestination: {
+                "@type": "DefinedRegion",
+                addressCountry: "RU",
+              },
+            },
+            hasMerchantReturnPolicy: {
+              "@type": "MerchantReturnPolicy",
+              applicableCountry: "RU",
+              returnPolicyCategory:
+                "https://schema.org/MerchantReturnFiniteReturnWindow",
+              merchantReturnDays: 14,
+              returnMethod: "https://schema.org/ReturnByMail",
+              returnFees: "https://schema.org/FreeReturn",
+            },
           },
         },
       ],
