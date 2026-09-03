@@ -6,7 +6,9 @@ import {
   BodyType,
   formatPrice,
   bodyTypeLabel,
+  productImages,
 } from '@/data/catalog';
+import PhotoViewer from '@/components/PhotoViewer';
 import { pickWires, WireAnswers, KEEP_LABELS } from '@/lib/wire-pick';
 
 interface Props {
@@ -31,6 +33,8 @@ const WireCard = ({
   picked: boolean;
   onPick: () => void;
 }) => {
+  const [zoom, setZoom] = useState<number | null>(null);
+  const photos = productImages(wire);
   const full = wire.wireLevel === 'full';
   const keeps = wire.wireKeeps || {};
   const rows = Object.keys(KEEP_LABELS).filter((k) => k in keeps);
@@ -57,7 +61,39 @@ const WireCard = ({
         </span>
       </div>
 
-      <div className="mt-3 font-medium leading-snug">{wire.name}</div>
+      <div className="mt-3 flex gap-4">
+        {/* Проводки различаются разъёмами — по снимку это видно быстрее,
+            чем по названию. Клик открывает фото во весь экран. */}
+        <button
+          type="button"
+          onClick={() => setZoom(0)}
+          aria-label={`Посмотреть фото: ${wire.name}`}
+          className="group relative h-24 w-24 flex-none overflow-hidden border border-border bg-surface-muted"
+        >
+          <img
+            src={photos[0]}
+            alt={wire.name}
+            loading="lazy"
+            decoding="async"
+            width={200}
+            height={200}
+            className="h-full w-full object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+          />
+          <span className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center bg-background/85 text-foreground opacity-0 transition-opacity group-hover:opacity-100">
+            <Icon name="Maximize2" size={13} />
+          </span>
+        </button>
+        <div className="min-w-0 flex-1 font-medium leading-snug">
+          {wire.name}
+        </div>
+      </div>
+
+      <PhotoViewer
+        images={photos}
+        alt={wire.name}
+        index={zoom}
+        onClose={() => setZoom(null)}
+      />
 
       {rows.length > 0 && (
         <ul className="mt-3 space-y-1.5">
