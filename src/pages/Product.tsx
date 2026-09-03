@@ -30,6 +30,7 @@ import {
   FREE_FROM,
 } from "@/lib/delivery";
 import { SITE_URL } from "@/lib/seo";
+import { seoTitle, seoDescription } from "@/lib/product-seo";
 import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useCart } from "@/context/CartContext";
@@ -104,15 +105,18 @@ const Product = () => {
       .slice(0, 3)
       .map(([k, v]) => `${k}: ${v}`)
       .join(". ");
-    const brandNames = Object.keys(product.fits ?? {}).join(", ");
+    // Полный текст для карточки товара в поиске (structured data):
+    // там место не ограничено, и живое описание уместнее сводки
     const summary =
       productDescription(product)[0]?.slice(0, 240) ||
       `${product.name}. ${specs}`;
     const url = `${SITE_URL}/product/${product.id}`;
 
     return {
-      title: `${product.name} — купить, артикул ${productSku(product)} | ШТАТНО`,
-      description: `${summary}${brandNames ? ` Совместимость: ${brandNames}.` : ""}`,
+      // Заголовок и краткое описание собираются из данных карточки —
+      // так похожие товары не выглядят в выдаче одинаковыми
+      title: seoTitle(product),
+      description: seoDescription(product),
       image: shots[0],
       canonical: url,
       type: "product" as const,
