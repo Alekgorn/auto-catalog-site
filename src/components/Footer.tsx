@@ -1,7 +1,7 @@
 import LogoMark from "@/components/ui/logo-mark";
 import { Link } from "react-router-dom";
 import { useCatalog } from "@/context/CatalogContext";
-import { telHref } from "@/lib/site-settings";
+import { telHref, SELLER } from "@/lib/site-settings";
 import { slugify } from "@/lib/slug";
 
 const COLS: {
@@ -178,8 +178,16 @@ const Footer = () => {
 
       <div className="rule-hair" />
       <div className="grid grid-cols-1 gap-x-6 py-5 text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground md:grid-cols-12">
-        <div className="md:col-span-6">© 2026 Штатно · Розничная продажа</div>
-        <div className="mt-2 md:col-span-6 md:mt-0 md:text-right">
+        {/*
+         * Реквизиты продавца обязательны на каждой странице. Вписываем их
+         * в уже существующую строку копирайта, а не отдельным блоком —
+         * подвал не должен вырасти ради двух номеров
+         */}
+        <div className="md:col-span-7">
+          © 2026 Штатно · {SELLER.shortName} · ИНН {SELLER.inn} · ОГРНИП{' '}
+          {SELLER.ogrnip}
+        </div>
+        <div className="mt-2 md:col-span-5 md:mt-0 md:text-right">
           Цены на сайте не являются публичной офертой
         </div>
       </div>

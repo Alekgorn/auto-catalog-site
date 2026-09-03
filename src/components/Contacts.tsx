@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendOrder } from '@/lib/api';
 import { loadVehicle } from '@/lib/vehicle';
 import { useCatalog } from '@/context/CatalogContext';
-import { maxHref, telHref, tgHref } from '@/lib/site-settings';
+import { maxHref, telHref, tgHref, SELLER } from '@/lib/site-settings';
 
 const Contacts = () => {
   const { toast } = useToast();
@@ -113,6 +113,20 @@ const Contacts = () => {
                   <Icon name={s.icon} size={18} />
                 </a>
               ))}
+          </div>
+
+          {/*
+           * Полные реквизиты продавца. В подвале идёт короткая строка,
+           * а здесь — состав целиком: покупателю есть куда посмотреть,
+           * прежде чем оставить телефон и оплатить заказ
+           */}
+          <div className="mt-10 border-t border-border pt-5 text-sm leading-relaxed text-muted-foreground">
+            <div className="eyebrow mb-2 text-foreground">Реквизиты</div>
+            <div>{SELLER.legalName}</div>
+            <div className="mt-1">
+              ИНН {SELLER.inn} · ОГРНИП {SELLER.ogrnip}
+            </div>
+            <div className="mt-1">БИК банка {SELLER.bik}</div>
           </div>
         </div>
 
