@@ -299,10 +299,26 @@ const ScenarioPage = () => {
   const hits = useMemo(() => {
     let out = found;
 
-    // Пришли по ссылке с маркой — оставляем только её оборудование
+    /*
+     * Подборка, где подбор по машине не нужен: всё оборудование в ней
+     * универсальное. Марку из ссылки игнорируем — иначе страница сама
+     * себе противоречила: сверху «встаёт на любой автомобиль», а ниже
+     * пусто, потому что ни у одного товара марка не проставлена
+     */
+    if (scenario?.noVehicle) return out;
+
+    /*
+     * Пришли по ссылке с маркой — оставляем её оборудование и то, что
+     * не зависит от марки. Раньше универсальные товары отбрасывались:
+     * в подборках, где всё универсальное (шумоизоляция, регистраторы),
+     * список выходил пустым, и человек видел «под эту машину ничего нет»
+     * прямо под фразой «встаёт на любой автомобиль»
+     */
     if (brandFilter) {
       out = out.filter(
-        (h) => (findFitModels(h.product.fits, brandFilter) ?? []).length > 0,
+        (h) =>
+          (findFitModels(h.product.fits, brandFilter) ?? []).length > 0 ||
+          fitsAll(h.product),
       );
     }
 
@@ -326,6 +342,7 @@ const ScenarioPage = () => {
     stepMode,
     partial,
     withUniversal,
+    scenario,
   ]);
 
   /** Сколько в подборке универсальных позиций — их убирает переключатель */
@@ -554,7 +571,7 @@ const ScenarioPage = () => {
         <ScenarioHero
           scenario={scenario}
           introParts={introParts}
-          brandFilter={brandFilter}
+          brandFilter={scenario.noVehicle ? "" : brandFilter}
           onClearBrand={() => {
             const next = new URLSearchParams(params);
             next.delete("brand");

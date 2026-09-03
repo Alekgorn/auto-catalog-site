@@ -472,9 +472,14 @@ const KitSection = ({
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {(collapsed ? [chosen!] : list.slice(0, shown)).map((p, i) => (
               <Fragment key={p.id}>
-                {/* Ниже — то, что подходит почти всем, а не именно этой машине */}
+                {/*
+                  Ниже — то, что подходит любой машине, а не именно этой.
+                  Полосу ставим, только когда выше есть точные совпадения:
+                  иначе она подписывала бы весь список шага
+                */}
                 {!collapsed &&
                   i === exactCount &&
+                  exactCount > 0 &&
                   exactCount < list.length && (
                     <UniversalDivider count={list.length - exactCount} vehicle={vehicle} />
                   )}

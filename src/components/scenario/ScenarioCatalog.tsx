@@ -94,8 +94,23 @@ const ScenarioCatalog = ({
       id="catalog-list"
       className="flex scroll-mt-24 flex-wrap items-center justify-between gap-4 py-5"
     >
-      <div className="text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
-        Всего товаров: {list.length}
+      {/*
+        Под машину и «любой машине» — разные вещи, показываем их отдельно.
+        Общее число вводило в заблуждение: человек видел «Всего 40» и думал,
+        что все сорок встанут в его машину
+      */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
+        {vehicle && fit.exact.length > 0 && (
+          <span className="bg-primary px-2.5 py-1 font-head font-bold tracking-[0.04em] text-primary-foreground">
+            под вашу машину: {fit.exact.length}
+          </span>
+        )}
+        {vehicle && fit.universal.length > 0 && (
+          <span className="border border-border bg-surface px-2.5 py-1 font-head font-bold tracking-[0.04em]">
+            универсальных: {fit.universal.length}
+          </span>
+        )}
+        {!vehicle && <span>Всего товаров: {list.length}</span>}
       </div>
       <label className="flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.12em] text-muted-foreground">
         Сортировка
@@ -201,12 +216,27 @@ const ScenarioCatalog = ({
             id="catalog-top"
             className="grid grid-cols-2 gap-3 pb-8 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
           >
+            {/* Под машину нет ничего: говорим прямо, а не молча показываем
+                универсальные товары так, будто они подобраны под неё */}
+            {vehicle && fit.exact.length === 0 && fit.universal.length > 0 && (
+              <p className="col-span-full -mt-1 mb-1 text-[0.85rem] text-muted-foreground">
+                Именно под {vehicle.brand} {vehicle.model} здесь ничего нет —
+                ниже товары, которые не зависят от марки и года.
+              </p>
+            )}
             {visible.map((h, i) => (
               <Fragment key={h.product.id}>
-                {/* Граница между «точно встанет» и «подойдёт почти всем» */}
-                {i === fit.exact.length && fit.universal.length > 0 && (
-                  <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
-                )}
+                {/*
+                  Граница между «точно встанет» и «подойдёт любой машине».
+                  Нужна, только когда выше неё что-то есть: если точных
+                  совпадений нет, полоса вставала бы первой строкой и
+                  подписывала весь список — про это говорит шапка выше.
+                */}
+                {i === fit.exact.length &&
+                  fit.exact.length > 0 &&
+                  fit.universal.length > 0 && (
+                    <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
+                  )}
                 <ProductCard product={h.product} vehicle={vehicle} />
               </Fragment>
             ))}

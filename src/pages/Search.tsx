@@ -480,11 +480,21 @@ const SearchPage = () => {
                   id="catalog-top"
                   className="grid grid-cols-2 gap-3 pb-10 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
                 >
+                  {/* Под машину ничего не нашлось — говорим об этом словами */}
+                  {vehicle && fit.exact.length === 0 && fit.universal.length > 0 && (
+                    <p className="col-span-full -mt-1 mb-1 text-[0.85rem] text-muted-foreground">
+                      Именно под {vehicle.brand} {vehicle.model} по этому запросу
+                      ничего нет — ниже товары, которые не зависят от марки и года.
+                    </p>
+                  )}
                   {visible.map((h, i) => (
                     <Fragment key={h.product.id}>
-                      {i === fit.exact.length && fit.universal.length > 0 && (
-                        <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
-                      )}
+                      {/* Полоса нужна, только если выше неё есть точные совпадения */}
+                      {i === fit.exact.length &&
+                        fit.exact.length > 0 &&
+                        fit.universal.length > 0 && (
+                          <UniversalDivider count={fit.universal.length} vehicle={vehicle} />
+                        )}
                       <ProductCard product={h.product} vehicle={vehicle} />
                     </Fragment>
                   ))}
