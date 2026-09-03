@@ -13,6 +13,7 @@ import FloatingFilters from "@/components/FloatingFilters";
 import NotFound from "@/pages/NotFound";
 import { useCatalog } from "@/context/CatalogContext";
 import { SITE_URL } from "@/lib/seo";
+import { categoryTitle, categoryDescription } from "@/lib/category-seo";
 import { useSeo } from "@/hooks/use-seo";
 import { slugify } from "@/lib/slug";
 import { formatPrice } from "@/data/catalog";
@@ -163,10 +164,10 @@ const CategoryPage = () => {
   useSeo(
     category
       ? {
-          title: `${category} — купить с доставкой | ШТАТНО`,
-          description: `${category}: ${items.length} позиций в наличии${
-            minPrice ? `, цены от ${formatPrice(minPrice)}` : ""
-          }. Подбор по марке и модели автомобиля, доставка по России.`,
+          // Собираем из самого раздела: количество, вилка цен, марки,
+          // размеры. Иначе у всех разделов один и тот же текст
+          title: categoryTitle(category, items),
+          description: categoryDescription(category, items),
           canonical: `${SITE_URL}/catalog/${slug}`,
           jsonLd: [
             crumbsJsonLd([
