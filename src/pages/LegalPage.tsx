@@ -1,11 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import SectionHead from '@/components/SectionHead';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import NotFound from '@/pages/NotFound';
-import { LEGAL_DOCS } from '@/data/legal';
+import { buildLegalDocs } from '@/data/legal';
+import { useCatalog } from '@/context/CatalogContext';
 import { SITE_URL } from '@/lib/seo';
 import { useSeo } from '@/hooks/use-seo';
 
@@ -19,7 +20,9 @@ import { useSeo } from '@/hooks/use-seo';
 const LegalPage = () => {
   // Адрес и есть имя документа: /oferta, /privacy
   const slug = useLocation().pathname.replace(/\//g, '');
-  const doc = LEGAL_DOCS[slug];
+  // Контакты берём те же, что показывает весь сайт
+  const { contacts } = useCatalog();
+  const doc = useMemo(() => buildLegalDocs(contacts)[slug], [contacts, slug]);
 
   useSeo(
     doc
