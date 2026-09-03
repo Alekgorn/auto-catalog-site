@@ -26,10 +26,10 @@ interface Props {
 }
 
 const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
-  { key: 'phone', label: 'Телефон', hint: '8 800 333-44-55' },
-  { key: 'email', label: 'Почта', hint: 'zakaz@shtatno.ru' },
-  { key: 'address', label: 'Адрес склада', hint: 'Москва, улица, дом' },
-  { key: 'hours', label: 'Часы работы', hint: 'Пн–Сб, 09:00 — 20:00' },
+  { key: 'phone', label: 'Телефон', hint: '+7 911 963-96-71' },
+  { key: 'email', label: 'Почта', hint: 'unosound@yandex.ru' },
+  { key: 'address', label: 'Город или адрес', hint: 'Санкт-Петербург' },
+  { key: 'hours', label: 'Часы работы', hint: 'Пн–Пт, 10:00 — 18:00' },
   { key: 'telegram', label: 'Telegram', hint: 'https://t.me/имя или @имя' },
   {
     key: 'max',
