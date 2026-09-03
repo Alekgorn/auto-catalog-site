@@ -22,6 +22,7 @@ export interface VehicleWiring {
 
 interface WireOption {
   slug: string;
+  sku: string;
   name: string;
   price: number;
 }
@@ -59,6 +60,259 @@ const yearsLabel = (r: VehicleWiring): string => {
   if (to) return `до ${to}`;
   return 'все годы';
 };
+
+/** Форма одного поколения. Вынесена наружу: объявленный внутри компонента
+ *  элемент пересоздаётся на каждый ввод, и поле теряет фокус после буквы */
+const GenerationForm = ({
+  r,
+  wires,
+  busy,
+  onEdit,
+  onSave,
+  onRemove,
+}: {
+  r: VehicleWiring;
+  wires: WireOption[];
+  busy: boolean;
+  onEdit: (patch: Partial<VehicleWiring>) => void;
+  onSave: () => void;
+  onRemove: () => void;
+}) => {
+  const [wireSearch, setWireSearch] = useState('');
+  const picked = wires.find((w) => w.slug === r.wireSlug);
+  const found = wireSearch.trim()
+    ? wires
+        .filter((w) => {
+          const q = wireSearch.trim().toLowerCase();
+          return (
+            w.sku.toLowerCase().includes(q) || w.name.toLowerCase().includes(q)
+          );
+        })
+        .slice(0, 8)
+    : [];
+  return (
+      <div className="space-y-4 border-l-2 border-border py-3 pl-4">
+        <div className="flex flex-wrap gap-2">
+          {(
+            [
+              ['fixed', 'Фиксированная'],
+              ['select', 'Подбор'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => onEdit({ mode: id })}
+              className={`px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                r.mode === id
+                  ? 'bg-foreground text-background'
+                  : 'border border-border hover:border-foreground'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="block">
+            <span className="eyebrow mb-1 block">Год от</span>
+            <input
+              type="number"
+              value={r.yearFrom > 1990 ? r.yearFrom : ''}
+              placeholder="любой"
+              onChange={(e) =>
+                onEdit({ yearFrom: Number(e.target.value) || 1990 })
+              }
+              className="w-24 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
+            />
+          </label>
+          <label className="block">
+            <span className="eyebrow mb-1 block">Год по</span>
+            <input
+              type="number"
+              value={r.yearTo < 2100 ? r.yearTo : ''}
+              placeholder="по сей день"
+              onChange={(e) =>
+                onEdit({ yearTo: Number(e.target.value) || 2100 })
+              }
+              className="w-28 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
+            />
+          </label>
+        </div>
+
+        <div>
+          <span className="eyebrow mb-1 block">Кузов — пусто значит любой</span>
+          <div className="flex flex-wrap gap-2">
+            {BODY_TYPES.map((b) => {
+              const on = (r.bodies || []).includes(b.id);
+              return (
+                <button
+                  key={b.id}
+                  onClick={() =>
+                    onEdit({
+                      bodies: on
+                        ? (r.bodies || []).filter((x) => x !== b.id)
+                        : [...(r.bodies || []), b.id],
+                    })
+                  }
+                  className={`px-3 py-1.5 font-head text-[0.68rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                    on
+                      ? 'bg-foreground text-background'
+                      : 'border border-border hover:border-foreground'
+                  }`}
+                >
+                  {b.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div>
+          <span className="eyebrow mb-1 block">Руль</span>
+          <div className="flex flex-wrap gap-2">
+            {(
+              [
+                ['', 'Любой'],
+                ['left', 'Левый'],
+                ['right', 'Правый'],
+              ] as const
+            ).map(([id, label]) => (
+              <button
+                key={id || 'any'}
+                onClick={() => onEdit({ wheel: id })}
+                className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                  (r.wheel || '') === id
+                    ? 'bg-foreground text-background'
+                    : 'border border-border hover:border-foreground'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {r.mode === 'fixed' && (
+          <div>
+            <span className="eyebrow mb-1 block">Проводка</span>
+            {picked ? (
+              <div className="flex flex-wrap items-center gap-3 border border-border p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-medium">{picked.name}</div>
+                  <div className="text-[0.75rem] text-muted-foreground">
+                    {picked.sku && `${picked.sku} · `}
+                    {picked.price} ₽
+                  </div>
+                </div>
+                <button
+                  onClick={() => onEdit({ wireSlug: '' })}
+                  className="text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-primary"
+                >
+                  Заменить
+                </button>
+              </div>
+            ) : (
+              <div>
+                <input
+                  value={wireSearch}
+                  onChange={(e) => setWireSearch(e.target.value)}
+                  placeholder="Артикул или название проводки"
+                  className="w-full max-w-2xl border-b border-border bg-transparent py-2 text-sm outline-none focus:border-primary"
+                />
+                {found.length > 0 && (
+                  <div className="mt-2 max-w-2xl border border-border">
+                    {found.map((w) => (
+                      <button
+                        key={w.slug}
+                        onClick={() => {
+                          onEdit({ wireSlug: w.slug });
+                          setWireSearch('');
+                        }}
+                        className="flex w-full items-center gap-3 border-b border-border px-3 py-2 text-left last:border-b-0 transition-colors hover:bg-secondary"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">
+                            {w.name}
+                          </span>
+                          <span className="text-[0.72rem] text-muted-foreground">
+                            {w.sku && `${w.sku} · `}
+                            {w.price} ₽
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {wireSearch.trim() && found.length === 0 && (
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Ничего не нашлось — проверьте артикул
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {r.mode === 'select' && (
+          <div>
+            <span className="eyebrow mb-1 block">Что влияет на выбор</span>
+            <div className="flex flex-wrap gap-2">
+              {ASKS.map((a) => (
+                <button
+                  key={a.id}
+                  onClick={() =>
+                    onEdit({
+                      ask: { ...r.ask, [a.id]: !r.ask[a.id] },
+                    })
+                  }
+                  className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                    r.ask[a.id]
+                      ? 'bg-foreground text-background'
+                      : 'border border-border hover:border-foreground'
+                  }`}
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <label className="block">
+          <span className="eyebrow mb-1 block">
+            Обоснование — увидит покупатель, если у проводки нет своего текста
+          </span>
+          <textarea
+            value={r.reason}
+            onChange={(e) => onEdit({ reason: e.target.value })}
+            rows={2}
+            maxLength={600}
+            placeholder="Только этот интерфейс сохраняет штатный климат-контроль."
+            className="w-full max-w-2xl resize-y border-b border-border bg-transparent py-2 text-sm outline-none focus:border-primary"
+          />
+        </label>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={onSave}
+            disabled={busy}
+            className="bg-foreground px-5 py-2 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-background transition-opacity disabled:opacity-50"
+          >
+            {busy ? 'Сохраняем…' : 'Сохранить'}
+          </button>
+          <button
+            onClick={onRemove}
+            disabled={busy}
+            className="border border-border px-4 py-2 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            Удалить
+          </button>
+        </div>
+    </div>
+  );
+};
+
 
 /**
  * Подбор проводки по поколениям машины.
@@ -163,189 +417,6 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
     );
   }
 
-  /** Форма одного поколения */
-  const Form = ({ model, row }: { model: string; row: VehicleWiring }) => {
-    const r = current(model, row);
-    return (
-      <div className="space-y-4 border-l-2 border-border py-3 pl-4">
-        <div className="flex flex-wrap gap-2">
-          {(
-            [
-              ['fixed', 'Фиксированная'],
-              ['select', 'Подбор'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => edit(model, row, { mode: id })}
-              className={`px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                r.mode === id
-                  ? 'bg-foreground text-background'
-                  : 'border border-border hover:border-foreground'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="block">
-            <span className="eyebrow mb-1 block">Год от</span>
-            <input
-              type="number"
-              value={r.yearFrom > 1990 ? r.yearFrom : ''}
-              placeholder="любой"
-              onChange={(e) =>
-                edit(model, row, { yearFrom: Number(e.target.value) || 1990 })
-              }
-              className="w-24 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
-            />
-          </label>
-          <label className="block">
-            <span className="eyebrow mb-1 block">Год по</span>
-            <input
-              type="number"
-              value={r.yearTo < 2100 ? r.yearTo : ''}
-              placeholder="по сей день"
-              onChange={(e) =>
-                edit(model, row, { yearTo: Number(e.target.value) || 2100 })
-              }
-              className="w-28 border-b border-border bg-transparent py-1.5 outline-none focus:border-primary"
-            />
-          </label>
-        </div>
-
-        <div>
-          <span className="eyebrow mb-1 block">Кузов — пусто значит любой</span>
-          <div className="flex flex-wrap gap-2">
-            {BODY_TYPES.map((b) => {
-              const on = (r.bodies || []).includes(b.id);
-              return (
-                <button
-                  key={b.id}
-                  onClick={() =>
-                    edit(model, row, {
-                      bodies: on
-                        ? (r.bodies || []).filter((x) => x !== b.id)
-                        : [...(r.bodies || []), b.id],
-                    })
-                  }
-                  className={`px-3 py-1.5 font-head text-[0.68rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                    on
-                      ? 'bg-foreground text-background'
-                      : 'border border-border hover:border-foreground'
-                  }`}
-                >
-                  {b.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <span className="eyebrow mb-1 block">Руль</span>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ['', 'Любой'],
-                ['left', 'Левый'],
-                ['right', 'Правый'],
-              ] as const
-            ).map(([id, label]) => (
-              <button
-                key={id || 'any'}
-                onClick={() => edit(model, row, { wheel: id })}
-                className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                  (r.wheel || '') === id
-                    ? 'bg-foreground text-background'
-                    : 'border border-border hover:border-foreground'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {r.mode === 'fixed' && (
-          <label className="block">
-            <span className="eyebrow mb-1 block">Проводка</span>
-            <select
-              value={r.wireSlug}
-              onChange={(e) => edit(model, row, { wireSlug: e.target.value })}
-              className="w-full max-w-2xl border-b border-border bg-transparent py-2 text-sm outline-none focus:border-primary"
-            >
-              <option value="">— выберите проводку —</option>
-              {wires.map((w) => (
-                <option key={w.slug} value={w.slug}>
-                  {w.name} — {w.price} ₽
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        {r.mode === 'select' && (
-          <div>
-            <span className="eyebrow mb-1 block">Что влияет на выбор</span>
-            <div className="flex flex-wrap gap-2">
-              {ASKS.map((a) => (
-                <button
-                  key={a.id}
-                  onClick={() =>
-                    edit(model, row, {
-                      ask: { ...r.ask, [a.id]: !r.ask[a.id] },
-                    })
-                  }
-                  className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                    r.ask[a.id]
-                      ? 'bg-foreground text-background'
-                      : 'border border-border hover:border-foreground'
-                  }`}
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <label className="block">
-          <span className="eyebrow mb-1 block">
-            Обоснование — увидит покупатель, если у проводки нет своего текста
-          </span>
-          <textarea
-            value={r.reason}
-            onChange={(e) => edit(model, row, { reason: e.target.value })}
-            rows={2}
-            maxLength={600}
-            placeholder="Только этот интерфейс сохраняет штатный климат-контроль."
-            className="w-full max-w-2xl resize-y border-b border-border bg-transparent py-2 text-sm outline-none focus:border-primary"
-          />
-        </label>
-
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => save(model, r)}
-            disabled={busy}
-            className="bg-foreground px-5 py-2 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-background transition-opacity disabled:opacity-50"
-          >
-            {busy ? 'Сохраняем…' : 'Сохранить'}
-          </button>
-          <button
-            onClick={() => remove(model, row.id)}
-            disabled={busy}
-            className="border border-border px-4 py-2 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
-          >
-            Удалить
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div>
       <div className="flex flex-wrap items-center gap-3">
@@ -425,7 +496,14 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
                             : 'подбор'}
                         </span>
                       </div>
-                      <Form model={model} row={row} />
+                      <GenerationForm
+                        r={current(model, row)}
+                        wires={wires}
+                        busy={busy}
+                        onEdit={(patch) => edit(model, row, patch)}
+                        onSave={() => save(model, current(model, row))}
+                        onRemove={() => remove(model, row.id)}
+                      />
                     </div>
                   ))}
 
@@ -434,7 +512,16 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
                       <div className="pl-4 text-[0.75rem] uppercase tracking-[0.08em] text-primary">
                         Новое поколение
                       </div>
-                      <Form model={model} row={blank(brand, model)} />
+                      <GenerationForm
+                        r={newDraft}
+                        wires={wires}
+                        busy={busy}
+                        onEdit={(patch) =>
+                          edit(model, blank(brand, model), patch)
+                        }
+                        onSave={() => save(model, newDraft)}
+                        onRemove={() => remove(model, undefined)}
+                      />
                     </div>
                   )}
 

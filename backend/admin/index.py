@@ -2610,12 +2610,17 @@ def handler(event: dict, context) -> dict:
                 for r in cur.fetchall()
             ]
             cur.execute(
-                f"SELECT slug, name, price FROM {schema()}.products "
+                f"SELECT slug, sku, name, price FROM {schema()}.products "
                 f"WHERE category = {q(WIRES_CATEGORY)} AND is_active "
                 f"ORDER BY name"
             )
             wires = [
-                {'slug': w['slug'], 'name': w['name'], 'price': w['price']}
+                {
+                    'slug': w['slug'],
+                    'sku': w['sku'] or '',
+                    'name': w['name'],
+                    'price': w['price'],
+                }
                 for w in cur.fetchall()
             ]
             cur.close()
