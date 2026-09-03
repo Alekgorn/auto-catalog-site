@@ -234,13 +234,30 @@ def download_external(url: str, timeout: float) -> tuple:
     Возвращает (сырые_байты, расширение, причина_отказа).
     """
     import urllib.error
+    import urllib.parse
     import urllib.request
 
     if timeout <= 0:
         return None, None, 'не хватило времени'
 
+    # В адресах поставщика встречаются пробелы и кириллица («7 дюймов»).
+    # Без кодирования библиотека такой адрес даже не принимает — и раньше
+    # это выглядело как «сайт долго отвечает», из-за чего ссылка не попадала
+    # в отказы и намертво запирала очередь переноса.
+    try:
+        parts = urllib.parse.urlsplit(url)
+        safe = urllib.parse.urlunsplit((
+            parts.scheme,
+            parts.netloc,
+            urllib.parse.quote(parts.path),
+            urllib.parse.quote(parts.query, safe='=&'),
+            '',
+        ))
+    except Exception:
+        return None, None, 'неверный адрес картинки'
+
     req = urllib.request.Request(
-        url,
+        safe,
         headers={
             'User-Agent': 'Mozilla/5.0 (compatible; ShtatnoBot/1.0)',
             'Accept': 'image/*,*/*',
@@ -252,6 +269,13 @@ def download_external(url: str, timeout: float) -> tuple:
             raw = r.read(MAX_IMAGE_BYTES + 1)
     except urllib.error.HTTPError as e:
         return None, None, f'сайт ответил отказом ({e.code})'
+    except (urllib.error.URLError, ValueError) as e:
+        # Разделяем «сайт не успел» и «адрес битый»: первое стоит повторить,
+        # второе — нет, иначе одна кривая ссылка блокирует всю очередь
+        text = str(getattr(e, 'reason', e)).lower()
+        if 'timed out' in text or 'timeout' in text:
+            return None, None, 'сайт отвечает слишком долго'
+        return None, None, 'не удалось открыть адрес'
     except Exception:
         return None, None, 'сайт отвечает слишком долго'
 
@@ -1715,20 +1739,47 @@ def handler(event: dict, context) -> dict:
         if action == 'optimize-images':
             """Пережимает фото товаров в WebP порциями, чтобы уложиться в таймаут."""
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(f"SELECT url FROM {schema()}.optimize_skip")
+            skip_opt = {r['url'] for r in cur.fetchall()}
+
+            # Только наши файлы: у чужих ссылок расширение тоже .jpg,
+            # но пережать их нельзя — сначала перенос в своё хранилище
             cur.execute(
                 f"SELECT id, images FROM {schema()}.products "
-                f"WHERE images::text ~* '\\.(png|jpe?g)' ORDER BY id"
+                f"WHERE EXISTS (SELECT 1 FROM jsonb_array_elements_text(images) AS u "
+                f"WHERE u LIKE {q(CDN_PREFIX + '%')} AND lower(split_part(u, '?', 1)) "
+                f"~ '\\.(png|jpe?g)$' AND NOT EXISTS (SELECT 1 FROM {schema()}.optimize_skip s "
+                f"WHERE s.url = u)) ORDER BY id"
             )
             rows = cur.fetchall()
 
             def heavy(u: str) -> bool:
+                """Фото, которое мы можем пережать.
+
+                Чужие ссылки сюда не годятся: пережимаем мы только то, что
+                лежит в нашем хранилище. Раньше их тоже считали, и счётчик
+                вечно висел на «не оптимизировано» — обработать эти файлы
+                было нельзя, пока они не переехали к нам.
+                """
+                if not _is_own_cdn(u) or u in skip_opt:
+                    return False
                 return u.lower().split('?')[0].endswith(('.png', '.jpg', '.jpeg'))
 
             left = sum(len([u for u in (r['images'] or []) if heavy(u)]) for r in rows)
 
+            # Чужие фото ждут переноса, а не сжатия — показываем отдельно,
+            # чтобы было видно: работа есть, но сначала другая
+            cur.execute(
+                f"SELECT COALESCE(SUM(("
+                f"SELECT COUNT(*) FROM jsonb_array_elements_text(images) AS u "
+                f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')}"
+                f")), 0) AS n FROM {schema()}.products"
+            )
+            external = int(cur.fetchone()['n'] or 0)
+
             if method == 'GET':
                 cur.close()
-                return resp(200, {'left': left})
+                return resp(200, {'left': left, 'external': external})
 
             # За один вызов пережимаем ровно одно фото — лимит функции 2 секунды
             saved = 0
@@ -1739,6 +1790,15 @@ def handler(event: dict, context) -> dict:
                     continue
                 new_url = reoptimize_url(urls[idx])
                 if new_url == urls[idx]:
+                    # Сжатие не дало выигрыша — файл и так лёгкий. Помечаем,
+                    # иначе счётчик застрянет на нём навсегда: каждый вызов
+                    # брал бы то же фото и снова упирался в тот же отказ
+                    cur.execute(
+                        f"INSERT INTO {schema()}.optimize_skip (url, reason) "
+                        f"VALUES ({q(urls[idx])}, {q('сжатие не уменьшает файл')}) "
+                        f"ON CONFLICT (url) DO NOTHING"
+                    )
+                    conn.commit()
                     continue
                 urls[idx] = new_url
                 cur.execute(
@@ -1750,7 +1810,12 @@ def handler(event: dict, context) -> dict:
                 break
 
             cur.close()
-            return resp(200, {'done': saved, 'saved': saved, 'left': max(left - saved, 0)})
+            return resp(200, {
+                'done': saved,
+                'saved': saved,
+                'left': max(left - saved, 0),
+                'external': external,
+            })
 
         if action == 'bulk' and method == 'POST':
             ids = [int(i) for i in (body.get('ids') or []) if str(i).isdigit()]
