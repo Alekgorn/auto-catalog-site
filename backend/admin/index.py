@@ -489,6 +489,13 @@ def row_to_product(r: dict) -> dict:
         'wireFeatures': r.get('wire_features') or [],
         # Подсказка покупателю: на что смотреть при выборе проводки
         'wireHint': r.get('wire_hint') or '',
+        # Ниже — поля старой схемы. В карточке товара и на сайте их нет,
+        # читает только Excel-разметка проводок: файл на два листа
+        # выгружается и загружается как раньше
+        'wireTech': r.get('wire_tech') or {},
+        'wireKeeps': r.get('wire_keeps') or {},
+        'wireLevel': r.get('wire_level') or '',
+        'wireNote': r.get('wire_note') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,

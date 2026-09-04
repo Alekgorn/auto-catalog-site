@@ -33,7 +33,7 @@ def handler(event: dict, context) -> dict:
             f"SELECT p.slug, p.sku, p.name, p.category, p.subcategory, p.price, p.old_price, p.pro_price, p.ozon_url, p.wb_url, p.install, p.warranty, "
             f"p.year_from, p.year_to, p.badge, p.images, p.video_url, p.description, p.specs, p.kit, p.fits, p.popularity, p.created_at, p.notes, p.extra, p.extra_title, p.stock_qty, p.stock_note, "
             # Подбор проводки: для каких машин и что сохраняет
-            f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, p.wire_bodies, p.wire_wheel, "
+            f"p.wire_bodies, p.wire_wheel, "
             # Проводки, подходящие к рамке — по ним подбор и работает
             f"p.frame_wires, p.wire_included, p.wire_features, p.wire_hint, "
             # Тип подбора: своё значение товара важнее умолчания категории
@@ -68,10 +68,6 @@ def handler(event: dict, context) -> dict:
                 'extraTitle': r['extra_title'] or '',
                 'fits': r['fits'],
                 'fitMode': r['fit_mode'],
-                'wireTech': r['wire_tech'] or {},
-                'wireKeeps': r['wire_keeps'] or {},
-                'wireLevel': r['wire_level'] or '',
-                'wireNote': r['wire_note'] or '',
                 'wireBodies': r['wire_bodies'] or [],
                 'wireWheel': r['wire_wheel'] or '',
                 'frameWires': r['frame_wires'] or [],

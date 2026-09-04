@@ -71,14 +71,6 @@ export interface Product {
    * Приходит с сервера уже с учётом умолчания категории.
    */
   fitMode?: FitMode;
-  /**
-   * Подбор проводки. wireTech — для каких машин проводка (по нему прячем
-   * неподходящее), wireKeeps — что останется работать у клиента (по нему
-   * объясняем разницу в цене). Это разные вещи, объединять нельзя.
-   */
-  wireTech?: Record<string, 'yes' | 'no' | 'any'>;
-  wireKeeps?: Record<string, boolean>;
-  wireLevel?: 'full' | 'basic' | 'limited' | '';
   /** Кузова, на которые встаёт проводка. Пусто — подходит любому */
   wireBodies?: BodyType[];
   /** Сторона руля: left | right. Пусто — подходит любой */
@@ -91,8 +83,6 @@ export interface Product {
   wireFeatures?: string[];
   /** Подсказка к выбору проводки — пишется у рамки, видна покупателю */
   wireHint?: string;
-  /** Текст про сохранение функций — его видит покупатель */
-  wireNote?: string;
   years: [number, number];
   badge?: string;
   images?: string[];
