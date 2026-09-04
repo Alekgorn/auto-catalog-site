@@ -46,10 +46,33 @@ const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
   }, [groups, search, onlyEmpty]);
 
   // Комплектные рамки считаем закрытыми: размечать там нечего
-  const done = groups.filter(
-    (g) =>
-      g.frames.every((f) => f.wireIncluded) || (g.wires.length && !g.mixed),
-  ).length;
+  const isReady = (g: FrameGroup) =>
+    g.frames.every((f) => f.wireIncluded) || (!!g.wires.length && !g.mixed);
+
+  const done = groups.filter(isReady).length;
+  const percent = groups.length ? Math.round((done / groups.length) * 100) : 0;
+
+  /*
+   * Где связи ещё нет — по маркам.
+   *
+   * «Осталось 900 групп» не подсказывает, за что браться. А «Toyota — 62
+   * незакрытых» сразу показывает, где работа окупится быстрее всего:
+   * массовая марка закрывает больше запросов покупателей.
+   */
+  const gaps = useMemo(() => {
+    const map = new Map<string, { left: number; total: number }>();
+    groups.forEach((g) => {
+      const cur = map.get(g.brand) ?? { left: 0, total: 0 };
+      map.set(g.brand, {
+        left: cur.left + (isReady(g) ? 0 : 1),
+        total: cur.total + 1,
+      });
+    });
+    return [...map.entries()]
+      .map(([brand, v]) => ({ brand, ...v }))
+      .filter((x) => x.left > 0)
+      .sort((a, b) => b.left - a.left);
+  }, [groups]);
 
   /** Ставим проводки всей группе разом — одним запросом на все рамки */
   const save = async (group: FrameGroup, slugs: string[]) => {
@@ -87,9 +110,61 @@ const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
           и подбор станет точным. Рамки одного периода размечаются разом:
           9", 10" и 12,3" под одну панель, проводка у них общая.
         </p>
-        <div className="text-[0.78rem] text-muted-foreground">
-          Размечено {done} из {groups.length}
+      </div>
+
+      <div className="mt-5 border border-border p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="font-head text-lg font-bold uppercase tracking-tight">
+            Размечено {done} из {groups.length}
+          </div>
+          <div className="font-head text-lg font-bold text-primary">
+            {percent}%
+          </div>
         </div>
+
+        <div className="mt-3 h-2 w-full bg-surface">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+
+        {gaps.length > 0 ? (
+          <>
+            <div className="mt-4 text-[0.85rem] text-muted-foreground">
+              Марки, где связь не проставлена — сначала те, где незакрытых
+              больше всего:
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {gaps.slice(0, 24).map((g) => (
+                <button
+                  key={g.brand}
+                  onClick={() => {
+                    setSearch(g.brand);
+                    setOnlyEmpty(true);
+                  }}
+                  title={`Показать незакрытые: ${g.brand}`}
+                  className="border border-border px-3 py-1.5 text-[0.8rem] transition-colors hover:border-primary hover:text-primary"
+                >
+                  {g.brand}
+                  <span className="ml-2 text-muted-foreground">
+                    {g.left} из {g.total}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {gaps.length > 24 && (
+              <div className="mt-3 text-[0.8rem] text-muted-foreground">
+                И ещё {gaps.length - 24} марок
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="mt-4 flex items-center gap-2 text-[0.85rem] text-primary">
+            <Icon name="Check" size={15} />
+            Все рамки связаны с проводками
+          </div>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
