@@ -4,6 +4,11 @@ import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import HotspotsEditor from '@/components/admin/HotspotsEditor';
 import ShowcaseEditor from '@/components/admin/ShowcaseEditor';
+import ScenariosEditor from '@/components/admin/ScenariosEditor';
+import {
+  ScenarioOverride,
+  DEFAULT_SCENARIOS,
+} from '@/lib/scenario-settings';
 import { showcaseHref } from '@/lib/showcase';
 import ScenariosCheck from '@/components/admin/ScenariosCheck';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
@@ -54,8 +59,9 @@ const SitePanel = ({ onSaved }: Props) => {
   const [hotspots, setHotspots] = useState<HeroHotspot[]>(DEFAULT_HOTSPOTS);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(DEFAULT_ANALYTICS);
   const [showcase, setShowcase] = useState<ShowcaseKit[]>([]);
+  const [scenarios, setScenarios] = useState<ScenarioOverride[]>(DEFAULT_SCENARIOS);
   const [busy, setBusy] = useState(false);
-  const { products } = useCatalog();
+  const { products, categories } = useCatalog();
 
   useEffect(() => {
     adminFetch('?action=settings')
@@ -68,6 +74,8 @@ const SitePanel = ({ onSaved }: Props) => {
         if (Array.isArray(s.hotspots) && s.hotspots.length) setHotspots(s.hotspots);
         if (s.analytics) setAnalytics({ ...DEFAULT_ANALYTICS, ...s.analytics });
         if (Array.isArray(s.showcase)) setShowcase(s.showcase);
+        if (Array.isArray(s.scenarios) && s.scenarios.length)
+          setScenarios(s.scenarios);
       })
       .catch(() => undefined);
   }, []);
@@ -89,6 +97,7 @@ const SitePanel = ({ onSaved }: Props) => {
           showcase: showcase
             .filter((k) => k.title.trim() && k.ids.length)
             .map((k) => ({ ...k, href: showcaseHref(k) })),
+          scenarios,
         },
       }),
     });
@@ -259,6 +268,14 @@ const SitePanel = ({ onSaved }: Props) => {
 
       <div className="mt-14 border-t border-foreground pt-10">
         <HotspotsEditor value={hotspots} onChange={setHotspots} />
+      </div>
+
+      <div className="mt-14 border-t border-foreground pt-10">
+        <ScenariosEditor
+          value={scenarios}
+          onChange={setScenarios}
+          categories={categories}
+        />
       </div>
 
       <div className="mt-14 border-t border-foreground pt-10">

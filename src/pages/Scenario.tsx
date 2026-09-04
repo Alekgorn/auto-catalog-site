@@ -19,7 +19,8 @@ import {
   headunitFitsVehicle,
   screenSize,
 } from "@/lib/kit-filter";
-import { SCENARIOS, findScenario } from "@/data/scenarios";
+import { findScenario } from "@/data/scenarios";
+import { scenarioWith, visibleScenarios } from "@/lib/scenario-settings";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { scenarioTitle, scenarioDescription } from "@/lib/scenario-seo";
@@ -54,9 +55,16 @@ const ScenarioPage = () => {
     allProducts,
     brands,
     categories: allCategories,
+    scenarioSettings,
     loading,
   } = useCatalog();
-  const scenario = findScenario(slug);
+  /* Тексты и разделы карточки правятся в админке — накладываем их
+     поверх сценария из кода */
+  const base = findScenario(slug);
+  const scenario = useMemo(
+    () => (base ? scenarioWith(base, scenarioSettings) : undefined),
+    [base, scenarioSettings],
+  );
 
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   /**
@@ -585,7 +593,9 @@ const ScenarioPage = () => {
     );
   }
 
-  const others = SCENARIOS.filter((s) => s.slug !== scenario.slug).slice(0, 4);
+  const others = visibleScenarios(scenarioSettings)
+    .filter((s) => s.slug !== scenario.slug)
+    .slice(0, 4);
 
   return (
     <div className="min-h-screen bg-background">
