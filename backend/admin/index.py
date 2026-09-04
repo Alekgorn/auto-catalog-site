@@ -2895,6 +2895,10 @@ def handler(event: dict, context) -> dict:
                     'wireSlug': s['wire_slug'],
                     'reason': s['reason'],
                     'ask': s['ask'] or {},
+                    # Кузов и руль тоже выгружаем: без них файл возвращался
+                    # с пустыми колонками и загрузка стирала разметку
+                    'wheel': s['wheel'] or '',
+                    'bodies': s['bodies'] or [],
                 }
                 for s in cur.fetchall()
             ]
