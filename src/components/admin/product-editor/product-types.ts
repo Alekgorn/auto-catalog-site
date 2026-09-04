@@ -90,6 +90,8 @@ export interface AdminProduct {
   wireIncluded?: boolean;
   /** Что подключает — id из справочника признаков */
   wireFeatures?: string[];
+  /** Подсказка к выбору проводки — пишется у рамки, видна покупателю */
+  wireHint?: string;
   /** Текст про потерю функций — его видит покупатель */
   wireNote?: string;
   /** Сколько штук на складе. 0 — только под заказ */
@@ -135,6 +137,7 @@ export const emptyProduct = (): AdminProduct => ({
   frameWires: [],
   wireIncluded: false,
   wireFeatures: [],
+  wireHint: '',
   wireNote: '',
   sortOrder: 100,
   isActive: true,

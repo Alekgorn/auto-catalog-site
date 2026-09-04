@@ -136,6 +136,30 @@ const ProductWiringTab = ({ form, set, products = [], onOpen }: Props) => {
                 пересечением по годам.
               </p>
 
+              {/* Подсказка нужна там, где проводок несколько и различает
+                  их не галочка, а то, что стояло с завода: монитор,
+                  комплектация, версия панели. Автоматика такое не знает */}
+              {(form.frameWires?.length ?? 0) > 1 && (
+                <div className="mt-4 border border-border p-4">
+                  <div className="font-head text-sm font-bold uppercase tracking-tight">
+                    Что написать покупателю
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    К этой рамке подходит несколько проводок. Объясните
+                    своими словами, как выбрать: на какой разъём смотреть,
+                    чем отличаются комплектации. Текст покажем прямо над
+                    вариантами.
+                  </p>
+                  <textarea
+                    value={form.wireHint ?? ''}
+                    onChange={(e) => set('wireHint', e.target.value)}
+                    rows={3}
+                    placeholder="Например: посмотрите на разъём за штатной магнитолой. Если машина шла с монитором — берите обычный, без монитора — вариант с пометкой «без монитора». XP ставился на комплектации Techno с 2023 года."
+                    className="mt-3 w-full resize-y border border-border bg-transparent p-3 text-sm outline-none transition-colors focus:border-primary"
+                  />
+                </div>
+              )}
+
               {wireOptions.length > 6 && (
                 <input
                   value={search}

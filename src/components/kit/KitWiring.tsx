@@ -82,8 +82,12 @@ const KitWiring = ({
    * нечестно: покупатель закажет не ту деталь и вернётся с претензией.
    */
   const transitional = useMemo(
-    () => transitionalYear(wirings, vehicle),
-    [wirings, vehicle],
+    () =>
+      /* Рамка уже назвала свои проводки — гадать по годам не нужно.
+         Плашка «год переходный» тут только пугает: выбор сделан не по
+         вероятности, а по тому, что реально подходит к этой панели */
+      frame?.frameWires?.length ? false : transitionalYear(wirings, vehicle),
+    [wirings, vehicle, frame],
   );
   /*
    * Кузова для вопроса. Если одна настройка привязана к хэтчбеку, а вторая
@@ -271,7 +275,11 @@ const KitWiring = ({
             Молча показать одну наугад хуже: покупатель закажет не ту деталь
             и вернётся с претензией. Лучше признать предел и предложить помощь.
           */}
-          {res.pickMode === 'select' && res.full.length + res.budget.length > 1 && (
+          {/* Продавец объяснил выбор словами — тревожная плашка лишняя:
+              она говорит «мы не смогли» там, где ответ уже дан */}
+          {!frame?.wireHint &&
+            res.pickMode === 'select' &&
+            res.full.length + res.budget.length > 1 && (
             <div className="border border-[#B45309] bg-[#B45309]/5 p-5">
               <div className="flex items-start gap-2.5">
                 <Icon
@@ -368,6 +376,25 @@ const KitWiring = ({
                   showWireFeatures
                 />
               ))}
+            </div>
+          )}
+
+          {/*
+            Подсказка продавца к этой рамке. Стоит над вариантами: когда
+            проводок несколько и различает их не галочка, а то, что стояло
+            с завода, человеку нужен не фильтр, а объяснение — куда
+            посмотреть в своей машине.
+          */}
+          {frame?.wireHint && mainList.length > 1 && (
+            <div className="flex items-start gap-2.5 border border-border bg-surface p-4">
+              <Icon
+                name="Info"
+                size={17}
+                className="mt-0.5 shrink-0 text-primary"
+              />
+              <p className="whitespace-pre-line text-sm leading-relaxed">
+                {frame.wireHint}
+              </p>
             </div>
           )}
 
