@@ -20,6 +20,7 @@ import {
   WireQuestion,
 } from '@/lib/wire-pick';
 import { useCatalog } from '@/context/CatalogContext';
+import { maxHref } from '@/lib/site-settings';
 
 /** Сколько карточек добавляет «Показать ещё» — два ряда сетки */
 const STEP_MORE = 10;
@@ -226,16 +227,38 @@ const KitWiring = ({
 
         {/* Подключение — самый частый повод засомневаться: разъёмы
             похожи, и ошибка стоит возврата. Живой человек должен быть
-            под рукой прямо здесь, а не в подвале сайта */}
-        <a
-          href={contacts.whatsapp}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 border-2 border-primary px-4 py-2 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          <Icon name="MessageCircle" size={15} />
-          Нужна консультация
-        </a>
+            под рукой прямо здесь, а не в подвале сайта.
+
+            Два мессенджера рядом, без общей кнопки-прокладки: лишний
+            шаг «нажми, потом выбери куда» теряет половину обращений.
+            Показываем только те, что реально настроены */}
+        <div className="flex items-center gap-2">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            Нужна консультация?
+          </span>
+          {maxHref(contacts.max) && (
+            <a
+              href={maxHref(contacts.max)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 border-2 border-primary px-3.5 py-2 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <Icon name="MessageCircle" size={15} />
+              MAX
+            </a>
+          )}
+          {contacts.telegram && (
+            <a
+              href={contacts.telegram}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 border-2 border-primary px-3.5 py-2 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+            >
+              <Icon name="Send" size={15} />
+              Telegram
+            </a>
+          )}
+        </div>
       </div>
 
       {/*
@@ -403,7 +426,7 @@ const KitWiring = ({
                     проводов — либо сравните разъём с фотографиями ниже сами.
                   </p>
                   <a
-                    href={contacts.whatsapp}
+                    href={maxHref(contacts.max) || contacts.telegram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-4 inline-flex items-center gap-2 bg-foreground px-4 py-2.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-background transition-opacity hover:opacity-90"
@@ -453,7 +476,7 @@ const KitWiring = ({
                       : 'Показать другие варианты'}
                   </button>
                   <a
-                    href={contacts.whatsapp}
+                    href={maxHref(contacts.max) || contacts.telegram}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-3 flex items-center gap-2 text-sm text-muted-foreground underline transition-colors hover:text-foreground"
