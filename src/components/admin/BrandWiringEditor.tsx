@@ -3,6 +3,8 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { BODY_TYPES, BodyType } from '@/data/catalog';
+import { AdminProduct } from '@/components/admin/product-editor/product-types';
+import { FRAMES_CATEGORY } from '@/lib/kit-filter';
 
 export interface VehicleWiring {
   id?: number;
@@ -30,7 +32,62 @@ interface WireOption {
 interface Props {
   brand: string;
   models: string[];
+  /** Каталог целиком — из него достаём рамки этой модели */
+  products: AdminProduct[];
 }
+
+/** Рамки модели, сгруппированные по годам: один период — один ряд фото */
+interface FrameGroup {
+  from: number;
+  to: number;
+  items: AdminProduct[];
+}
+
+/**
+ * Рамки модели по периодам.
+ *
+ * Фото решают то, чего не решает таблица годов: две рамки на соседние
+ * периоды выглядят по-разному, и это видно за секунду. Человек открывает
+ * модель и сразу понимает, что 2006 и 2012 — разные машины, а значит и
+ * проводки им нужны разные.
+ *
+ * Периоды с разницей в год считаем одним: поставщики пишут «2011» и
+ * «2012» про одну и ту же панель.
+ */
+const frameGroups = (
+  products: AdminProduct[],
+  brand: string,
+  model: string,
+): FrameGroup[] => {
+  const mine = products.filter((p) => {
+    if (!p.isActive || p.category !== FRAMES_CATEGORY) return false;
+    if (p.fitMode === 'universal' || !p.yearFrom) return false;
+    const models = Object.entries(p.fits ?? {}).find(
+      ([b]) => b.toLowerCase() === brand.toLowerCase(),
+    )?.[1];
+    return (
+      Array.isArray(models) &&
+      models.some((m) => m.toLowerCase() === model.toLowerCase())
+    );
+  });
+
+  const out: FrameGroup[] = [];
+  mine
+    .sort((a, b) => a.yearFrom - b.yearFrom || a.yearTo - b.yearTo)
+    .forEach((p) => {
+      const last = out[out.length - 1];
+      if (
+        last &&
+        Math.abs(last.from - p.yearFrom) <= 1 &&
+        Math.abs(last.to - (p.yearTo || last.to)) <= 1
+      ) {
+        last.items.push(p);
+        return;
+      }
+      out.push({ from: p.yearFrom, to: p.yearTo, items: [p] });
+    });
+  return out;
+};
 
 const ASKS = [
   { id: 'amp', label: 'Усилитель' },
@@ -340,6 +397,54 @@ const GenerationForm = ({
 
 
 /**
+ * Полоса рамок по периодам.
+ *
+ * Показываем то, что покупатель выбирает первым. Видно, что рамки на
+ * 2006 и 2012 разные — значит и панели разные, и одной строкой разметки
+ * их не покрыть. Годы под фото те же, что придётся вписать в разметку.
+ */
+const FramesStrip = ({ groups }: { groups: FrameGroup[] }) => {
+  if (!groups.length) return null;
+  return (
+    <div className="ml-4 border border-border bg-surface p-3">
+      <div className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+        Рамки в каталоге — по годам
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-5 gap-y-3">
+        {groups.map((g) => (
+          <div key={`${g.from}-${g.to}`} className="min-w-0">
+            <div className="text-[0.75rem] font-medium">
+              {g.from}
+              {g.to ? `–${g.to}` : '+'}
+              <span className="ml-1.5 text-[0.7rem] font-normal text-muted-foreground">
+                {g.items.length} шт
+              </span>
+            </div>
+            <div className="mt-1 flex gap-1.5">
+              {g.items.slice(0, 4).map((p) => (
+                <img
+                  key={p.id ?? p.slug}
+                  src={p.images?.[0] ?? ''}
+                  alt={p.name}
+                  title={p.name}
+                  loading="lazy"
+                  className="h-14 w-14 flex-none border border-border bg-card object-contain p-0.5"
+                />
+              ))}
+              {g.items.length > 4 && (
+                <span className="flex h-14 w-8 flex-none items-center text-[0.7rem] text-muted-foreground">
+                  +{g.items.length - 4}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Подбор проводки по поколениям машины.
  *
  * У модели их бывает несколько, и проводки у них разные: Civic до 2011 —
@@ -347,7 +452,7 @@ const GenerationForm = ({
  * угодно, и кузов задаётся тут же, рядом с годами: отдельно от годов он
  * теряет смысл.
  */
-const BrandWiringEditor = ({ brand, models }: Props) => {
+const BrandWiringEditor = ({ brand, models, products }: Props) => {
   const { toast } = useToast();
   const [rows, setRows] = useState<VehicleWiring[]>([]);
   const [wires, setWires] = useState<WireOption[]>([]);
@@ -491,6 +596,7 @@ const BrandWiringEditor = ({ brand, models }: Props) => {
 
               {isOpen && (
                 <div className="mb-3 space-y-3">
+                  <FramesStrip groups={frameGroups(products, brand, model)} />
                   {list.map((row) => (
                     <div key={row.id}>
                       <div className="flex flex-wrap items-center gap-2 pl-4 text-[0.75rem] uppercase tracking-[0.08em] text-muted-foreground">
