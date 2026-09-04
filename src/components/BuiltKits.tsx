@@ -93,63 +93,125 @@ const BuiltKits = () => {
               )}
             </div>
 
-            <div className="mt-5 flex flex-wrap items-start gap-x-2 gap-y-4 sm:gap-x-3">
+            {/* Компьютер: формула из полноразмерных плиток — как в
+                каталоге, с названием товара. Три позиции и цена занимают
+                строку целиком, фото читается без прищуривания */}
+            <div className="mt-5 hidden flex-wrap items-start gap-x-4 gap-y-5 lg:flex">
               {kit.items.map((p, idx) => (
                 <Fragment key={p.id}>
                   {idx > 0 && (
-                    <span className="self-center pt-2 font-head text-xl font-bold text-muted-foreground sm:text-2xl">
+                    <span className="self-center font-head text-3xl font-bold text-muted-foreground">
                       +
                     </span>
                   )}
-                  <div className="w-[68px] sm:w-[104px]">
+                  <div className="w-[188px]">
                     {p.images?.[0] ? (
                       <img
                         src={p.images[0]}
                         alt={p.name}
                         loading="lazy"
-                        className="aspect-square w-full border border-border bg-surface object-contain p-1"
+                        className="aspect-square w-full border border-border bg-surface object-contain p-3"
                       />
                     ) : (
                       <div className="flex aspect-square w-full items-center justify-center border border-border bg-surface">
                         <Icon
                           name="Package"
-                          size={22}
+                          size={30}
                           className="text-muted-foreground/40"
                         />
                       </div>
                     )}
-                    <div className="mt-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.04em]">
+                    <div className="mt-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-primary">
                       {shortName(p.category)}
                     </div>
-                    <div className="text-[0.75rem] text-muted-foreground">
+                    <h3 className="mt-1 line-clamp-2 font-head text-[0.9rem] font-bold leading-snug tracking-tight">
+                      {p.name}
+                    </h3>
+                    <div className="mt-1 font-head text-[0.95rem] font-bold">
                       {p.price.toLocaleString('ru-RU')} ₽
                     </div>
                   </div>
                 </Fragment>
               ))}
 
-              <span className="self-center pt-2 font-head text-xl font-bold text-muted-foreground sm:text-2xl">
+              <span className="self-center font-head text-3xl font-bold text-muted-foreground">
                 =
               </span>
 
-              <div className="self-center pt-2">
-                <div className="font-head text-2xl font-bold tracking-tight">
+              <div className="self-center">
+                <div className="font-head text-3xl font-bold tracking-tight">
                   {kit.total.toLocaleString('ru-RU')} ₽
                 </div>
-                {/* Срок называем здесь, до оплаты. Неприятен не сам заказ
-                    под поставку, а когда о нём узнают после платежа */}
                 {kit.term && (
-                  <div className="text-[0.8rem] text-muted-foreground">
+                  <div className="mt-1 text-[0.85rem] text-muted-foreground">
                     {kit.term}
                   </div>
                 )}
-                <span className="mt-1 inline-flex items-center gap-2 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-primary">
+                <span className="mt-2 inline-flex items-center gap-2 font-head text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-primary">
                   Посмотреть комплект
                   <Icon
                     name="ArrowRight"
-                    size={13}
+                    size={14}
                     className="transition-transform group-hover:translate-x-1"
                   />
+                </span>
+              </div>
+            </div>
+
+            {/* Телефон: формула из трёх плиток растянулась бы на несколько
+                экранов. Одно фото и список — то же содержание, но читается
+                одним взглядом */}
+            <div className="mt-4 flex gap-4 lg:hidden">
+              {kit.items[0]?.images?.[0] ? (
+                <img
+                  src={kit.items[0].images[0]}
+                  alt={kit.title}
+                  loading="lazy"
+                  className="aspect-square w-[112px] flex-none border border-border bg-surface object-contain p-2"
+                />
+              ) : (
+                <div className="flex aspect-square w-[112px] flex-none items-center justify-center border border-border bg-surface">
+                  <Icon
+                    name="Package"
+                    size={24}
+                    className="text-muted-foreground/40"
+                  />
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <ul className="space-y-1">
+                  {kit.items.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-baseline justify-between gap-3 text-[0.85rem]"
+                    >
+                      <span className="text-muted-foreground">
+                        {shortName(p.category)}
+                      </span>
+                      <span className="flex-none">
+                        {p.price.toLocaleString('ru-RU')} ₽
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-border pt-2">
+                  <span className="font-head text-[0.8rem] font-bold uppercase tracking-tight">
+                    Итого
+                  </span>
+                  <span className="font-head text-xl font-bold tracking-tight">
+                    {kit.total.toLocaleString('ru-RU')} ₽
+                  </span>
+                </div>
+                {kit.term && (
+                  <div className="mt-1 text-[0.8rem] text-muted-foreground">
+                    {kit.term}
+                  </div>
+                )}
+                <span className="mt-2 inline-flex items-center gap-2 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-primary">
+                  Посмотреть комплект
+                  <Icon name="ArrowRight" size={13} />
                 </span>
               </div>
             </div>
