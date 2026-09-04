@@ -84,6 +84,8 @@ export interface AdminProduct {
   wireBodies?: BodyType[];
   /** Сторона руля. Пусто — подходит любой */
   wireWheel?: '' | 'left' | 'right';
+  /** Артикулы проводок, подходящих к этой рамке. Пусто — не размечено */
+  frameWires?: string[];
   /** Текст про потерю функций — его видит покупатель */
   wireNote?: string;
   /** Сколько штук на складе. 0 — только под заказ */
@@ -126,6 +128,7 @@ export const emptyProduct = (): AdminProduct => ({
   wireLevel: '',
   wireBodies: [],
   wireWheel: '',
+  frameWires: [],
   wireNote: '',
   sortOrder: 100,
   isActive: true,

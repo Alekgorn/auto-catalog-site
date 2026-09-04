@@ -83,6 +83,8 @@ export interface Product {
   wireBodies?: BodyType[];
   /** Сторона руля: left | right. Пусто — подходит любой */
   wireWheel?: 'left' | 'right' | '';
+  /** Проводки, подходящие к этой рамке — по ним работает подбор */
+  frameWires?: string[];
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];

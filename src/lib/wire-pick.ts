@@ -246,6 +246,53 @@ export const pickWires = (
   );
 
   /*
+   * Проводки, отмеченные прямо на выбранной рамке.
+   *
+   * Это самый точный источник: рамка привязана к конкретной панели, а
+   * человек её уже выбрал — значит и модель, и годы, и тип панели нам
+   * известны без единого вопроса. Поэтому такой список бьёт и разметку
+   * по годам, и общий подбор по каталогу.
+   *
+   * Одна проводка — показываем её и молчим. Несколько — отсеиваем по
+   * ответам про усилитель, камеру и CAN-шину, как и раньше.
+   */
+  const fromFrame = frame?.frameWires?.length
+    ? products.filter((p) => frame.frameWires?.includes(p.id))
+    : [];
+
+  if (fromFrame.length === 1) {
+    return {
+      pickMode: 'fixed',
+      full: fromFrame,
+      budget: [],
+      question: null,
+      fallback: false,
+    };
+  }
+
+  if (fromFrame.length > 1) {
+    let left = fromFrame.filter(
+      (p) =>
+        techOk(p, 'amp', answers.amp) &&
+        techOk(p, 'camera', answers.camera) &&
+        techOk(p, 'can', answers.can),
+    );
+    if (!left.length) left = fromFrame;
+
+    // Спрашиваем только о том, что реально делит оставшиеся варианты
+    const next = (['camera', 'amp', 'can'] as const).find(
+      (k) => answers[k] === undefined && splits(left, k),
+    );
+    return {
+      pickMode: left.length === 1 ? 'fixed' : 'select',
+      full: left.sort((a, b) => a.price - b.price),
+      budget: [],
+      question: next ? { id: next, ...QUESTIONS[next] } : null,
+      fallback: false,
+    };
+  }
+
+  /*
    * Машина помечена как «фиксированная» — проводка известна точно.
    * Спрашивать про усилитель и CAN-шину незачем: решение уже принято
    * человеком, который разбирается. Каждый лишний вопрос теряет покупателя.
