@@ -34,16 +34,34 @@ interface Props {
    */
   picked?: boolean;
   onPick?: (product: Product) => void;
+  /**
+   * Шаг «Подключение»: советуем именно этот вариант — он подходит под
+   * ответы покупателя. Рисуем метку вместо отдельной крупной карточки.
+   */
+  recommended?: boolean;
+  /**
+   * Показать, что проводка подключает. Только на шаге подключения: в
+   * общем каталоге этот список ничего не решает и загромождает сетку.
+   */
+  showWireFeatures?: boolean;
 }
 
 /** Сколько характеристик влезает в карточку, не раздувая её */
 const SPEC_LIMIT = 3;
 
-const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
+const ProductCard = ({
+  product,
+  vehicle: raw,
+  picked,
+  onPick,
+  recommended,
+  showWireFeatures,
+}: Props) => {
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
-  const { cardFields, categorySpecs, brands, products } = useCatalog();
+  const { cardFields, categorySpecs, brands, products, wireFeatures } =
+    useCatalog();
 
   /**
    * Магнитолу к машине привязывает не марка, а размер: она встаёт через
@@ -202,9 +220,9 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
           className="aspect-square w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03] sm:p-3"
         />
 
-        {product.badge && (
+        {(recommended || product.badge) && (
           <span className="absolute right-0 top-2 bg-primary px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-primary-foreground sm:top-3 sm:px-2.5 sm:text-[0.68rem]">
-            {product.badge}
+            {recommended ? 'Рекомендуем' : product.badge}
           </span>
         )}
 
@@ -324,6 +342,39 @@ const ProductCard = ({ product, vehicle: raw, picked, onPick }: Props) => {
             значения были такими же тёмными и плотными, как название, и
             весь верх карточки выглядел одним куском текста. Теперь
             название — единственный тёмный акцент, а это фон под ним */}
+        {/* Что проводка подключает: галочка — работает, крестик — нет.
+            Это главное, по чему выбирают на шаге подключения, поэтому
+            стоит выше характеристик */}
+        {showWireFeatures &&
+          !!(product.wireFeatures || []).length &&
+          wireFeatures.length > 0 && (
+            <ul className="mt-2.5 space-y-0.5 text-[0.72rem] leading-snug">
+              {wireFeatures.map((f) => {
+                const on = (product.wireFeatures || []).includes(f.id);
+                return (
+                  <li key={f.id} className="flex items-start gap-1.5">
+                    <Icon
+                      name={on ? 'Check' : 'X'}
+                      size={12}
+                      className={`mt-0.5 flex-none ${
+                        on ? 'text-success' : 'text-primary'
+                      }`}
+                    />
+                    <span
+                      className={
+                        on
+                          ? 'text-muted-foreground'
+                          : 'text-muted-foreground/70 line-through'
+                      }
+                    >
+                      {f.label}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
         {specRows.length > 0 && (
           <dl className="mt-2.5 space-y-0.5 text-[0.72rem] leading-snug">
             {/* Значение не сжималось из-за flex-none и вылезало за карточку.
