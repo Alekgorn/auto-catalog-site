@@ -4,7 +4,7 @@ import { adminFetch } from '@/lib/api';
 import { formatPrice } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
 import { useCatalog } from '@/context/CatalogContext';
-import { showcaseHref } from '@/components/admin/ShowcaseEditor';
+import { showcaseHref } from '@/lib/showcase';
 import { ShowcaseKit } from '@/lib/site-settings';
 
 export interface AdminOrder {
