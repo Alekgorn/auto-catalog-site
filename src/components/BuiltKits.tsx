@@ -81,7 +81,7 @@ const BuiltKits = () => {
             className="group block border border-border p-5 transition-colors hover:border-primary sm:p-6"
           >
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <div className="font-head text-lg font-bold uppercase tracking-tight">
+              <div className="font-head text-xl font-bold uppercase tracking-tight">
                 {kit.title}
               </div>
               {/* Пояснение продавца: из одних названий товаров не видно,
@@ -93,53 +93,61 @@ const BuiltKits = () => {
               )}
             </div>
 
+            {/* Что именно собрали. Без этой строки заголовок с машиной
+                читался так, будто собрали саму Ладу Весту */}
+            {kit.kitName && (
+              <div className="mt-1 text-[0.95rem] text-muted-foreground">
+                {kit.kitName}
+              </div>
+            )}
+
             {/* Компьютер: формула из полноразмерных плиток — как в
                 каталоге, с названием товара. Три позиции и цена занимают
                 строку целиком, фото читается без прищуривания */}
-            <div className="mt-5 hidden flex-wrap items-start gap-x-4 gap-y-5 lg:flex">
+            <div className="mt-5 hidden flex-wrap items-stretch gap-x-3 gap-y-5 lg:flex">
               {kit.items.map((p, idx) => (
                 <Fragment key={p.id}>
                   {idx > 0 && (
-                    <span className="self-center font-head text-3xl font-bold text-muted-foreground">
+                    <span className="flex w-9 flex-none items-center justify-center self-center font-head text-5xl font-bold leading-none text-foreground">
                       +
                     </span>
                   )}
-                  <div className="w-[188px]">
+                  <div className="w-[248px] flex-none border border-border p-3">
                     {p.images?.[0] ? (
                       <img
                         src={p.images[0]}
                         alt={p.name}
                         loading="lazy"
-                        className="aspect-square w-full border border-border bg-surface object-contain p-3"
+                        className="aspect-square w-full bg-surface object-contain p-2"
                       />
                     ) : (
-                      <div className="flex aspect-square w-full items-center justify-center border border-border bg-surface">
+                      <div className="flex aspect-square w-full items-center justify-center bg-surface">
                         <Icon
                           name="Package"
-                          size={30}
+                          size={34}
                           className="text-muted-foreground/40"
                         />
                       </div>
                     )}
-                    <div className="mt-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-primary">
+                    <div className="mt-3 font-head text-[0.72rem] font-semibold uppercase tracking-[0.06em] text-primary">
                       {shortName(p.category)}
                     </div>
-                    <h3 className="mt-1 line-clamp-2 font-head text-[0.9rem] font-bold leading-snug tracking-tight">
+                    <h3 className="mt-1.5 line-clamp-2 font-head text-[0.95rem] font-bold leading-snug tracking-tight">
                       {p.name}
                     </h3>
-                    <div className="mt-1 font-head text-[0.95rem] font-bold">
+                    <div className="mt-2 font-head text-[1.05rem] font-bold">
                       {p.price.toLocaleString('ru-RU')} ₽
                     </div>
                   </div>
                 </Fragment>
               ))}
 
-              <span className="self-center font-head text-3xl font-bold text-muted-foreground">
+              <span className="flex w-9 flex-none items-center justify-center self-center font-head text-5xl font-bold leading-none text-foreground">
                 =
               </span>
 
               <div className="self-center">
-                <div className="font-head text-3xl font-bold tracking-tight">
+                <div className="font-head text-4xl font-bold tracking-tight">
                   {kit.total.toLocaleString('ru-RU')} ₽
                 </div>
                 {kit.term && (
