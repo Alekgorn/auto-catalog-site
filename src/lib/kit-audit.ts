@@ -364,17 +364,6 @@ export const auditWiring = (
   rows.forEach((r) => {
     const where = `${r.brand} ${r.model} ${r.years[0]}–${r.years[1]}`;
 
-    // Режим «Фиксированный» без товара — подбор не покажет ничего
-    if (r.mode === 'fixed' && !r.wireSlug) {
-      out.push({
-        rule: 'fixed-empty',
-        level: 'error',
-        title: where,
-        text: 'Тип «Фиксированный», но проводка не выбрана',
-        hint: 'Покупатель не увидит рекомендацию — поставьте товар или тип «Подбор»',
-      });
-    }
-
     // Ссылка на товар, которого больше нет в каталоге
     if (r.wireSlug && !wireSlugs.has(r.wireSlug)) {
       out.push({
