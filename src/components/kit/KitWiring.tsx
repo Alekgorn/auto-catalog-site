@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import ProductCard from '@/components/ProductCard';
 import {
   Product,
   Vehicle,
   BodyType,
   formatPrice,
   bodyTypeLabel,
-  productImages,
 } from '@/data/catalog';
 import {
   pickWires,
@@ -19,6 +19,9 @@ import {
   matchingWirings,
 } from '@/lib/wire-pick';
 import { useCatalog } from '@/context/CatalogContext';
+
+/** Сколько карточек добавляет «Показать ещё» — два ряда сетки */
+const STEP_MORE = 10;
 
 interface Props {
   /** Товары раздела проводок */
@@ -33,147 +36,6 @@ interface Props {
   pickedId?: string;
   onPick: (product: Product) => void;
 }
-
-/**
- * Карточка варианта подключения.
- *
- * Фото крупное и кликабельное: проводки различаются разъёмами, и по снимку
- * это видно быстрее, чем по названию. Клик открывает быстрый просмотр —
- * тот же, что в каталоге, чтобы поведение нигде не отличалось.
- */
-const WireCard = ({
-  wire,
-  recommended,
-  picked,
-  onPick,
-  note,
-  limited,
-}: {
-  wire: Product;
-  recommended: boolean;
-  picked: boolean;
-  onPick: () => void;
-  /** Пояснение админа — почему этот вариант такой */
-  note?: string;
-  /** Вариант из скрытого списка: работает, но с ограничениями */
-  limited?: boolean;
-}) => {
-  const { wireFeatures: features } = useCatalog();
-  const photos = productImages(wire);
-  /* Что подключает эта проводка. Показываем весь справочник: покупателю
-     важно не только что работает, но и чего он не получит */
-  const marks = wire.wireFeatures || [];
-  const text = note || wire.wireNote;
-
-  return (
-    <div
-      className={`border p-5 ${
-        recommended ? 'border-foreground bg-card' : 'border-border bg-card/60'
-      }`}
-    >
-      {(recommended || limited) && (
-        <div className="flex flex-wrap items-center gap-2">
-          {recommended && (
-            <span className="bg-foreground px-2 py-1 font-head text-[0.65rem] font-bold uppercase tracking-[0.08em] text-background">
-              Рекомендуем
-            </span>
-          )}
-          {/* Скрытый вариант: подойдёт, но не даст того, что человек
-              просил. «Ограниченная совместимость» звучало как «может не
-              подойти» — пугало там, где проводка исправна */}
-          {limited && (
-            <span className="flex items-center gap-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-[#B45309]">
-              <Icon name="TriangleAlert" size={14} />
-              Не всё, что вы просили
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="mt-4 flex flex-col gap-5 sm:flex-row">
-        <button
-          type="button"
-          onClick={() =>
-            window.dispatchEvent(
-              new CustomEvent('quickview:open', { detail: wire.id }),
-            )
-          }
-          aria-label={`Быстрый просмотр: ${wire.name}`}
-          className="group relative h-44 w-full flex-none overflow-hidden border border-border bg-surface-muted sm:h-40 sm:w-40"
-        >
-          <img
-            src={photos[0]}
-            alt={wire.name}
-            loading="lazy"
-            decoding="async"
-            width={400}
-            height={400}
-            className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
-          />
-          <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-background/85 text-foreground opacity-0 transition-opacity group-hover:opacity-100">
-            <Icon name="Maximize2" size={14} />
-          </span>
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div className="font-medium leading-snug">{wire.name}</div>
-
-          {/* Текст админа идёт сразу под названием — он объясняет, за что
-              цена, и должен читаться раньше кнопки «Выбрать» */}
-          {text && (
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {text}
-            </p>
-          )}
-
-          {marks.length > 0 && features.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {features.map((f) => {
-                const on = marks.includes(f.id);
-                return (
-                  <li key={f.id} className="flex items-start gap-2 text-sm">
-                    <Icon
-                      name={on ? 'Check' : 'X'}
-                      size={15}
-                      className={`mt-0.5 shrink-0 ${
-                        on ? 'text-success' : 'text-primary'
-                      }`}
-                    />
-                    <span
-                      className={
-                        on ? '' : 'text-muted-foreground line-through'
-                      }
-                    >
-                      {f.label}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-        <div className="font-head text-2xl font-bold">
-          {formatPrice(wire.price)}
-        </div>
-        <button
-          onClick={onPick}
-          className={`px-5 py-2.5 font-head text-[0.75rem] font-semibold uppercase tracking-[0.08em] transition-colors ${
-            picked
-              ? 'bg-success text-success-foreground'
-              : recommended
-                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                : 'border border-foreground hover:bg-foreground hover:text-background'
-          }`}
-        >
-          {picked ? 'В комплекте' : 'Выбрать'}
-        </button>
-      </div>
-    </div>
-  );
-};
 
 /**
  * Блок «Подключение» — умный подбор проводки вместо списка похожих позиций.
@@ -195,6 +57,9 @@ const KitWiring = ({
   const { contacts, wireFeatures } = useCatalog();
   const [answers, setAnswers] = useState<WireAnswers>({});
   const [openBudget, setOpenBudget] = useState(false);
+  /* Сколько вариантов показываем сразу. Ряд в каталоге — пять карточек,
+     берём два ряда: столько влезает без прокрутки на ноутбуке */
+  const [shown, setShown] = useState(STEP_MORE);
   /** Раскрыты ли проводки соседнего периода — для переходного года */
   const [openTransition, setOpenTransition] = useState(false);
   const [warnFor, setWarnFor] = useState<string | null>(null);
@@ -246,6 +111,14 @@ const KitWiring = ({
         wireFeatures,
       ),
     [products, vehicle, answers, modelBodies, wiring, frame, wireFeatures],
+  );
+
+  /* Что показываем в основной сетке. В режиме «рекомендуем» остальные
+     варианты уезжают под кнопку, в обычном — идут общим списком */
+  const mainList = useMemo(
+    () =>
+      res.pickMode === 'fixed' ? res.full : [...res.full, ...res.budget],
+    [res],
   );
 
   /*
@@ -483,39 +356,61 @@ const KitWiring = ({
             </div>
           )}
 
-          {transitional &&
-            openTransition &&
-            otherPeriodWires.map((w) => (
-              <WireCard
-                key={`t-${w.id}`}
-                wire={w}
-                recommended={false}
+          {transitional && openTransition && otherPeriodWires.length > 0 && (
+            <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {otherPeriodWires.map((w) => (
+                <ProductCard
+                  key={`t-${w.id}`}
+                  product={w}
+                  vehicle={vehicle}
+                  picked={pickedId === w.id}
+                  onPick={() => onPick(w)}
+                  showWireFeatures
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Сетка как в каталоге: проводка — такой же товар, и выбивать
+              её из общего строя незачем. Признаки подключения показываем
+              прямо в карточке, ради них и была крупная вёрстка */}
+          <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {mainList.slice(0, shown).map((w, i) => (
+              <ProductCard
+                key={w.id}
+                product={w}
+                vehicle={vehicle}
                 picked={pickedId === w.id}
                 onPick={() => onPick(w)}
+                recommended={res.pickMode === 'fixed' && i === 0}
+                showWireFeatures
               />
             ))}
 
-          {res.pickMode === 'select'
-            ? /* Режим подбора: все варианты равны, ничего не прячем */
-              [...res.full, ...res.budget].map((w) => (
-                <WireCard
-                  key={w.id}
-                  wire={w}
-                  recommended={false}
-                  picked={pickedId === w.id}
-                  onPick={() => onPick(w)}
-                />
-              ))
-            : res.full.map((w, i) => (
-                <WireCard
-                  key={w.id}
-                  wire={w}
-                  recommended={i === 0}
-                  picked={pickedId === w.id}
-                  onPick={() => onPick(w)}
-                  note={i === 0 ? w.wireNote || wiring?.reason : undefined}
-                />
-              ))}
+            {shown < mainList.length && (
+              <button
+                onClick={() => setShown((n) => n + STEP_MORE)}
+                className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon name="Plus" size={22} className="flex-none" />
+                <span className="font-head text-[0.8rem] font-bold uppercase tracking-[0.06em]">
+                  Показать ещё
+                </span>
+                <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
+                  ещё {mainList.length - shown}
+                </span>
+              </button>
+            )}
+          </div>
+
+          {/* Пояснение админа к рекомендованной проводке. В карточке для
+              него места нет, а прочитать его надо: оно объясняет цену */}
+          {res.pickMode === 'fixed' &&
+            (res.full[0]?.wireNote || wiring?.reason) && (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {res.full[0]?.wireNote || wiring?.reason}
+              </p>
+            )}
 
           {/* Точный вариант известен — остальные прячем, чтобы не путать,
               но оставляем доступными: вдруг нужен вариант подешевле */}
@@ -533,55 +428,63 @@ const KitWiring = ({
                 <Icon name="ChevronDown" size={15} />
               </button>
             ) : (
-              res.budget.map((w) => (
-                <div key={w.id} className="space-y-3">
-                  <WireCard
-                    wire={w}
-                    recommended={false}
-                    limited
+              <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {res.budget.map((w) => (
+                  <ProductCard
+                    key={w.id}
+                    product={w}
+                    vehicle={vehicle}
                     picked={pickedId === w.id}
+                    /* Сразу не выбираем: сначала честно предупреждаем,
+                       что часть функций не заработает */
                     onPick={() => setWarnFor(w.id)}
+                    showWireFeatures
                   />
-                  {warnFor === w.id && pickedId !== w.id && (
-                    <div className="border border-primary bg-primary/5 p-4">
-                      <div className="flex items-start gap-2">
-                        <Icon
-                          name="TriangleAlert"
-                          size={17}
-                          className="mt-0.5 shrink-0 text-primary"
-                        />
-                        <div>
-                          <div className="font-head text-sm font-bold uppercase tracking-tight">
-                            Часть функций работать не будет
-                          </div>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {w.wireNote ||
-                              'Магнитола заработает, но не всё из того, что вы отметили: сверьтесь со списком выше.'}
-                          </p>
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <button
-                              onClick={() => {
-                                onPick(w);
-                                setWarnFor(null);
-                              }}
-                              className="border border-foreground px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
-                            >
-                              Всё равно выбрать
-                            </button>
-                            <button
-                              onClick={() => setWarnFor(null)}
-                              className="bg-foreground px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-background"
-                            >
-                              Оставить рекомендуемый
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))
+                ))}
+              </div>
             ))}
+
+          {/* Предупреждение о неполном варианте. Стоит под сеткой: в
+              карточке каталога места для него нет, а сказать надо до
+              того, как человек положит товар в комплект */}
+          {warnFor && pickedId !== warnFor && (
+            <div className="border border-primary bg-primary/5 p-4">
+              <div className="flex items-start gap-2">
+                <Icon
+                  name="TriangleAlert"
+                  size={17}
+                  className="mt-0.5 shrink-0 text-primary"
+                />
+                <div>
+                  <div className="font-head text-sm font-bold uppercase tracking-tight">
+                    Часть функций работать не будет
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {res.budget.find((w) => w.id === warnFor)?.wireNote ||
+                      'Магнитола заработает, но не всё из того, что вы отметили: сверьтесь со списком в карточке.'}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => {
+                        const w = res.budget.find((x) => x.id === warnFor);
+                        if (w) onPick(w);
+                        setWarnFor(null);
+                      }}
+                      className="border border-foreground px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
+                    >
+                      Всё равно выбрать
+                    </button>
+                    <button
+                      onClick={() => setWarnFor(null)}
+                      className="bg-foreground px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-background"
+                    >
+                      Оставить рекомендуемый
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {res.full.length === 0 && res.budget.length === 0 && (
             <div className="border border-border bg-card p-5 text-sm text-muted-foreground">
