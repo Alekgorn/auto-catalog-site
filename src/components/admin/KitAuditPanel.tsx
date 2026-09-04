@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
-import {
-  AdminProduct,
-  emptyProduct,
-} from '@/components/admin/product-editor/product-types';
-import { WIRES_CATEGORY } from '@/lib/kit-filter';
+import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
 import {
   KIT_RULE_TITLES,
@@ -24,6 +21,14 @@ interface Props {
 
 type View = 'products' | 'wiring' | 'gaps';
 
+/** Проводка из каталога — то, из чего выбираем в разметке */
+interface WireOption {
+  slug: string;
+  sku: string;
+  name: string;
+  price: number;
+}
+
 /**
  * Проверка комплекта: рамки, проводки и разметка подбора.
  *
@@ -36,10 +41,11 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
   const [wiringRows, setWiringRows] = useState<VehicleWiring[]>([]);
+  const [wires, setWires] = useState<WireOption[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   // Разметка подбора живёт в своей таблице — тянем отдельно от товаров
-  useEffect(() => {
+  const loadWiring = () =>
     adminFetch('?action=vehicle-wiring')
       .then((r) => r.json())
       .then((d) => {
@@ -61,9 +67,14 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
             }) as unknown as VehicleWiring,
         );
         setWiringRows(rows);
+        setWires(d.wires ?? []);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
+
+  useEffect(() => {
+    loadWiring();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const productIssues = useMemo(
@@ -76,7 +87,24 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
     [wiringRows, products, brands],
   );
 
-  const gaps = useMemo(() => findKitGaps(products), [products]);
+  /*
+   * Машины без проводки, кроме тех, что уже закрыты разметкой.
+   *
+   * Разметка «Фиксированный» говорит подбору, какую проводку показать,
+   * даже если у самого товара эта машина не отмечена: для Газели это
+   * обычный ISO-переходник, размеченный на всю марку. Такая машина уже
+   * не дыра, и держать её в списке — значит гонять по кругу.
+   */
+  const gaps = useMemo(() => {
+    const covered = new Set(
+      wiringRows
+        .filter((r) => r.mode === 'fixed' && r.wireSlug)
+        .map((r) => `${r.brand.toLowerCase()}|${r.model.toLowerCase()}`),
+    );
+    return findKitGaps(products).filter(
+      (g) => !covered.has(`${g.brand.toLowerCase()}|${g.model.toLowerCase()}`),
+    );
+  }, [products, wiringRows]);
 
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
@@ -142,7 +170,7 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
       </div>
 
       {view === 'gaps' ? (
-        <GapsList rows={gaps} onEdit={onEdit} />
+        <GapsList rows={gaps} wires={wires} onSaved={loadWiring} />
       ) : !loaded && view === 'wiring' ? (
         <div className="mt-8 py-10 text-center text-[0.87rem] text-muted-foreground">
           Загружаем разметку…
@@ -268,66 +296,170 @@ const Empty = () => (
   </div>
 );
 
-/** Машины, под которые есть рамка, но нет проводки */
+/**
+ * Машины, под которые есть рамка, но нет проводки.
+ *
+ * Закрываем дыру не новым товаром, а строкой разметки: почти всегда
+ * подходящая проводка в каталоге уже есть, просто она размечена на всю
+ * марку и на конкретной машине не отмечена. Для Газели это обычный
+ * ISO-переходник — выбрали из списка, и подбор начал его показывать.
+ */
 const GapsList = ({
   rows,
-  onEdit,
+  wires,
+  onSaved,
 }: {
   rows: KitGapRow[];
-  onEdit: (product: AdminProduct) => void;
+  wires: WireOption[];
+  onSaved: () => void;
 }) => {
+  const { toast } = useToast();
+  /** Какая машина сейчас раскрыта для выбора */
+  const [open, setOpen] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+
   if (!rows.length) return <Empty />;
 
+  const rowKey = (r: KitGapRow) => `${r.brand}|${r.model}|${r.yearFrom}`;
+
   /**
-   * Заготовка карточки проводки под эту машину.
+   * Записываем строку разметки.
    *
-   * Марку, модель и годы берём из рамки, из-за которой машина попала в
-   * список: раз рамка на эти годы есть, проводка нужна на те же. Остальное
-   * заполняет человек — мы только избавляем его от рутины.
+   * fixed со slug — «для этой машины вот эта проводка», select без него —
+   * «вариантов несколько, показать все подходящие».
    */
-  const draft = (r: KitGapRow): AdminProduct => ({
-    ...emptyProduct(),
-    name: `Переходник Андроид магнитолы для ${r.brand} ${r.model}`,
-    category: WIRES_CATEGORY,
-    fitMode: 'vehicle',
-    fits: { [r.brand]: [r.model] },
-    yearFrom: r.yearFrom || emptyProduct().yearFrom,
-    yearTo: r.yearTo || emptyProduct().yearTo,
-  });
+  const save = async (r: KitGapRow, mode: 'fixed' | 'select', slug = '') => {
+    setBusy(true);
+    const res = await adminFetch('?action=vehicle-wiring', {
+      method: 'POST',
+      body: JSON.stringify({
+        brand: r.brand,
+        model: r.model,
+        yearFrom: r.yearFrom || 1990,
+        yearTo: r.yearTo || 2100,
+        mode,
+        wireSlug: slug,
+        reason: '',
+        ask: {},
+        wheel: '',
+        bodies: [],
+      }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить' });
+      return;
+    }
+    setOpen(null);
+    setSearch('');
+    onSaved();
+    toast({
+      title: 'Сохранено',
+      description: `${r.brand} ${r.model}: ${
+        mode === 'fixed' ? 'проводка выбрана' : 'показываем все подходящие'
+      }`,
+    });
+  };
+
+  const shownWires = search.trim()
+    ? wires.filter((w) =>
+        `${w.name} ${w.sku}`.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : wires;
 
   return (
     <>
       <div className="mt-5 border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
         Под эти машины рамка в каталоге есть, а проводки нет — покупатель
-        дойдёт до второго шага и остановится. Кнопка создаёт карточку
-        проводки с уже заполненной машиной и годами.
+        дойдёт до второго шага и остановится. Выберите готовую проводку из
+        каталога: чаще всего подходит переходник, размеченный на всю марку.
       </div>
       <div className="mt-2">
-        {rows.map((r, i) => (
-          <div
-            key={`${r.brand}-${r.model}-${i}`}
-            className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border py-3"
-          >
-            <div className="min-w-0">
-              <div className="font-head text-[0.92rem] font-bold">
-                {r.brand} {r.model}
-                <span className="ml-2 font-body text-[0.78rem] font-normal text-muted-foreground">
-                  {r.yearFrom || '?'}–{r.yearTo || '?'}
-                </span>
+        {rows.map((r) => {
+          const id = rowKey(r);
+          const isOpen = open === id;
+          return (
+            <div key={id} className="border-b border-border py-3">
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+                <div className="min-w-0">
+                  <div className="font-head text-[0.92rem] font-bold">
+                    {r.brand} {r.model}
+                    <span className="ml-2 font-body text-[0.78rem] font-normal text-muted-foreground">
+                      {r.yearFrom || '?'}–{r.yearTo || '?'}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-[0.76rem] text-muted-foreground">
+                    {r.example}
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setOpen(isOpen ? null : id);
+                    setSearch('');
+                  }}
+                  className={`flex flex-none items-center gap-1.5 border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors ${
+                    isOpen
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-foreground hover:bg-foreground hover:text-background'
+                  }`}
+                >
+                  <Icon name={isOpen ? 'X' : 'Plus'} size={13} />
+                  {isOpen ? 'Закрыть' : 'Указать проводку'}
+                </button>
               </div>
-              <div className="mt-0.5 text-[0.76rem] text-muted-foreground">
-                {r.example}
-              </div>
+
+              {isOpen && (
+                <div className="mt-3 border border-border bg-surface p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Поиск по названию или артикулу"
+                      className="min-w-0 flex-1 border border-border bg-background px-3 py-2 text-[0.82rem] outline-none focus:border-foreground"
+                    />
+                    <button
+                      disabled={busy}
+                      onClick={() => save(r, 'select')}
+                      className="flex-none border border-border px-3 py-2 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground disabled:opacity-50"
+                    >
+                      Показать все подходящие
+                    </button>
+                  </div>
+
+                  <div className="mt-3 max-h-[19rem] overflow-y-auto">
+                    {shownWires.length === 0 ? (
+                      <div className="py-6 text-center text-[0.8rem] text-muted-foreground">
+                        Ничего не нашлось
+                      </div>
+                    ) : (
+                      shownWires.map((w) => (
+                        <button
+                          key={w.slug}
+                          disabled={busy}
+                          onClick={() => save(r, 'fixed', w.slug)}
+                          className="flex w-full items-baseline justify-between gap-4 border-b border-border py-2 text-left transition-colors hover:text-primary disabled:opacity-50"
+                        >
+                          <span className="min-w-0 text-[0.82rem]">
+                            {w.name}
+                            {w.sku && (
+                              <span className="ml-2 text-[0.72rem] text-muted-foreground">
+                                {w.sku}
+                              </span>
+                            )}
+                          </span>
+                          <span className="flex-none text-[0.78rem] text-muted-foreground">
+                            {w.price ? `${w.price.toLocaleString('ru')} ₽` : ''}
+                          </span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-            <button
-              onClick={() => onEdit(draft(r))}
-              className="flex flex-none items-center gap-1.5 border border-foreground px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
-            >
-              <Icon name="Plus" size={13} />
-              Добавить проводку
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </>
   );
