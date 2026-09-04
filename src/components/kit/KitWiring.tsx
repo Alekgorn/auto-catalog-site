@@ -8,7 +8,6 @@ import {
   bodyTypeLabel,
   productImages,
 } from '@/data/catalog';
-import PhotoViewer from '@/components/PhotoViewer';
 import {
   pickWires,
   WireAnswers,
@@ -33,23 +32,32 @@ interface Props {
   onPick: (product: Product) => void;
 }
 
-/** Карточка варианта: цена, что сохраняется, кнопка выбора */
+/**
+ * Карточка варианта подключения.
+ *
+ * Фото крупное и кликабельное: проводки различаются разъёмами, и по снимку
+ * это видно быстрее, чем по названию. Клик открывает быстрый просмотр —
+ * тот же, что в каталоге, чтобы поведение нигде не отличалось.
+ */
 const WireCard = ({
   wire,
   recommended,
   picked,
   onPick,
+  note,
 }: {
   wire: Product;
   recommended: boolean;
   picked: boolean;
   onPick: () => void;
+  /** Пояснение админа — почему этот вариант такой */
+  note?: string;
 }) => {
-  const [zoom, setZoom] = useState<number | null>(null);
   const photos = productImages(wire);
   const full = wire.wireLevel === 'full';
   const keeps = wire.wireKeeps || {};
   const rows = Object.keys(KEEP_LABELS).filter((k) => k in keeps);
+  const text = note || wire.wireNote;
 
   return (
     <div
@@ -73,64 +81,68 @@ const WireCard = ({
         </span>
       </div>
 
-      <div className="mt-3 flex gap-4">
-        {/* Проводки различаются разъёмами — по снимку это видно быстрее,
-            чем по названию. Клик открывает фото во весь экран. */}
+      <div className="mt-4 flex flex-col gap-5 sm:flex-row">
         <button
           type="button"
-          onClick={() => setZoom(0)}
-          aria-label={`Посмотреть фото: ${wire.name}`}
-          className="group relative h-24 w-24 flex-none overflow-hidden border border-border bg-surface-muted"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent('quickview:open', { detail: wire.id }),
+            )
+          }
+          aria-label={`Быстрый просмотр: ${wire.name}`}
+          className="group relative h-44 w-full flex-none overflow-hidden border border-border bg-surface-muted sm:h-40 sm:w-40"
         >
           <img
             src={photos[0]}
             alt={wire.name}
             loading="lazy"
             decoding="async"
-            width={200}
-            height={200}
-            className="h-full w-full object-contain p-1 transition-transform duration-300 group-hover:scale-105"
+            width={400}
+            height={400}
+            className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
           />
-          <span className="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center bg-background/85 text-foreground opacity-0 transition-opacity group-hover:opacity-100">
-            <Icon name="Maximize2" size={13} />
+          <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center bg-background/85 text-foreground opacity-0 transition-opacity group-hover:opacity-100">
+            <Icon name="Maximize2" size={14} />
           </span>
         </button>
-        <div className="min-w-0 flex-1 font-medium leading-snug">
-          {wire.name}
+
+        <div className="min-w-0 flex-1">
+          <div className="font-medium leading-snug">{wire.name}</div>
+
+          {/* Текст админа идёт сразу под названием — он объясняет, за что
+              цена, и должен читаться раньше кнопки «Выбрать» */}
+          {text && (
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {text}
+            </p>
+          )}
+
+          {rows.length > 0 && (
+            <ul className="mt-3 space-y-1.5">
+              {rows.map((k) => (
+                <li key={k} className="flex items-start gap-2 text-sm">
+                  <Icon
+                    name={keeps[k] ? 'Check' : 'X'}
+                    size={15}
+                    className={`mt-0.5 shrink-0 ${
+                      keeps[k] ? 'text-success' : 'text-primary'
+                    }`}
+                  />
+                  <span
+                    className={
+                      keeps[k] ? '' : 'text-muted-foreground line-through'
+                    }
+                  >
+                    {KEEP_LABELS[k]}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      <PhotoViewer
-        images={photos}
-        alt={wire.name}
-        index={zoom}
-        onClose={() => setZoom(null)}
-      />
-
-      {rows.length > 0 && (
-        <ul className="mt-3 space-y-1.5">
-          {rows.map((k) => (
-            <li key={k} className="flex items-start gap-2 text-sm">
-              <Icon
-                name={keeps[k] ? 'Check' : 'X'}
-                size={15}
-                className={`mt-0.5 shrink-0 ${
-                  keeps[k] ? 'text-success' : 'text-primary'
-                }`}
-              />
-              <span
-                className={
-                  keeps[k] ? '' : 'text-muted-foreground line-through'
-                }
-              >
-                {KEEP_LABELS[k]}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
         <div className="font-head text-2xl font-bold">
           {formatPrice(wire.price)}
         </div>
@@ -147,12 +159,6 @@ const WireCard = ({
           {picked ? 'В комплекте' : 'Выбрать'}
         </button>
       </div>
-
-      {!full && wire.wireNote && (
-        <p className="mt-3 border-t border-border pt-3 text-sm text-muted-foreground">
-          {wire.wireNote}
-        </p>
-      )}
     </div>
   );
 };
@@ -311,28 +317,16 @@ const KitWiring = ({
       ) : (
         <div className="mt-5 space-y-4">
           {res.full.map((w, i) => (
-            <div key={w.id} className="space-y-2">
-              <WireCard
-                wire={w}
-                recommended={i === 0}
-                picked={pickedId === w.id}
-                onPick={() => onPick(w)}
-              />
-              {/* Почему именно эта проводка — иначе цена выглядит
-                  прихотью продавца, а не необходимостью */}
-              {i === 0 && (w.wireNote || wiring?.reason) && (
-                <div className="flex items-start gap-2 border-l-2 border-foreground bg-secondary/40 px-4 py-3">
-                  <Icon
-                    name="Info"
-                    size={16}
-                    className="mt-0.5 shrink-0 text-muted-foreground"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    {w.wireNote || wiring?.reason}
-                  </p>
-                </div>
-              )}
-            </div>
+            <WireCard
+              key={w.id}
+              wire={w}
+              recommended={i === 0}
+              picked={pickedId === w.id}
+              onPick={() => onPick(w)}
+              /* Обоснование поколения показываем у рекомендуемого варианта,
+                 если у самой проводки своего текста нет */
+              note={i === 0 ? w.wireNote || wiring?.reason : undefined}
+            />
           ))}
 
           {res.budget.length > 0 &&
