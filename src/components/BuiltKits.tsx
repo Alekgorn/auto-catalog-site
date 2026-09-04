@@ -81,8 +81,11 @@ const BuiltKits = () => {
             className="group block border border-border p-5 transition-colors hover:border-primary sm:p-6"
           >
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              {/* «Магнитола на» + «Toyota FJ Cruiser 2013» — одной строкой.
+                  Отдельной подписью это читалось так, будто собрали саму
+                  машину, а не комплект для неё */}
               <div className="font-head text-xl font-bold uppercase tracking-tight">
-                {kit.title}
+                {[kit.kitName, kit.title].filter(Boolean).join(' ')}
               </div>
               {/* Пояснение продавца: из одних названий товаров не видно,
                   почему собрано именно так */}
@@ -93,26 +96,18 @@ const BuiltKits = () => {
               )}
             </div>
 
-            {/* Что именно собрали. Без этой строки заголовок с машиной
-                читался так, будто собрали саму Ладу Весту */}
-            {kit.kitName && (
-              <div className="mt-1 text-[0.95rem] text-muted-foreground">
-                {kit.kitName}
-              </div>
-            )}
-
             {/* Компьютер: формула из полноразмерных плиток — как в
                 каталоге, с названием товара. Три позиции и цена занимают
                 строку целиком, фото читается без прищуривания */}
-            <div className="mt-5 hidden flex-wrap items-stretch gap-x-3 gap-y-5 lg:flex">
+            <div className="mt-5 hidden items-stretch gap-x-3 lg:flex">
               {kit.items.map((p, idx) => (
                 <Fragment key={p.id}>
                   {idx > 0 && (
-                    <span className="flex w-9 flex-none items-center justify-center self-center font-head text-5xl font-bold leading-none text-foreground">
+                    <span className="flex w-7 flex-none items-center justify-center self-center font-head text-4xl font-bold leading-none text-foreground xl:w-9 xl:text-5xl">
                       +
                     </span>
                   )}
-                  <div className="w-[248px] flex-none border border-border p-3">
+                  <div className="min-w-0 flex-1 border border-border p-3 [max-width:248px]">
                     {p.images?.[0] ? (
                       <img
                         src={p.images[0]}
@@ -142,12 +137,14 @@ const BuiltKits = () => {
                 </Fragment>
               ))}
 
-              <span className="flex w-9 flex-none items-center justify-center self-center font-head text-5xl font-bold leading-none text-foreground">
+              <span className="flex w-7 flex-none items-center justify-center self-center font-head text-4xl font-bold leading-none text-foreground xl:w-9 xl:text-5xl">
                 =
               </span>
 
-              <div className="self-center">
-                <div className="font-head text-4xl font-bold tracking-tight">
+              {/* Цена не сжимается и не переносится: перенос строки под
+                  плитки выглядел обрывом формулы на полуслове */}
+              <div className="w-[210px] flex-none self-center">
+                <div className="font-head text-3xl font-bold tracking-tight xl:text-4xl">
                   {kit.total.toLocaleString('ru-RU')} ₽
                 </div>
                 {kit.term && (
@@ -155,7 +152,7 @@ const BuiltKits = () => {
                     {kit.term}
                   </div>
                 )}
-                <span className="mt-2 inline-flex items-center gap-2 font-head text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-primary">
+                <span className="mt-2 inline-flex items-center gap-2 whitespace-nowrap font-head text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-primary">
                   Посмотреть комплект
                   <Icon
                     name="ArrowRight"
