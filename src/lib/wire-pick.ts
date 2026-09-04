@@ -307,20 +307,59 @@ export const pickWires = (
   }
 
   if (fromFrame.length > 1) {
-    let left = fromFrame.filter((p) =>
-      asked.every((f) => featureOk(p, f.id, answers[f.id])),
+    const byPrice = (a: Product, b: Product) => a.price - b.price;
+
+    /*
+     * Требования покупателя: «да» на вопрос — проводка обязана это
+     * подключать. Отвечать на все вопросы необязательно, считаем по тем,
+     * что уже заданы.
+     */
+    const needs = asked.filter((f) => answers[f.id] === true).map((f) => f.id);
+    const fits2 = fromFrame.filter((p) =>
+      needs.every((k) => (p.wireFeatures || []).includes(k)),
     );
-    if (!left.length) left = fromFrame;
 
     // Спрашиваем только о том, что реально делит оставшиеся варианты
     const next = asked.find(
-      (f) => answers[f.id] === undefined && splits(left, f.id),
+      (f) => answers[f.id] === undefined && splits(fromFrame, f.id),
     );
+
+    /*
+     * Вопрос ещё есть — показываем всё и ничего не советуем: советовать
+     * до ответа значит гадать.
+     */
+    if (next) {
+      return {
+        pickMode: 'select',
+        full: [...fromFrame].sort(byPrice),
+        budget: [],
+        question: { id: next.id, ...questionFor(next) },
+        fallback: false,
+      };
+    }
+
+    /*
+     * Вопросы кончились — надо посоветовать, а не вываливать список.
+     *
+     * Подходящие идут наверх, самая дешёвая из них — рекомендация.
+     * Остальные прячем в «другие варианты»: сказавшему «камера есть»
+     * проводка без камеры технически подойдёт, но камера работать не
+     * будет, и молча ставить её рядом как равную — обман.
+     *
+     * Ответ «нет» ничего не отсекает: проводка, которая умеет больше,
+     * работает и на простой машине. Она просто окажется ниже по цене.
+     */
+    const good = fits2.length ? fits2 : fromFrame;
+    const rest = fromFrame.filter((p) => !good.includes(p));
+
+    /* Всегда «рекомендуем», даже когда подходят обе: человек ответил на
+       вопросы и ждёт ответа, а не списка равных вариантов. Первой идёт
+       самая дешёвая подходящая */
     return {
-      pickMode: left.length === 1 ? 'fixed' : 'select',
-      full: left.sort((a, b) => a.price - b.price),
-      budget: [],
-      question: next ? { id: next.id, ...questionFor(next) } : null,
+      pickMode: 'fixed',
+      full: [...good].sort(byPrice),
+      budget: [...rest].sort(byPrice),
+      question: null,
       fallback: false,
     };
   }
