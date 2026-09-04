@@ -65,7 +65,7 @@ const ProductKits = ({ id }: { id: string }) => {
             </div>
 
             <div className="mt-2 flex-1 text-[0.85rem] leading-relaxed text-muted-foreground">
-              {kit.items.length} позиции в комплекте
+              {kit.note || `${kit.items.length} позиции в комплекте`}
             </div>
 
             <div className="mt-3 font-head text-lg font-bold tracking-tight">

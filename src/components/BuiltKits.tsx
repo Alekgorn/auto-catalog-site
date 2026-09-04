@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { Fragment, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
@@ -6,7 +6,7 @@ import { useCatalog } from '@/context/CatalogContext';
 
 /*
  * В составе показываем не название товара и не полное имя раздела:
- * «Переходные рамки для магнитол» не влезает в карточку и обрывается
+ * «Переходные рамки для магнитол» не влезает в подпись и обрывается
  * многоточием. Человеку тут важен сам факт «рамка есть», а подробности
  * он увидит, открыв комплект.
  */
@@ -15,10 +15,10 @@ const SHORT: [RegExp, string][] = [
   [/рамк/i, 'Рамка'],
   [/переходник|жгут|проводк|разъем|разъём/i, 'Проводка'],
   [/камер/i, 'Камера'],
-  [/регистратор/i, 'Видеорегистратор'],
+  [/регистратор/i, 'Регистратор'],
   [/парктрон/i, 'Парктроник'],
   [/шумоизол|виброизол/i, 'Шумоизоляция'],
-  [/антенн/i, 'Антенный переходник'],
+  [/антенн/i, 'Антенна'],
 ];
 
 const shortName = (category: string): string => {
@@ -33,6 +33,10 @@ const shortName = (category: string): string => {
  * «сколько стоит», а «разберётесь ли вы с моей машиной». Поэтому здесь
  * не новинки склада, а решённые задачи — включая простые, из пары
  * позиций: по ним посетитель за рамкой узнаёт свой случай.
+ *
+ * Состав показан формулой из фотографий: магнитола + рамка + проводка =
+ * цена. Списком названий комплект читается как перечень, а картинками —
+ * сразу видно, что именно человек получит в коробке.
  *
  * Цены считаем по каталогу на лету. Хранить их в карточке значило бы
  * однажды показать вчерашнюю стоимость и разбираться с этим при заказе.
@@ -51,7 +55,6 @@ const BuiltKits = () => {
           ...kit,
           items,
           total: items.reduce((s, p) => s + (p.price || 0), 0),
-          image: kit.image || items[0]?.images?.[0] || '',
         };
       })
       /* Карточка без состава — недоделанная: цена собралась бы нулевой */
@@ -70,73 +73,85 @@ const BuiltKits = () => {
         note="Комплекты, которые мы подобрали для клиентов. Нажмите на любой — увидите точный состав с ценами и сможете поменять его под свою машину."
       />
 
-      <div className="grid grid-cols-1 gap-5 pb-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-4 pb-10">
         {cards.map((kit, i) => (
           <Link
             key={i}
             to={kit.href?.slice(kit.href.indexOf('/sborka')) || '#'}
-            className="group flex flex-col border border-border transition-colors hover:border-primary"
+            className="group block border border-border p-5 transition-colors hover:border-primary sm:p-6"
           >
-            {kit.image ? (
-              <img
-                src={kit.image}
-                alt={kit.title}
-                loading="lazy"
-                className="aspect-[4/3] w-full bg-surface object-cover"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] w-full items-center justify-center bg-surface">
-                <Icon
-                  name="Car"
-                  size={40}
-                  className="text-muted-foreground/40"
-                />
-              </div>
-            )}
-
-            <div className="flex flex-1 flex-col p-5">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
               <div className="font-head text-lg font-bold uppercase tracking-tight">
                 {kit.title}
               </div>
-
-              <ul className="mt-3 flex-1 space-y-1.5">
-                {kit.items.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-start gap-2 text-[0.85rem] leading-snug text-muted-foreground"
-                  >
-                    <Icon
-                      name="Check"
-                      size={14}
-                      className="mt-0.5 flex-none text-primary"
-                    />
-                    <span className="line-clamp-1">
-                      {shortName(p.category)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-4 font-head text-xl font-bold tracking-tight">
-                {kit.total.toLocaleString('ru-RU')} ₽
-              </div>
-
-              {/* Срок называем здесь, до оплаты. Неприятен не сам заказ
-                  под поставку, а когда о нём узнают после платежа */}
-              {kit.term && (
-                <div className="mt-1 text-[0.8rem] text-muted-foreground">
-                  {kit.term}
+              {/* Пояснение продавца: из одних названий товаров не видно,
+                  почему собрано именно так */}
+              {kit.note && (
+                <div className="text-[0.9rem] text-muted-foreground">
+                  {kit.note}
                 </div>
               )}
+            </div>
 
-              <span className="mt-4 inline-flex items-center gap-2 font-head text-[0.75rem] font-semibold uppercase tracking-[0.08em] text-primary">
-                Посмотреть комплект
-                <Icon
-                  name="ArrowRight"
-                  size={14}
-                  className="transition-transform group-hover:translate-x-1"
-                />
+            <div className="mt-5 flex flex-wrap items-start gap-x-2 gap-y-4 sm:gap-x-3">
+              {kit.items.map((p, idx) => (
+                <Fragment key={p.id}>
+                  {idx > 0 && (
+                    <span className="self-center pt-2 font-head text-xl font-bold text-muted-foreground sm:text-2xl">
+                      +
+                    </span>
+                  )}
+                  <div className="w-[68px] sm:w-[104px]">
+                    {p.images?.[0] ? (
+                      <img
+                        src={p.images[0]}
+                        alt={p.name}
+                        loading="lazy"
+                        className="aspect-square w-full border border-border bg-surface object-contain p-1"
+                      />
+                    ) : (
+                      <div className="flex aspect-square w-full items-center justify-center border border-border bg-surface">
+                        <Icon
+                          name="Package"
+                          size={22}
+                          className="text-muted-foreground/40"
+                        />
+                      </div>
+                    )}
+                    <div className="mt-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.04em]">
+                      {shortName(p.category)}
+                    </div>
+                    <div className="text-[0.75rem] text-muted-foreground">
+                      {p.price.toLocaleString('ru-RU')} ₽
+                    </div>
+                  </div>
+                </Fragment>
+              ))}
+
+              <span className="self-center pt-2 font-head text-xl font-bold text-muted-foreground sm:text-2xl">
+                =
               </span>
+
+              <div className="self-center pt-2">
+                <div className="font-head text-2xl font-bold tracking-tight">
+                  {kit.total.toLocaleString('ru-RU')} ₽
+                </div>
+                {/* Срок называем здесь, до оплаты. Неприятен не сам заказ
+                    под поставку, а когда о нём узнают после платежа */}
+                {kit.term && (
+                  <div className="text-[0.8rem] text-muted-foreground">
+                    {kit.term}
+                  </div>
+                )}
+                <span className="mt-1 inline-flex items-center gap-2 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] text-primary">
+                  Посмотреть комплект
+                  <Icon
+                    name="ArrowRight"
+                    size={13}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
+                </span>
+              </div>
             </div>
           </Link>
         ))}
