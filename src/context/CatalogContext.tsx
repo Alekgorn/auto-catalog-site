@@ -23,6 +23,7 @@ import {
   HeroHotspot,
   FaqItem,
   FilterBlockKey,
+  ShowcaseKit,
   SiteContacts,
 } from '@/lib/site-settings';
 
@@ -36,6 +37,7 @@ export interface PrerenderData {
   settings?: {
     card_fields?: string[];
     wire_features?: WireFeature[];
+    showcase?: ShowcaseKit[];
     contacts?: Partial<SiteContacts>;
     faq?: FaqItem[];
     filter_blocks?: FilterBlockKey[];
@@ -67,6 +69,7 @@ interface CatalogValue {
   cardFields: string[];
   /** Справочник признаков подключения — по нему подбор задаёт вопросы */
   wireFeatures: WireFeature[];
+  showcase: ShowcaseKit[];
   contacts: SiteContacts;
   faq: FaqItem[];
   filterBlocks: FilterBlockKey[];
@@ -218,6 +221,9 @@ export const CatalogProvider = ({
   const [wireFeatures, setWireFeatures] = useState<WireFeature[]>(
     seed?.settings?.wire_features ?? [],
   );
+  const [showcase, setShowcase] = useState<ShowcaseKit[]>(
+    seed?.settings?.showcase ?? [],
+  );
   const [contacts, setContacts] = useState<SiteContacts>({
     ...DEFAULT_CONTACTS,
     ...(seed?.settings?.contacts ?? {}),
@@ -312,6 +318,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.card_fields)) {
           setCardFields(data.settings.card_fields);
         }
+        if (Array.isArray(data.settings?.showcase)) {
+          setShowcase(data.settings.showcase);
+        }
         if (Array.isArray(data.settings?.wire_features)) {
           setWireFeatures(data.settings.wire_features);
         }
@@ -378,6 +387,7 @@ export const CatalogProvider = ({
     categorySpecs,
     cardFields,
     wireFeatures,
+    showcase,
     contacts,
     faq,
     filterBlocks,

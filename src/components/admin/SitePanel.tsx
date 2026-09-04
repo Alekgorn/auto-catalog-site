@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import HotspotsEditor from '@/components/admin/HotspotsEditor';
+import ShowcaseEditor, { showcaseHref } from '@/components/admin/ShowcaseEditor';
 import ScenariosCheck from '@/components/admin/ScenariosCheck';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import ExternalImages from '@/components/admin/ExternalImages';
@@ -18,8 +19,10 @@ import {
   FILTER_BLOCKS,
   FaqItem,
   FilterBlockKey,
+  ShowcaseKit,
   SiteContacts,
 } from '@/lib/site-settings';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   onSaved: () => void;
@@ -49,7 +52,9 @@ const SitePanel = ({ onSaved }: Props) => {
   const [blocks, setBlocks] = useState<FilterBlockKey[]>(DEFAULT_FILTER_BLOCKS);
   const [hotspots, setHotspots] = useState<HeroHotspot[]>(DEFAULT_HOTSPOTS);
   const [analytics, setAnalytics] = useState<SiteAnalytics>(DEFAULT_ANALYTICS);
+  const [showcase, setShowcase] = useState<ShowcaseKit[]>([]);
   const [busy, setBusy] = useState(false);
+  const { products } = useCatalog();
 
   useEffect(() => {
     adminFetch('?action=settings')
@@ -61,6 +66,7 @@ const SitePanel = ({ onSaved }: Props) => {
         if (Array.isArray(s.filter_blocks)) setBlocks(s.filter_blocks);
         if (Array.isArray(s.hotspots) && s.hotspots.length) setHotspots(s.hotspots);
         if (s.analytics) setAnalytics({ ...DEFAULT_ANALYTICS, ...s.analytics });
+        if (Array.isArray(s.showcase)) setShowcase(s.showcase);
       })
       .catch(() => undefined);
   }, []);
@@ -77,6 +83,11 @@ const SitePanel = ({ onSaved }: Props) => {
           filter_blocks: blocks,
           hotspots: hotspots.filter((x) => x.label.trim()),
           analytics,
+          /* Ссылку на комплект собираем здесь: в карточке хранится только
+             состав, адрес всегда пересчитывается под текущий формат */
+          showcase: showcase
+            .filter((k) => k.title.trim() && k.ids.length)
+            .map((k) => ({ ...k, href: showcaseHref(k) })),
         },
       }),
     });
@@ -247,6 +258,14 @@ const SitePanel = ({ onSaved }: Props) => {
 
       <div className="mt-14 border-t border-foreground pt-10">
         <HotspotsEditor value={hotspots} onChange={setHotspots} />
+      </div>
+
+      <div className="mt-14 border-t border-foreground pt-10">
+        <ShowcaseEditor
+          value={showcase}
+          onChange={setShowcase}
+          products={products}
+        />
       </div>
 
       <div className="mt-14 border-t border-foreground">
