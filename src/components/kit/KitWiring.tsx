@@ -408,49 +408,56 @@ const KitWiring = ({
               непонятно: она читалась как подпись ко всему шагу, а не как
               «вот альтернатива этой карточке».
             */}
-            {res.pickMode === 'fixed' && res.budget.length > 0 && (
+            {res.pickMode === 'fixed' && res.budget.length > 0 && !openBudget && (
               <button
-                onClick={() => setOpenBudget((v) => !v)}
+                onClick={() => setOpenBudget(true)}
                 className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
-                <Icon
-                  name={openBudget ? 'X' : 'Wallet'}
-                  size={22}
-                  className="flex-none"
-                />
+                <Icon name="Wallet" size={22} className="flex-none" />
                 <span className="font-head text-[0.8rem] font-bold uppercase leading-tight tracking-[0.06em]">
-                  {openBudget
-                    ? 'Скрыть'
-                    : res.budget[0].price < res.full[0].price
-                      ? 'Дешевле, но без части функций'
-                      : 'Другие варианты'}
+                  {res.budget[0].price < res.full[0].price
+                    ? 'Дешевле, но без части функций'
+                    : 'Другие варианты'}
                 </span>
                 <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
-                  {openBudget
-                    ? 'вернуть как было'
-                    : res.budget[0].price < res.full[0].price
-                      ? `от ${formatPrice(res.budget[0].price)}`
-                      : `ещё ${res.budget.length}`}
+                  {res.budget[0].price < res.full[0].price
+                    ? `от ${formatPrice(res.budget[0].price)}`
+                    : `ещё ${res.budget.length}`}
                 </span>
               </button>
             )}
 
-            {/* Раскрытые варианты идут той же сеткой — встают следом за
-                кнопкой, а не отдельным блоком внизу */}
-            {res.pickMode === 'fixed' &&
-              openBudget &&
-              res.budget.map((w) => (
-                <ProductCard
-                  key={w.id}
-                  product={w}
-                  vehicle={vehicle}
-                  picked={pickedId === w.id}
-                  /* Сразу не выбираем: сначала честно предупреждаем,
-                     что часть функций не заработает */
-                  onPick={() => setWarnFor(w.id)}
-                  showWireFeatures
-                />
-              ))}
+            {/* Раскрыли — карточки встают той же сеткой, а «Скрыть»
+                уезжает за ними: свернуть хочется, досмотрев список, и
+                кнопка должна ждать там, где заканчивается чтение */}
+            {res.pickMode === 'fixed' && openBudget && (
+              <>
+                {res.budget.map((w) => (
+                  <ProductCard
+                    key={w.id}
+                    product={w}
+                    vehicle={vehicle}
+                    picked={pickedId === w.id}
+                    /* Сразу не выбираем: сначала честно предупреждаем,
+                       что часть функций не заработает */
+                    onPick={() => setWarnFor(w.id)}
+                    showWireFeatures
+                  />
+                ))}
+                <button
+                  onClick={() => setOpenBudget(false)}
+                  className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Icon name="X" size={22} className="flex-none" />
+                  <span className="font-head text-[0.8rem] font-bold uppercase leading-tight tracking-[0.06em]">
+                    Скрыть
+                  </span>
+                  <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
+                    вернуть как было
+                  </span>
+                </button>
+              </>
+            )}
           </div>
 
           {/* Пояснение админа к рекомендованной проводке. В карточке для
