@@ -139,6 +139,16 @@ const ShowcaseEditor = ({ value, onChange, products }: Props) => {
                 </div>
               </div>
 
+              <div className="mt-4">
+                <span className="eyebrow">Что собрали</span>
+                <input
+                  value={kit.kitName ?? ''}
+                  placeholder="Магнитола Topway TS105 9″ с рамкой и проводкой"
+                  onChange={(e) => setAt(i, { kitName: e.target.value })}
+                  className={input}
+                />
+              </div>
+
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block">
                   <span className="eyebrow">Срок поставки</span>
