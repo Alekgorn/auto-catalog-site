@@ -503,8 +503,10 @@ const Admin = () => {
           categorySpecs={categorySpecs}
           categoryFitModes={categoryFitModes}
           brands={brands}
+          products={products}
           onClose={() => setEditing(null)}
           onSave={save}
+          onOpen={setEditing}
         />
       )}
 

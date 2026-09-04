@@ -13,6 +13,8 @@ import { formatPrice } from '@/data/catalog';
 interface Props {
   products: AdminProduct[];
   onReload?: () => void;
+  /** Открыть карточку товара — правки делаются там, где они видны */
+  onEdit?: (p: AdminProduct) => void;
 }
 
 /** Что спрашиваем у покупателя — эти три решают, какая проводка нужна */
@@ -36,7 +38,7 @@ const OPTS: { id: WireTechValue; label: string; hint: string }[] = [
  * Значения ставятся прямо в строке, без открытия карточки товара: на
  * четырёхстах позициях каждый лишний клик стоит часов.
  */
-const WireTechPanel = ({ products, onReload }: Props) => {
+const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlyEmpty, setOnlyEmpty] = useState(true);
@@ -130,12 +132,20 @@ const WireTechPanel = ({ products, onReload }: Props) => {
               key={p.slug ?? p.id}
               className="flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-border py-3"
             >
-              <img
-                src={p.images?.[0] ?? ''}
-                alt=""
-                loading="lazy"
-                className="h-12 w-12 flex-none bg-card object-contain"
-              />
+              {/* Клик по фото открывает карточку: там правят название,
+                  совместимость и всё остальное */}
+              <button
+                onClick={() => onEdit?.(p)}
+                title="Открыть карточку"
+                className="flex-none"
+              >
+                <img
+                  src={p.images?.[0] ?? ''}
+                  alt=""
+                  loading="lazy"
+                  className="h-12 w-12 bg-card object-contain transition-opacity hover:opacity-70"
+                />
+              </button>
               <div className="min-w-[15rem] flex-1">
                 <div className="text-[0.85rem] leading-snug">{p.name}</div>
                 <div className="mt-0.5 text-[0.72rem] uppercase tracking-[0.06em] text-muted-foreground">

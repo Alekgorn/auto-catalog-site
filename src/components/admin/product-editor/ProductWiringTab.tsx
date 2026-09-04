@@ -1,45 +1,69 @@
+import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { BODY_TYPES } from '@/data/catalog';
+import { formatPrice } from '@/data/catalog';
+import { FRAMES_CATEGORY, WIRES_CATEGORY } from '@/lib/kit-filter';
 import {
   AdminProduct,
   SetField,
   WIRE_TECH,
-  WIRE_KEEPS,
-  WIRE_LEVELS,
-  WHEEL_SIDES,
   WireTechValue,
-  WireLevel,
-  label,
-  field,
 } from './product-types';
 
 interface Props {
   form: AdminProduct;
   set: SetField;
+  /** Каталог целиком — из него берём вторую сторону связи */
+  products?: AdminProduct[];
+  /** Открыть другой товар: связь редактируется с обеих сторон */
+  onOpen?: (product: AdminProduct) => void;
 }
 
-const TECH_OPTS: { id: WireTechValue; label: string }[] = [
-  { id: 'yes', label: 'Да' },
-  { id: 'no', label: 'Нет' },
-  { id: 'any', label: 'Неважно' },
+/** Признаки, по которым проводки отличаются друг от друга */
+const KEYS = ['amp', 'camera', 'can'];
+
+const TECH_OPTS: { id: WireTechValue; label: string; hint: string }[] = [
+  { id: 'yes', label: 'Только с ним', hint: 'Проводка нужна, если это есть' },
+  { id: 'no', label: 'Только без', hint: 'Проводка не рассчитана на это' },
+  { id: 'any', label: 'Неважно', hint: 'Подходит в любом случае' },
 ];
 
+/** Совпадают ли товары хотя бы по одной машине и пересекаются ли годы */
+const related = (a: AdminProduct, b: AdminProduct): boolean => {
+  const aFrom = a.yearFrom || 1990;
+  const aTo = a.yearTo || 2100;
+  const bFrom = b.yearFrom || 1990;
+  const bTo = b.yearTo || 2100;
+  if (aFrom > bTo || bFrom > aTo) return false;
+
+  return Object.entries(a.fits ?? {}).some(([brand, models]) => {
+    const other = Object.entries(b.fits ?? {}).find(
+      ([x]) => x.toLowerCase() === brand.toLowerCase(),
+    )?.[1];
+    if (!Array.isArray(other)) return false;
+    return (models ?? []).some((m) =>
+      other.some((o) => o.toLowerCase() === m.toLowerCase()),
+    );
+  });
+};
+
 /**
- * Вкладка «Подключение» — только для проводок и переходников.
+ * Вкладка «Подключение» — связь рамки и проводки.
  *
- * Здесь два блока, и они отвечают на разные вопросы. «С чем работает» —
- * фильтр: если проводка не рассчитана на машину со штатным усилителем, а
- * усилитель есть, покупатель этот товар вообще не увидит. «Что останется
- * работать» — наоборот, товар показываем, но честно пишем, что теряется.
+ * Отсюда убрано всё, что осталось от старой схемы с годами: уровень
+ * совместимости, кузова, руль, список сохраняемых функций. Заполнено это
+ * было у трёх товаров из тысячи семисот и ни на что не влияло — а место
+ * занимало и путало.
  *
- * Смысл разделения простой: дешёвый переходник не «неправильный» — он
- * рабочий, просто без климата. Спрятать его нельзя (кому-то климат не
- * нужен), выдать за равноценный — тоже: человек купит, потеряет функцию
- * и вернётся недовольным.
+ * Осталось ровно то, что решает: какие проводки подходят к рамке (или к
+ * каким рамкам подходит проводка) и три признака, по которым проводки
+ * отличаются между собой. Связь правится с обеих сторон — открыли рамку
+ * или проводку, результат один.
  */
-const ProductWiringTab = ({ form, set }: Props) => {
+const ProductWiringTab = ({ form, set, products = [], onOpen }: Props) => {
+  const [search, setSearch] = useState('');
+  const isFrame = form.category === FRAMES_CATEGORY;
+  const isWire = form.category === WIRES_CATEGORY;
   const tech = form.wireTech || {};
-  const keeps = form.wireKeeps || {};
 
   const setTech = (id: string, val: WireTechValue) => {
     const next = { ...tech };
@@ -48,251 +72,232 @@ const ProductWiringTab = ({ form, set }: Props) => {
     set('wireTech', next);
   };
 
-  const setKeep = (id: string, val: boolean) => {
-    const next = { ...keeps };
-    if (id in next && next[id] === val) delete next[id];
-    else next[id] = val;
-    set('wireKeeps', next);
+  /* Рамки, к которым привязана эта проводка. Связь хранится у рамки, но
+     смотреть на неё удобно с обеих сторон: открыли проводку — видно, где
+     она используется */
+  const usedByFrames = useMemo(
+    () =>
+      isWire && form.slug
+        ? products.filter((p) => p.frameWires?.includes(form.slug!))
+        : [],
+    [isWire, form.slug, products],
+  );
+
+  /* Проводки, которые можно поставить этой рамке: та же машина и
+     пересечение по годам. Из четырёхсот выбрать нельзя, из десяти легко */
+  const wireOptions = useMemo(() => {
+    if (!isFrame) return [];
+    const q = search.trim().toLowerCase();
+    return products
+      .filter((p) => p.isActive && p.category === WIRES_CATEGORY)
+      .filter((p) => related(form, p) || form.frameWires?.includes(p.slug ?? ''))
+      .filter((p) => !q || `${p.name} ${p.sku}`.toLowerCase().includes(q))
+      .sort((a, b) => a.price - b.price);
+  }, [isFrame, products, form, search]);
+
+  const toggleWire = (slug: string) => {
+    const now = form.frameWires ?? [];
+    set(
+      'frameWires',
+      now.includes(slug) ? now.filter((x) => x !== slug) : [...now, slug],
+    );
   };
 
   return (
     <div className="space-y-8">
-      <div className="flex items-start gap-2 border border-border bg-secondary/40 p-4">
-        <Icon
-          name="Info"
-          size={16}
-          className="mt-0.5 shrink-0 text-muted-foreground"
-        />
-        <p className="text-sm text-muted-foreground">
-          Заполняется у проводок и рамок. Первый блок решает,{' '}
-          <b>кому товар не показывать</b>. Второй — <b>что написать тому</b>,
-          кому показали.
-        </p>
-      </div>
+      {/* ─── Рамка: комплект и список проводок ─── */}
+      {isFrame && (
+        <>
+          <label className="flex cursor-pointer items-start gap-3 border border-border p-4 transition-colors hover:border-foreground">
+            <input
+              type="checkbox"
+              checked={!!form.wireIncluded}
+              onChange={(e) => set('wireIncluded', e.target.checked)}
+              className="mt-0.5 h-4 w-4 flex-none accent-primary"
+            />
+            <span>
+              <span className="font-head text-sm font-bold uppercase tracking-tight">
+                Проводка уже в комплекте
+              </span>
+              <span className="mt-1 block text-sm text-muted-foreground">
+                Рамка продаётся вместе с проводкой. При её выборе шаг
+                «Подключение» пропускается — покупателю не предложат купить
+                то, что уже лежит в коробке.
+              </span>
+            </span>
+          </label>
 
-      {/* Комплект «рамка + проводка». Ставится у рамки: покупателю,
-          выбравшему её, шаг с проводкой показывать нельзя — он купит
-          вторую и вернётся с претензией */}
-      <label className="flex cursor-pointer items-start gap-3 border border-border p-4 transition-colors hover:border-foreground">
-        <input
-          type="checkbox"
-          checked={!!form.wireIncluded}
-          onChange={(e) => set('wireIncluded', e.target.checked)}
-          className="mt-0.5 h-4 w-4 flex-none accent-primary"
-        />
-        <span>
-          <span className="font-head text-sm font-bold uppercase tracking-tight">
-            Проводка уже в комплекте
-          </span>
-          <span className="mt-1 block text-sm text-muted-foreground">
-            Для рамок, которые продаются вместе с проводкой. При выборе
-            такой рамки шаг «Подключение» пропускается — покупателю не
-            предложат купить то, что у него уже есть в коробке.
-          </span>
-        </span>
-      </label>
+          {!form.wireIncluded && (
+            <div>
+              <div className="font-head text-sm font-bold uppercase tracking-tight">
+                Какие проводки подходят
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Покупатель выбирает рамку первой — по этому списку ему и
+                подберут проводку. Показаны позиции на ту же машину с
+                пересечением по годам.
+              </p>
 
-      <div>
-        <div className="font-head text-sm font-bold uppercase tracking-tight">
-          С чем работает
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Для каких машин эта проводка. «Неважно» — параметр не влияет на
-          совместимость, покупателя об этом не спросим.
-        </p>
-        <div className="mt-4 space-y-2">
-          {WIRE_TECH.map((t) => (
-            <div
-              key={t.id}
-              className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-2"
-            >
-              <span className="text-sm">{t.label}</span>
-              <div className="flex gap-1">
-                {TECH_OPTS.map((o) => (
+              {wireOptions.length > 6 && (
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Поиск по названию"
+                  className="mt-3 w-full max-w-xs border-b border-border bg-transparent py-2 text-sm outline-none transition-colors focus:border-primary"
+                />
+              )}
+
+              {wireOptions.length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">
+                  Подходящих проводок не нашлось. Проверьте совместимость и
+                  годы — возможно, у проводки не указана эта модель.
+                </p>
+              ) : (
+                <div className="mt-3 space-y-1.5">
+                  {wireOptions.map((w) => (
+                    <div
+                      key={w.slug}
+                      className="flex items-center gap-3 border border-border p-2 transition-colors hover:border-foreground"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          form.frameWires?.includes(w.slug ?? '') ?? false
+                        }
+                        onChange={() => toggleWire(w.slug ?? '')}
+                        className="h-4 w-4 flex-none accent-primary"
+                      />
+                      {/* Клик по фото уводит в карточку: правки признаков
+                          делаются там, где они видны */}
+                      <button
+                        onClick={() => onOpen?.(w)}
+                        title="Открыть карточку"
+                        className="flex-none"
+                      >
+                        <img
+                          src={w.images?.[0] ?? ''}
+                          alt=""
+                          loading="lazy"
+                          className="h-11 w-11 bg-card object-contain transition-opacity hover:opacity-70"
+                        />
+                      </button>
+                      <div className="min-w-0 flex-1 text-[0.82rem] leading-snug">
+                        {w.name}
+                        <div className="mt-0.5 text-[0.72rem] text-muted-foreground">
+                          {w.yearFrom || '…'}–{w.yearTo || '…'} ·{' '}
+                          {formatPrice(w.price)} ·{' '}
+                          {KEYS.every((k) => (w.wireTech || {})[k]) ? (
+                            <span className="text-success">признаки есть</span>
+                          ) : (
+                            <span className="text-primary">
+                              признаки не заполнены
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ─── Проводка: признаки и где используется ─── */}
+      {isWire && (
+        <>
+          <div>
+            <div className="font-head text-sm font-bold uppercase tracking-tight">
+              Чем отличается от других
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Когда к рамке подходит несколько проводок, выбрать нужную
+              помогают эти три признака — по ним подбор и задаёт вопрос
+              покупателю. «Неважно» значит, что вопрос не задаётся.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
+              {WIRE_TECH.filter((t) => KEYS.includes(t.id)).map((t) => (
+                <div key={t.id}>
+                  <div className="text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground">
+                    {t.label}
+                  </div>
+                  <div className="mt-1.5 flex">
+                    {TECH_OPTS.map((o) => (
+                      <button
+                        key={o.id}
+                        title={o.hint}
+                        onClick={() => setTech(t.id, o.id)}
+                        className={`border px-3 py-1.5 text-[0.72rem] transition-colors ${
+                          tech[t.id] === o.id
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-border text-muted-foreground hover:border-foreground'
+                        }`}
+                      >
+                        {o.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="font-head text-sm font-bold uppercase tracking-tight">
+              К каким рамкам подходит
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Проставляется в карточке рамки. Здесь видно, где эта проводка
+              уже используется — нажмите на фото, чтобы открыть рамку.
+            </p>
+            {usedByFrames.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Пока ни к одной рамке не привязана. Откройте нужную рамку и
+                отметьте эту проводку в списке.
+              </p>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {usedByFrames.map((f) => (
                   <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => setTech(t.id, o.id)}
-                    className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                      tech[t.id] === o.id
-                        ? 'bg-foreground text-background'
-                        : 'border border-border hover:border-foreground'
-                    }`}
+                    key={f.slug}
+                    onClick={() => onOpen?.(f)}
+                    title={f.name}
+                    className="flex w-[13rem] items-center gap-2 border border-border p-2 text-left transition-colors hover:border-foreground"
                   >
-                    {o.label}
+                    <img
+                      src={f.images?.[0] ?? ''}
+                      alt=""
+                      loading="lazy"
+                      className="h-10 w-10 flex-none bg-card object-contain"
+                    />
+                    <span className="min-w-0 flex-1 text-[0.75rem] leading-tight">
+                      <span className="line-clamp-2">{f.name}</span>
+                      <span className="mt-0.5 block text-muted-foreground">
+                        {f.yearFrom || '…'}–{f.yearTo || '…'}
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <div className="font-head text-sm font-bold uppercase tracking-tight">
-          Кузов
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Отмечайте, только если проводка встаёт не на все кузова. Ничего не
-          отмечено — подходит любому. У машин кузова уже размечены, поэтому
-          покупателя спросим сами и только когда это решает.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {BODY_TYPES.map((b) => {
-            const on = (form.wireBodies || []).includes(b.id);
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => {
-                  const cur = form.wireBodies || [];
-                  set(
-                    'wireBodies',
-                    on ? cur.filter((x) => x !== b.id) : [...cur, b.id],
-                  );
-                }}
-                className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                  on
-                    ? 'bg-foreground text-background'
-                    : 'border border-border hover:border-foreground'
-                }`}
-              >
-                {b.label}
-              </button>
-            );
-          })}
-        </div>
-        {(form.wireBodies || []).length === 0 && (
-          <p className="mt-2 text-sm text-success">
-            Сейчас: подходит на любой кузов
-          </p>
-        )}
-      </div>
-
-      <div>
-        <div className="font-head text-sm font-bold uppercase tracking-tight">
-          Сторона руля
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Отмечайте, только если товар подходит не всем. Ничего не выбрано —
-          подходит и левому, и правому.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {WHEEL_SIDES.map((w) => (
-            <button
-              key={w.id}
-              type="button"
-              onClick={() =>
-                set('wireWheel', form.wireWheel === w.id ? '' : w.id)
-              }
-              className={`px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                form.wireWheel === w.id
-                  ? 'bg-foreground text-background'
-                  : 'border border-border hover:border-foreground'
-              }`}
-            >
-              {w.label}
-            </button>
-          ))}
-        </div>
-        {!form.wireWheel && (
-          <p className="mt-2 text-sm text-success">Сейчас: подходит любому</p>
-        )}
-      </div>
-
-      <div>
-        <div className="font-head text-sm font-bold uppercase tracking-tight">
-          Что останется работать
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Что получит клиент после установки. Отсюда берётся пометка
-          «сохраняет климат» на сайте.
-        </p>
-
-        <div className="mt-4">
-          <span className={label}>Уровень совместимости</span>
-          <div className="mt-1 flex flex-wrap gap-2">
-            {WIRE_LEVELS.map((l) => (
-              <button
-                key={l.id}
-                type="button"
-                onClick={() =>
-                  set('wireLevel', form.wireLevel === l.id ? '' : (l.id as WireLevel))
-                }
-                className={`px-4 py-2 text-left transition-colors ${
-                  form.wireLevel === l.id
-                    ? 'bg-foreground text-background'
-                    : 'border border-border hover:border-foreground'
-                }`}
-              >
-                <span className="font-head text-[0.72rem] font-semibold uppercase tracking-[0.06em]">
-                  {l.label}
-                </span>
-                <span
-                  className={`block text-[0.7rem] ${
-                    form.wireLevel === l.id
-                      ? 'text-background/70'
-                      : 'text-muted-foreground'
-                  }`}
-                >
-                  {l.hint}
-                </span>
-              </button>
-            ))}
+            )}
           </div>
-        </div>
+        </>
+      )}
 
-        <div className="mt-5 space-y-2">
-          {WIRE_KEEPS.map((k) => (
-            <div
-              key={k.id}
-              className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-2"
-            >
-              <span className="text-sm">{k.label}</span>
-              <div className="flex gap-1">
-                <button
-                  type="button"
-                  onClick={() => setKeep(k.id, true)}
-                  className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                    keeps[k.id] === true
-                      ? 'bg-success text-success-foreground'
-                      : 'border border-border hover:border-foreground'
-                  }`}
-                >
-                  Сохраняет
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setKeep(k.id, false)}
-                  className={`px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                    keeps[k.id] === false
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border hover:border-foreground'
-                  }`}
-                >
-                  Теряется
-                </button>
-              </div>
-            </div>
-          ))}
+      {!isFrame && !isWire && (
+        <div className="flex items-start gap-2 border border-border bg-secondary/40 p-4">
+          <Icon
+            name="Info"
+            size={16}
+            className="mt-0.5 shrink-0 text-muted-foreground"
+          />
+          <p className="text-sm text-muted-foreground">
+            Эта вкладка заполняется только у рамок и проводок. Смените
+            категорию товара, если нужно настроить подключение.
+          </p>
         </div>
-      </div>
-
-      <div>
-        <span className={label}>Описание совместимости</span>
-        <p className="mb-2 text-sm text-muted-foreground">
-          Этот текст увидит покупатель. Пишите по-человечески: «магнитола
-          заработает, но климат с экрана пропадёт».
-        </p>
-        <textarea
-          value={form.wireNote || ''}
-          onChange={(e) => set('wireNote', e.target.value)}
-          rows={3}
-          maxLength={600}
-          className={`${field} resize-y`}
-          placeholder="CAN-интерфейс сохраняет штатное управление климатом и кнопки на руле."
-        />
-      </div>
+      )}
     </div>
   );
 };
