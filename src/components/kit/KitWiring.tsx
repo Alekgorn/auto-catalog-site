@@ -17,6 +17,7 @@ import {
   bodyFromFrame,
   transitionalYear,
   matchingWirings,
+  WireQuestion,
 } from '@/lib/wire-pick';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -170,22 +171,29 @@ const KitWiring = ({
   // Разметки нет — пусть работает привычный список
   if (res.fallback) return null;
 
-  /* Настройки расходятся по кузову, а кузов неизвестен — сначала спросим.
-     Иначе показали бы дорогую проводку владельцу седана */
-  const question =
-    bodyChoice.length > 1
-      ? {
-          id: 'body' as const,
-          title: 'Какой у вас кузов?',
-          hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
-          bodies: bodyChoice,
-        }
-      : res.question;
+  /* Все вопросы по этой машине одним списком. Кузов добавляем отдельно:
+     настройки марок расходятся по нему, а подбор об этом не знает */
+  const questions: WireQuestion[] = [
+    ...(bodyChoice.length > 1 && !res.questions.some((q) => q.id === 'body')
+      ? [
+          {
+            id: 'body',
+            title: 'Какой у вас кузов?',
+            hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
+            bodies: bodyChoice,
+          },
+        ]
+      : []),
+    ...res.questions,
+  ];
 
   const answer = (id: string, val: boolean | BodyType | null) =>
     setAnswers((a) => ({ ...a, [id]: val }));
 
-  const asked = Object.entries(answers).filter(([, v]) => v !== undefined);
+  /** Сколько уже отвечено — по нему считаем «3 из 4» */
+  const doneCount = questions.filter(
+    (q) => answers[q.id] !== undefined,
+  ).length;
 
   return (
     <div className="border border-border bg-background p-6">
@@ -205,71 +213,102 @@ const KitWiring = ({
         </div>
       </div>
 
-      {asked.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-3">
-          {asked.map(([k, v]) => (
-            <button
-              key={k}
-              onClick={() => setAnswers((a) => ({ ...a, [k]: undefined }))}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Icon name="Check" size={14} className="text-success" />
-              {k === 'body'
-                ? bodyTypeLabel(String(v))
-                : v
-                  ? 'есть'
-                  : 'нет'}
-              <span className="underline">изменить</span>
-            </button>
-          ))}
+      {/*
+        Все вопросы разом, а не по одному. Цепочка «ответил — появился
+        следующий» скрывала длину пути: человек не понимал, где конец, и
+        бросал на середине. Теперь список виден целиком, отвечать можно в
+        любом порядке, а незаполненное подсвечено.
+      */}
+      {questions.length > 0 && (
+        <div className="mt-5 border border-border bg-card p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <div className="font-head text-base font-bold uppercase tracking-tight">
+              Уточните про вашу машину
+            </div>
+            <div className="text-[0.8rem] text-muted-foreground">
+              {doneCount} из {questions.length}
+            </div>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {doneCount === questions.length
+              ? 'Спасибо — ниже подходящие варианты.'
+              : 'Отвечать можно в любом порядке. Не знаете — так и отметьте, покажем все варианты.'}
+          </p>
+
+          <div className="mt-4 divide-y divide-border">
+            {questions.map((q) => {
+              const val = answers[q.id];
+              const done = val !== undefined;
+              return (
+                <div
+                  key={q.id}
+                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 md:flex-row md:items-center md:justify-between md:gap-6"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start gap-2">
+                      <Icon
+                        name={done ? 'CircleCheck' : 'Circle'}
+                        size={16}
+                        className={`mt-0.5 shrink-0 ${
+                          done ? 'text-success' : 'text-muted-foreground'
+                        }`}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium leading-snug">
+                          {q.title}
+                        </div>
+                        {!done && (
+                          <p className="mt-0.5 text-[0.8rem] leading-relaxed text-muted-foreground">
+                            {q.hint}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-none flex-wrap gap-1.5 pl-6 md:pl-0">
+                    {q.id === 'body'
+                      ? (q.bodies || []).map((b) => (
+                          <button
+                            key={b}
+                            onClick={() => answer('body', b)}
+                            className={`border px-3.5 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                              val === b
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'border-border hover:border-foreground'
+                            }`}
+                          >
+                            {bodyTypeLabel(b)}
+                          </button>
+                        ))
+                      : (
+                          [
+                            { v: true, label: 'Есть' },
+                            { v: false, label: 'Нет' },
+                            { v: null, label: 'Не знаю' },
+                          ] as const
+                        ).map((o) => (
+                          <button
+                            key={String(o.v)}
+                            onClick={() => answer(q.id, o.v)}
+                            className={`border px-3.5 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                              done && val === o.v
+                                ? 'border-foreground bg-foreground text-background'
+                                : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {question ? (
-        <div className="mt-5 border border-foreground bg-card p-5">
-          <div className="font-head text-base font-bold uppercase tracking-tight">
-            {question.title}
-          </div>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            {question.hint}
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {question.id === 'body' ? (
-              (question.bodies || []).map((b) => (
-                <button
-                  key={b}
-                  onClick={() => answer('body', b)}
-                  className="border border-foreground px-5 py-2.5 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
-                >
-                  {bodyTypeLabel(b)}
-                </button>
-              ))
-            ) : (
-              <>
-                <button
-                  onClick={() => answer(question!.id, true)}
-                  className="border border-foreground px-5 py-2.5 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
-                >
-                  Да, есть
-                </button>
-                <button
-                  onClick={() => answer(question!.id, false)}
-                  className="border border-foreground px-5 py-2.5 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
-                >
-                  Нет
-                </button>
-                <button
-                  onClick={() => answer(question!.id, null)}
-                  className="border border-border px-5 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-                >
-                  Не знаю
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="mt-5 space-y-4">
+      <div className="mt-5 space-y-4">
           {/*
             Несколько проводок и точного ответа нет — честно говорим об этом.
             Молча показать одну наугад хуже: покупатель закажет не ту деталь
@@ -544,8 +583,7 @@ const KitWiring = ({
               вручную.
             </div>
           )}
-        </div>
-      )}
+      </div>
     </div>
   );
 };

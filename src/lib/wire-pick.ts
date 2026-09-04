@@ -143,6 +143,12 @@ export interface WirePick {
   budget: Product[];
   /** Ещё не различённые — нужен ответ */
   question: WireQuestion | null;
+  /**
+   * Все вопросы, которые вообще имеет смысл задать по этой машине —
+   * сразу, а не по одному. Цепочка «ответил — появился следующий»
+   * скрывала, сколько осталось: человек не понимал, где конец.
+   */
+  questions: WireQuestion[];
   /** Размеченных данных не хватает — показываем старый список */
   fallback: boolean;
 }
@@ -272,6 +278,7 @@ export const pickWires = (
     full: [],
     budget: [],
     question: null,
+    questions: [],
     fallback: true,
   };
   if (!vehicle) return empty;
@@ -302,6 +309,7 @@ export const pickWires = (
       full: fromFrame,
       budget: [],
       question: null,
+      questions: [],
       fallback: false,
     };
   }
@@ -319,10 +327,12 @@ export const pickWires = (
       needs.every((k) => (p.wireFeatures || []).includes(k)),
     );
 
-    // Спрашиваем только о том, что реально делит оставшиеся варианты
-    const next = asked.find(
-      (f) => answers[f.id] === undefined && splits(fromFrame, f.id),
-    );
+    /* Все вопросы, которые различают эти проводки. Показываем их разом:
+       по одному человек не видит, сколько осталось до конца */
+    const list = asked
+      .filter((f) => splits(fromFrame, f.id))
+      .map((f) => ({ id: f.id, ...questionFor(f) }));
+    const next = list.find((f) => answers[f.id] === undefined);
 
     /*
      * Вопрос ещё есть — показываем всё и ничего не советуем: советовать
@@ -333,7 +343,8 @@ export const pickWires = (
         pickMode: 'select',
         full: [...fromFrame].sort(byPrice),
         budget: [],
-        question: { id: next.id, ...questionFor(next) },
+        question: next,
+        questions: list,
         fallback: false,
       };
     }
@@ -360,6 +371,7 @@ export const pickWires = (
       full: [...good].sort(byPrice),
       budget: [...rest].sort(byPrice),
       question: null,
+      questions: list,
       fallback: false,
     };
   }
@@ -390,24 +402,28 @@ export const pickWires = (
   const bodies = bodySplits(left).filter(
     (b) => !allowed.length || allowed.includes(b),
   );
-  let question: WireQuestion | null = null;
+  /* Полный список вопросов по этой машине. Кузов идёт первым: его
+     покупатель знает точно, в отличие от усилителя и CAN-шины */
+  const questions: WireQuestion[] = [];
   if (bodies.length > 1 && !knownBody) {
-    question = {
+    questions.push({
       id: 'body',
       title: 'Какой у вас кузов?',
       hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
       bodies,
-    };
-  } else {
-    const next = asked.find(
-      (f) =>
-        answers[f.id] === undefined &&
-        splits(left, f.id) &&
-        // Режим «Подбор»: спрашиваем только про то, что отмечено в админке
-        (wiring?.mode !== 'select' || !!wiring.ask?.[f.id]),
-    );
-    if (next) question = { id: next.id, ...questionFor(next) };
+    });
   }
+  asked.forEach((f) => {
+    if (
+      splits(left, f.id) &&
+      // Режим «Подбор»: спрашиваем только про то, что отмечено в админке
+      (wiring?.mode !== 'select' || !!wiring.ask?.[f.id])
+    )
+      questions.push({ id: f.id, ...questionFor(f) });
+  });
+
+  const question =
+    questions.find((q) => answers[q.id] === undefined) ?? null;
 
   /* Раньше «полные» и «бюджетные» задавались вручную полем-уровнем.
      Теперь полнота видна из галочек: чем больше проводка подключает, тем
@@ -420,6 +436,7 @@ export const pickWires = (
     full: full.sort((a, b) => a.price - b.price),
     budget: budget.sort((a, b) => a.price - b.price),
     question,
+    questions,
     fallback: false,
   };
 };
