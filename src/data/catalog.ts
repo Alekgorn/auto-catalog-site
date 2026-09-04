@@ -85,6 +85,8 @@ export interface Product {
   wireWheel?: 'left' | 'right' | '';
   /** Проводки, подходящие к этой рамке — по ним работает подбор */
   frameWires?: string[];
+  /** Проводка уже в комплекте рамки — шаг подключения пропускаем */
+  wireIncluded?: boolean;
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];

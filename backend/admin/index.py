@@ -487,6 +487,8 @@ def row_to_product(r: dict) -> dict:
         'wireNote': r.get('wire_note') or '',
         # Проводки, подходящие к этой рамке. Пусто — ещё не размечено
         'frameWires': r.get('frame_wires') or [],
+        # Проводка уже в коробке — отдельно предлагать не надо
+        'wireIncluded': bool(r.get('wire_included')),
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -3369,6 +3371,7 @@ def handler(event: dict, context) -> dict:
                 'frame_wires': qjson(
                     [str(x) for x in (body.get('frameWires') or []) if x][:20]
                 ),
+                'wire_included': 'TRUE' if body.get('wireIncluded') else 'FALSE',
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

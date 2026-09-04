@@ -34,13 +34,20 @@ const FrameWiresPanel = ({ products, onReload }: Props) => {
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
     return groups.filter((g) => {
+      /* Комплектные рамки размечать нечем: проводка уже в коробке.
+         В списке «неразмеченные» им делать нечего */
+      if (onlyEmpty && g.frames.every((f) => f.wireIncluded)) return false;
       if (onlyEmpty && g.wires.length && !g.mixed) return false;
       if (!q) return true;
       return `${g.brand} ${g.model}`.toLowerCase().includes(q);
     });
   }, [groups, search, onlyEmpty]);
 
-  const done = groups.filter((g) => g.wires.length && !g.mixed).length;
+  // Комплектные рамки считаем закрытыми: размечать там нечего
+  const done = groups.filter(
+    (g) =>
+      g.frames.every((f) => f.wireIncluded) || (g.wires.length && !g.mixed),
+  ).length;
 
   /** Ставим проводки всей группе разом — одним запросом на все рамки */
   const save = async (group: FrameGroup, slugs: string[]) => {
@@ -195,7 +202,9 @@ const GroupRow = ({
           </span>
           <span className="mt-0.5 block text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground">
             {group.frames.length} рамок ·{' '}
-            {group.mixed ? (
+            {group.frames.every((f) => f.wireIncluded) ? (
+              <span className="text-success">проводка в комплекте</span>
+            ) : group.mixed ? (
               <span className="text-primary">проводки разные — сведите</span>
             ) : group.wires.length ? (
               <span className="text-success">

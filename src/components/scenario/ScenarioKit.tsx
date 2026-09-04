@@ -4,6 +4,7 @@ import { Product, Vehicle } from "@/data/catalog";
 import { Scenario } from "@/data/scenarios";
 import KitNoFrames from "@/components/kit/KitNoFrames";
 import KitWiring from "@/components/kit/KitWiring";
+import Icon from "@/components/ui/icon";
 import { useCatalog } from "@/context/CatalogContext";
 import { modelBodyTypes } from "@/data/catalog";
 import { pickWires } from "@/lib/wire-pick";
@@ -118,6 +119,40 @@ const ScenarioKit = ({
   return (
   <>
     {kit.map((step, i) => {
+      /*
+       * Рамка продаётся комплектом с проводкой — шаг подключения
+       * пропускаем целиком. Предложить проводку тому, у кого она уже в
+       * коробке, значит продать вторую и получить возврат.
+       */
+      const frame = products.find((p) => p.id === picks[FRAMES_CATEGORY]);
+      if (step.category === WIRES_CATEGORY && frame?.wireIncluded) {
+        /* Молча убрать шаг нельзя: человек помнит, что проводка нужна, и
+           будет искать её глазами. Говорим прямо — вопрос закрыт */
+        return (
+          <div key={step.category}>
+            {i > 0 && <div className="rule-hair" />}
+            <section id={stepId(i)} className="scroll-mt-24 py-11 md:py-14">
+              <div className="flex items-start gap-3 border border-success/40 bg-success/5 p-5">
+                <Icon
+                  name="CircleCheck"
+                  size={20}
+                  className="mt-0.5 shrink-0 text-success"
+                />
+                <div>
+                  <div className="font-head text-lg font-bold uppercase tracking-tight">
+                    Проводка уже в комплекте
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                    Выбранная рамка идёт вместе с проводкой — докупать
+                    ничего не нужно. Всё для подключения будет в коробке.
+                  </p>
+                </div>
+              </div>
+            </section>
+          </div>
+        );
+      }
+
       /* Проводки размечены — показываем умный подбор вместо списка
          визуально похожих позиций. Не размечены — всё как раньше. */
       const smart =
@@ -142,9 +177,7 @@ const ScenarioKit = ({
               vehicle={vehicle}
               modelBodies={modelBodyTypes(brands, vehicle!.brand, vehicle!.model)}
               wirings={vehicleWiring}
-              frame={products.find(
-                (p) => p.id === picks[FRAMES_CATEGORY],
-              )}
+              frame={frame}
               pickedId={picks[step.category]}
               onPick={onPick}
             />
