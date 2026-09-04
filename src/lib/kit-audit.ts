@@ -318,92 +318,131 @@ const checkFrameSize = (
   };
 };
 
-/* ─────────── поколения: разметка против рамок ─────────── */
+/* ─────────── периоды рамок против разметки ─────────── */
 
-export interface GenerationRow {
+/** Период, на который рамки делят модель: 2006–2011, 2011–2017 */
+export interface FramePeriod {
+  from: number;
+  to: number;
+  /** Сколько рамок продаётся на этот период */
+  frames: number;
+  /** Строка разметки, накрывающая период целиком. Нет — период не размечен */
+  markedBy?: string;
+}
+
+export interface PeriodRow {
   brand: string;
   model: string;
-  /** Годы начала поколений, как их видно по рамкам: 2006, 2011, 2017, 2020 */
-  starts: number[];
-  /** Что записано в разметке подбора: «2006–2019», «2020–2026» */
+  /** Периоды по рамкам, по возрастанию года */
+  periods: FramePeriod[];
+  /** Что сейчас записано в разметке подбора */
   covered: string[];
-  /** Сколько поколений попало в одну строку разметки — грубость ошибки */
+  /** Сколько периодов слито в одну строку разметки — насколько грубо */
   worst: number;
 }
 
 /**
- * Модели, где разметка подбора грубее, чем поколения по рамкам.
+ * Периоды, на которые рамки делят модель.
  *
- * Рамка привязана к панели, а панель меняется со сменой поколения. Значит
- * рамки — самый честный источник границ: Kia Rio по ним делится на 2006,
- * 2011, 2017 и 2020. Если в разметке стоит одна строка «2006–2019», то
- * три разных поколения получают одну и ту же проводку, хотя разъёмы у
- * них разные.
+ * Рамка — это то, что покупатель выбирает первым, и она уже привязана к
+ * конкретным годам панели. Значит рамки и задают деление: Kia Rio по ним
+ * распадается на 2006–2011, 2011–2017, 2017–2019 и 2020+. Одинаковые
+ * периоды схлопываем, соседние с разницей в год — тоже: поставщики пишут
+ * «2011» и «2012» про одну и ту же машину.
  *
- * Показываем только явные случаи — когда в одну строку разметки попало
- * два и больше поколений. Обратную сторону (разметка дробнее рамок) не
- * трогаем: там человек знает больше, чем видно по каталогу.
+ * Рамки с размахом больше 14 лет не берём: «1989–2026» — это позиция,
+ * размеченная на всю марку скопом, она не говорит ничего о панели
+ * конкретной модели.
+ */
+const framePeriods = (frames: AdminProduct[]): FramePeriod[] => {
+  const spans = frames
+    .filter((p) => p.yearFrom && (!p.yearTo || p.yearTo - p.yearFrom <= 14))
+    .map((p) => ({ from: p.yearFrom, to: p.yearTo || YEAR_MAX }))
+    .sort((a, b) => a.from - b.from || a.to - b.to);
+
+  const out: FramePeriod[] = [];
+  spans.forEach((s) => {
+    const last = out[out.length - 1];
+    // Тот же период с точностью до года — это та же машина, не новая
+    if (last && Math.abs(last.from - s.from) <= 1 && Math.abs(last.to - s.to) <= 1) {
+      last.frames += 1;
+      return;
+    }
+    out.push({ from: s.from, to: s.to, frames: 1 });
+  });
+  return out;
+};
+
+/**
+ * Модели, где разметка проводок грубее, чем деление по рамкам.
+ *
+ * Смысл в том, что происходит с покупателем. Он выбирает рамку — а
+ * значит уже сказал нам, какая у него машина и каких она годов. Rio
+ * 2006 года: камеры и усилителя на ней не бывает, подходит ровно одна
+ * проводка, и спрашивать не о чем. Rio 2012 года: камера уже возможна,
+ * вариантов несколько. Но пока в разметке стоит одна строка «2006–2019»,
+ * обе машины получают один и тот же ответ — либо лишние вопросы владельцу
+ * старой, либо неверная проводка владельцу новой.
+ *
+ * Показываем только явные случаи: когда одна строка разметки накрывает
+ * два и больше периодов рамок. Обратную сторону (разметка дробнее рамок)
+ * не трогаем — там человек знает больше, чем видно по каталогу.
  */
 export const findGenerationGaps = (
   products: AdminProduct[],
   wiring: VehicleWiring[],
-): GenerationRow[] => {
-  /* Границы поколений по рамкам. Годы начала, отличающиеся на год,
-     считаем одним поколением: поставщики пишут «2011» и «2012» про одну
-     и ту же машину, и дробить по ним значит выдумывать разницу */
-  const byModel = new Map<string, { brand: string; model: string; years: number[] }>();
+): PeriodRow[] => {
+  const byModel = new Map<
+    string,
+    { brand: string; model: string; frames: AdminProduct[] }
+  >();
   products
     .filter(
       (p) =>
-        p.isActive &&
-        p.category === FRAMES_CATEGORY &&
-        p.fitMode !== 'universal' &&
-        p.yearFrom &&
-        /* Рамка «1989–2026» — это позиция, размеченная на всю марку
-           скопом. Она ничего не говорит про поколение, а её год начала
-           тянул бы вниз границу у каждой модели. Порог в 14 лет: одно
-           поколение живёт 5–8, два подряд — до дюжины */
-        (!p.yearTo || p.yearTo - p.yearFrom <= 14),
+        p.isActive && p.category === FRAMES_CATEGORY && p.fitMode !== 'universal',
     )
     .forEach((p) => {
       pairsOf(p).forEach(({ key, brand, model }) => {
         const cell = byModel.get(key);
-        if (cell) cell.years.push(p.yearFrom);
-        else byModel.set(key, { brand, model, years: [p.yearFrom] });
+        if (cell) cell.frames.push(p);
+        else byModel.set(key, { brand, model, frames: [p] });
       });
     });
 
-  const rows: GenerationRow[] = [];
+  const rows: PeriodRow[] = [];
 
-  byModel.forEach(({ brand, model, years }, key) => {
-    const sorted = [...new Set(years)].sort((a, b) => a - b);
-    const starts: number[] = [];
-    sorted.forEach((y) => {
-      if (!starts.length || y - starts[starts.length - 1] > 1) starts.push(y);
-    });
-    if (starts.length < 2) return;
+  byModel.forEach(({ brand, model, frames }, key) => {
+    const periods = framePeriods(frames);
+    if (periods.length < 2) return;
 
     const marks = wiring.filter(
       (w) => `${w.brand.toLowerCase()}|${w.model.toLowerCase()}` === key,
     );
     if (!marks.length) return;
 
-    /* Сколько поколений накрывает самая грубая строка разметки. Начало
-       поколения считаем попавшим внутрь, если строка захватывает его и
-       хотя бы одно предыдущее — тогда машины разных лет неразличимы */
+    /* Период считаем накрытым строкой, если строка захватывает его
+       целиком: тогда всем машинам этих лет достанется одна проводка */
     let worst = 0;
     marks.forEach((w) => {
-      const inside = starts.filter(
-        (s) => s >= w.years[0] - 1 && s <= w.years[1],
+      const inside = periods.filter(
+        (p) => p.from >= w.years[0] - 1 && p.to <= w.years[1] + 1,
       ).length;
       if (inside > worst) worst = inside;
     });
     if (worst < 2) return;
 
+    // Кто именно накрывает период — подсказка, какую строку дробить
+    periods.forEach((p) => {
+      const own = marks.find(
+        (w) => p.from >= w.years[0] - 1 && p.to <= w.years[1] + 1,
+      );
+      if (own) p.markedBy = `${own.years[0]}–${own.years[1]}`;
+    });
+
     rows.push({
       brand,
       model,
-      starts,
+      periods,
       covered: marks.map((w) => `${w.years[0]}–${w.years[1]}`),
       worst,
     });

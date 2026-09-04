@@ -19,6 +19,8 @@ export interface WireQuestion {
 
 /** Настройка подбора для машины — из вкладки «Марки» */
 export interface VehicleWiring {
+  /** Номер строки в базе. Нет — строка ещё не сохранена */
+  id?: number;
   brand: string;
   model: string;
   years: [number, number];
