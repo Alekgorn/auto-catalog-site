@@ -1,6 +1,10 @@
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
-import { FRAMES_CATEGORY, WIRES_CATEGORY } from '@/lib/kit-filter';
+import {
+  FRAMES_CATEGORY,
+  HEADUNITS_CATEGORY,
+  WIRES_CATEGORY,
+} from '@/lib/kit-filter';
 
 /**
  * Проверки комплекта: рамки, проводки и разметка подбора.
@@ -134,12 +138,26 @@ const checkNoFits = (p: AdminProduct): KitIssue | null => {
 
 /* ─────────── связка рамка ↔ проводка ─────────── */
 
-/** Марка и модель в нижнем регистре — ключ для сравнения наборов */
-const pairsOf = (p: AdminProduct): string[] => {
-  const out: string[] = [];
+/**
+ * Пары «марка + модель» товара.
+ *
+ * key — в нижнем регистре, чтобы сравнивать наборы независимо от того,
+ * кто как записал. brand и model — как есть: их подставляем в новую
+ * карточку, и там нужно настоящее написание из справочника.
+ */
+const pairsOf = (
+  p: AdminProduct,
+): { key: string; brand: string; model: string }[] => {
+  const out: { key: string; brand: string; model: string }[] = [];
   Object.entries(p.fits ?? {}).forEach(([brand, models]) => {
     if (!Array.isArray(models)) return;
-    models.forEach((m) => out.push(`${brand.toLowerCase()}|${m.toLowerCase()}`));
+    models.forEach((model) =>
+      out.push({
+        key: `${brand.toLowerCase()}|${model.toLowerCase()}`,
+        brand,
+        model,
+      }),
+    );
   });
   return out;
 };
@@ -154,10 +172,11 @@ const yearsOverlap = (a: AdminProduct, b: AdminProduct): boolean => {
 };
 
 export interface KitGapRow {
+  /** Марка и модель как записаны в товаре — годятся для новой карточки */
   brand: string;
   model: string;
-  /** Годы, в которые рамка есть, а проводки нет */
-  years: string;
+  yearFrom: number;
+  yearTo: number;
   /** Рамка, из-за которой машина попала в список */
   example: string;
 }
@@ -189,12 +208,15 @@ export const findKitGaps = (products: AdminProduct[]): KitGapRow[] => {
   );
 
   const index = (list: AdminProduct[]) => {
-    const map = new Map<string, AdminProduct[]>();
+    const map = new Map<
+      string,
+      { brand: string; model: string; items: AdminProduct[] }
+    >();
     list.forEach((p) => {
-      pairsOf(p).forEach((key) => {
-        const arr = map.get(key);
-        if (arr) arr.push(p);
-        else map.set(key, [p]);
+      pairsOf(p).forEach(({ key, brand, model }) => {
+        const cell = map.get(key);
+        if (cell) cell.items.push(p);
+        else map.set(key, { brand, model, items: [p] });
       });
     });
     return map;
@@ -203,16 +225,16 @@ export const findKitGaps = (products: AdminProduct[]): KitGapRow[] => {
   const wireMap = index(wires);
   const rows: KitGapRow[] = [];
 
-  index(frames).forEach((items, key) => {
-    const other = wireMap.get(key) ?? [];
+  index(frames).forEach(({ brand, model, items }, key) => {
+    const other = wireMap.get(key)?.items ?? [];
     // Берём рамку, которой не нашлось проводки с пересечением по годам
     const orphan = items.find((p) => !other.some((o) => yearsOverlap(p, o)));
     if (!orphan) return;
-    const [brand, model] = key.split('|');
     rows.push({
       brand,
       model,
-      years: `${orphan.yearFrom || '?'}–${orphan.yearTo || '?'}`,
+      yearFrom: orphan.yearFrom || 0,
+      yearTo: orphan.yearTo || 0,
       example: orphan.name,
     });
   });
@@ -220,6 +242,80 @@ export const findKitGaps = (products: AdminProduct[]): KitGapRow[] => {
   return rows.sort(
     (a, b) => a.brand.localeCompare(b.brand) || a.model.localeCompare(b.model),
   );
+};
+
+/* ─────────── размеры: рамка против магнитол ─────────── */
+
+/** Диагональ из строки: «9 дюймов», «12,3″» */
+const sizeIn = (text: string): number | null => {
+  const m = (text ?? '').match(/(\d+(?:[.,]\d+)?)\s*(?:"|″|дюйм)/i);
+  return m ? parseFloat(m[1].replace(',', '.')) : null;
+};
+
+/**
+ * Диагональ товара: сперва из характеристик, потом из названия.
+ * Тот же порядок, что и на сайте, — иначе проверка ругалась бы на
+ * товары, которые покупатель видит правильно.
+ */
+const sizeOf = (p: AdminProduct): number | null => {
+  const spec = (p.specs ?? []).find(([k]) => {
+    const key = String(k).trim().toLowerCase();
+    return key.startsWith('диагональ') || key.startsWith('типоразмер');
+  });
+  if (spec) {
+    const v = sizeIn(spec[1]);
+    if (v) return v;
+  }
+  return sizeIn(p.name);
+};
+
+/** Размеры совпали. Полдюйма допуска: 12,3 встаёт в рамку «12,1» */
+const sameSize = (a: number, b: number): boolean => Math.abs(a - b) <= 0.5;
+
+/**
+ * Рамки, в которые нечего поставить.
+ *
+ * Рамка задаёт посадочное место, магнитола должна в него попасть по
+ * диагонали. Рамка на 7 дюймов, когда в каталоге нет ни одной 7-дюймовой
+ * магнитолы, — тупик: покупатель выберет машину, дойдёт до экрана и
+ * увидит пустой список.
+ *
+ * Отдельно ловим рамки вообще без размера: подбор не сможет отфильтровать
+ * по ним магнитолы и покажет все подряд, включая те, что не влезут.
+ */
+const checkFrameSize = (
+  p: AdminProduct,
+  headunitSizes: number[],
+): KitIssue | null => {
+  if (p.category !== FRAMES_CATEGORY) return null;
+
+  const size = sizeOf(p);
+  if (size === null) {
+    return {
+      rule: 'no-size',
+      level: 'warning',
+      title: p.name,
+      text: 'У рамки не указана диагональ',
+      hint: 'Подбор не отсеет магнитолы, которые в неё не встанут',
+      product: p,
+    };
+  }
+
+  if (!headunitSizes.length) return null;
+  if (headunitSizes.some((h) => sameSize(h, size))) return null;
+
+  const have = [...new Set(headunitSizes)]
+    .sort((a, b) => a - b)
+    .map((s) => `${String(s).replace('.', ',')}″`)
+    .join(', ');
+  return {
+    rule: 'size-orphan',
+    level: 'warning',
+    title: p.name,
+    text: `Рамка на ${String(size).replace('.', ',')}″, а магнитолы есть только ${have}`,
+    hint: 'Покупатель дойдёт до выбора экрана и увидит пустой список',
+    product: p,
+  };
 };
 
 /* ─────────── разметка подбора проводки ─────────── */
@@ -384,9 +480,21 @@ export const auditKitProducts = (
       (onlyActive ? p.isActive : true),
   );
 
+  /* Какие диагонали вообще есть в продаже. Считаем по видимым на сайте:
+     скрытую магнитолу покупатель не купит, и рамка под неё всё равно
+     остаётся тупиком */
+  const headunitSizes = products
+    .filter((p) => p.category === HEADUNITS_CATEGORY && p.isActive)
+    .map(sizeOf)
+    .filter((s): s is number => s !== null);
+
   const out: KitIssue[] = [];
   list.forEach((p) => {
-    const issues = [checkYears(p), checkNoFits(p)].filter(Boolean) as KitIssue[];
+    const issues = [
+      checkYears(p),
+      checkNoFits(p),
+      checkFrameSize(p, headunitSizes),
+    ].filter(Boolean) as KitIssue[];
     out.push(...issues);
   });
 
@@ -400,6 +508,8 @@ export const auditKitProducts = (
 export const KIT_RULE_TITLES: Record<string, string> = {
   years: 'Годы не совпадают',
   'no-fits': 'Нет привязки к машине',
+  'size-orphan': 'Нет магнитол под размер',
+  'no-size': 'У рамки нет диагонали',
   'fixed-empty': 'Проводка не выбрана',
   'dead-slug': 'Ссылка на удалённый товар',
   'hidden-slug': 'Проводка скрыта с сайта',

@@ -2,10 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
-import { AdminProduct } from '@/components/admin/product-editor/product-types';
+import {
+  AdminProduct,
+  emptyProduct,
+} from '@/components/admin/product-editor/product-types';
+import { WIRES_CATEGORY } from '@/lib/kit-filter';
 import { VehicleWiring } from '@/lib/wire-pick';
 import {
   KIT_RULE_TITLES,
+  KitGapRow,
   auditKitProducts,
   auditWiring,
   findKitGaps,
@@ -137,7 +142,7 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
       </div>
 
       {view === 'gaps' ? (
-        <GapsList rows={gaps} />
+        <GapsList rows={gaps} onEdit={onEdit} />
       ) : !loaded && view === 'wiring' ? (
         <div className="mt-8 py-10 text-center text-[0.87rem] text-muted-foreground">
           Загружаем разметку…
@@ -266,32 +271,61 @@ const Empty = () => (
 /** Машины, под которые есть рамка, но нет проводки */
 const GapsList = ({
   rows,
+  onEdit,
 }: {
-  rows: { brand: string; model: string; years: string; example: string }[];
+  rows: KitGapRow[];
+  onEdit: (product: AdminProduct) => void;
 }) => {
   if (!rows.length) return <Empty />;
+
+  /**
+   * Заготовка карточки проводки под эту машину.
+   *
+   * Марку, модель и годы берём из рамки, из-за которой машина попала в
+   * список: раз рамка на эти годы есть, проводка нужна на те же. Остальное
+   * заполняет человек — мы только избавляем его от рутины.
+   */
+  const draft = (r: KitGapRow): AdminProduct => ({
+    ...emptyProduct(),
+    name: `Переходник Андроид магнитолы для ${r.brand} ${r.model}`,
+    category: WIRES_CATEGORY,
+    fitMode: 'vehicle',
+    fits: { [r.brand]: [r.model] },
+    yearFrom: r.yearFrom || emptyProduct().yearFrom,
+    yearTo: r.yearTo || emptyProduct().yearTo,
+  });
+
   return (
     <>
       <div className="mt-5 border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
         Под эти машины рамка в каталоге есть, а проводки нет — покупатель
-        дойдёт до второго шага и остановится. Проверьте, чем закрыть:
-        часто подходит переходник, размеченный на всю марку.
+        дойдёт до второго шага и остановится. Кнопка создаёт карточку
+        проводки с уже заполненной машиной и годами.
       </div>
       <div className="mt-2">
         {rows.map((r, i) => (
           <div
             key={`${r.brand}-${r.model}-${i}`}
-            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-border py-3"
+            className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-border py-3"
           >
-            <div className="font-head text-[0.92rem] font-bold capitalize">
-              {r.brand} {r.model}
-              <span className="ml-2 font-body text-[0.78rem] font-normal text-muted-foreground">
-                {r.years}
-              </span>
+            <div className="min-w-0">
+              <div className="font-head text-[0.92rem] font-bold">
+                {r.brand} {r.model}
+                <span className="ml-2 font-body text-[0.78rem] font-normal text-muted-foreground">
+                  {r.yearFrom || '?'}–{r.yearTo || '?'}
+                </span>
+              </div>
+              <div className="mt-0.5 text-[0.76rem] text-muted-foreground">
+                {r.example}
+              </div>
             </div>
-            <div className="min-w-0 text-[0.76rem] text-muted-foreground">
-              {r.example}
-            </div>
+            <button
+              onClick={() => onEdit(draft(r))}
+              className="flex flex-none items-center gap-1.5 border border-foreground px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
+            >
+              <Icon name="Plus" size={13} />
+              Добавить проводку
+            </button>
           </div>
         ))}
       </div>
