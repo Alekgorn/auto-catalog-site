@@ -16,6 +16,8 @@ import {
   findWiring,
   wiringBodyChoice,
   bodyFromFrame,
+  transitionalYear,
+  matchingWirings,
 } from '@/lib/wire-pick';
 import { useCatalog } from '@/context/CatalogContext';
 
@@ -188,6 +190,8 @@ const KitWiring = ({
   const { contacts } = useCatalog();
   const [answers, setAnswers] = useState<WireAnswers>({});
   const [openBudget, setOpenBudget] = useState(false);
+  /** Раскрыты ли проводки соседнего периода — для переходного года */
+  const [openTransition, setOpenTransition] = useState(false);
   const [warnFor, setWarnFor] = useState<string | null>(null);
 
   /*
@@ -199,6 +203,17 @@ const KitWiring = ({
   const wiring = useMemo(
     () => findWiring(wirings, vehicle, knownBody),
     [wirings, vehicle, knownBody],
+  );
+
+  /*
+   * Год машины попал на стык двух периодов: рамки «2006–2011» и
+   * «2011–2017» обе продаются под 2011-й. Мы взяли проводку старшего
+   * периода, но это выбор по вероятности, а не по факту — молчать о нём
+   * нечестно: покупатель закажет не ту деталь и вернётся с претензией.
+   */
+  const transitional = useMemo(
+    () => transitionalYear(wirings, vehicle),
+    [wirings, vehicle],
   );
   /*
    * Кузова для вопроса. Если одна настройка привязана к хэтчбеку, а вторая
@@ -218,6 +233,40 @@ const KitWiring = ({
     () => pickWires(products, vehicle, answers, modelBodies, wiring, frame),
     [products, vehicle, answers, modelBodies, wiring, frame],
   );
+
+  /*
+   * Проводки соседнего периода — то, что показываем под жёлтой плашкой.
+   * Считаем их так же, как основные, но от строки другого периода: у неё
+   * своя проводка и свои ограничения. Дубли отсеиваем — если обе строки
+   * ведут к одному товару, показывать его дважды незачем.
+   */
+  const otherPeriodWires = useMemo(() => {
+    if (!transitional || !wiring) return [];
+    const others = matchingWirings(wirings, vehicle).filter(
+      (w) => `${w.years[0]}-${w.years[1]}` !== `${wiring.years[0]}-${wiring.years[1]}`,
+    );
+    const shownIds = new Set([...res.full, ...res.budget].map((p) => p.id));
+    const out: Product[] = [];
+    others.forEach((w) => {
+      const alt = pickWires(products, vehicle, answers, modelBodies, w, frame);
+      [...alt.full, ...alt.budget].forEach((p) => {
+        if (shownIds.has(p.id)) return;
+        shownIds.add(p.id);
+        out.push(p);
+      });
+    });
+    return out;
+  }, [
+    transitional,
+    wiring,
+    wirings,
+    vehicle,
+    products,
+    answers,
+    modelBodies,
+    frame,
+    res,
+  ]);
 
   // Разметки нет — пусть работает привычный список
   if (res.fallback) return null;
@@ -361,6 +410,68 @@ const KitWiring = ({
               </div>
             </div>
           )}
+
+          {/*
+            Год на стыке поколений. Проводку показываем — ту, что вероятнее,
+            — но честно говорим, что бывает и другая. Варианты прячем под
+            кнопку: разворачивать их всем незачем, а тому, у кого машина
+            «пограничная», они нужны под рукой.
+          */}
+          {transitional && (
+            <div className="border border-[#B45309] bg-[#B45309]/5 p-5">
+              <div className="flex items-start gap-2.5">
+                <Icon
+                  name="TriangleAlert"
+                  size={18}
+                  className="mt-0.5 shrink-0 text-[#B45309]"
+                />
+                <div className="min-w-0">
+                  <div className="font-head text-sm font-bold uppercase tracking-tight text-[#B45309]">
+                    {vehicle?.year} год — переходный
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    В этот год менялось поколение, и с завода ставили
+                    проводку как старого образца, так и нового. Мы показали
+                    более вероятный вариант. Если разъём не совпал —
+                    посмотрите второй.
+                  </p>
+                  <button
+                    onClick={() => setOpenTransition((v) => !v)}
+                    className="mt-3 flex items-center gap-2 border border-[#B45309] px-4 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-[#B45309] transition-colors hover:bg-[#B45309] hover:text-background"
+                  >
+                    <Icon
+                      name={openTransition ? 'ChevronUp' : 'ChevronDown'}
+                      size={15}
+                    />
+                    {openTransition
+                      ? 'Скрыть другие варианты'
+                      : 'Показать другие варианты'}
+                  </button>
+                  <a
+                    href={contacts.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center gap-2 text-sm text-muted-foreground underline transition-colors hover:text-foreground"
+                  >
+                    <Icon name="Camera" size={15} />
+                    Пришлите фото разъёма — скажем точно
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {transitional &&
+            openTransition &&
+            otherPeriodWires.map((w) => (
+              <WireCard
+                key={`t-${w.id}`}
+                wire={w}
+                recommended={false}
+                picked={pickedId === w.id}
+                onPick={() => onPick(w)}
+              />
+            ))}
 
           {res.pickMode === 'select'
             ? /* Режим подбора: все варианты равны, ничего не прячем */

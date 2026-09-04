@@ -124,24 +124,19 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
    * заводим новые строки в режиме «Подбор»: какая там проводка, решает
    * человек, а угадывать за него мы не вправе.
    */
-  const splitByFrames = async (row: PeriodRow) => {
+  const splitOne = async (row: PeriodRow): Promise<number> => {
     const key = `${row.brand.toLowerCase()}|${row.model.toLowerCase()}`;
     const marks = wiringRows.filter(
       (w) => `${w.brand.toLowerCase()}|${w.model.toLowerCase()}` === key,
     );
 
-    /* Рамки делят годы внахлёст: 2006–2011 и 2011–2017 спорят за 2011-й.
-       В разметке так нельзя — подбор возьмёт первую попавшуюся строку, и
-       владелец машины 2011 года получит проводку наугад. Отдаём спорный
-       год следующему периоду: он начинается с новой панели */
-    const spans = row.periods.map((p, i) => {
-      const next = row.periods[i + 1];
-      return { from: p.from, to: next ? Math.min(p.to, next.from - 1) : p.to };
-    });
-
-    setSplitting(true);
+    /* Годы пишем ровно как на рамках, внахлёст: 2006–2011 и 2011–2017.
+       Подгонять границы нельзя — рамка «2011» реально продаётся под
+       машину 2011 года, и отнимать у неё этот год значит врать о товаре.
+       Спорный год разруливает подбор: берёт строку старшего периода и
+       предупреждает покупателя, что год переходной */
     let done = 0;
-    for (const [i, p] of spans.entries()) {
+    for (const [i, p] of row.periods.entries()) {
       // Строка, которая уже стоит на этом периоде — её и правим
       const own =
         marks.find((w) => p.from >= w.years[0] - 1 && p.to <= w.years[1] + 1) ??
@@ -167,6 +162,12 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
       });
       if (res.ok) done += 1;
     }
+    return done;
+  };
+
+  const splitByFrames = async (row: PeriodRow) => {
+    setSplitting(true);
+    const done = await splitOne(row);
     setSplitting(false);
     await loadWiring();
     toast({
@@ -174,6 +175,32 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
       description: `${row.brand} ${row.model}: ${done} ${
         done === 1 ? 'период' : 'периода'
       }. Теперь выберите проводку для каждого.`,
+    });
+  };
+
+  /**
+   * Разбиваем все модели списка разом.
+   *
+   * Триста моделей руками не пройти, а операция безопасная: годы берутся
+   * из рамок, уже выбранные проводки сохраняются за первым периодом.
+   * Дальше остаётся только проставить проводки там, где их не было.
+   */
+  const splitAll = async () => {
+    setSplitting(true);
+    let models = 0;
+    let rowsMade = 0;
+    for (const row of generations) {
+      const n = await splitOne(row);
+      if (n) {
+        models += 1;
+        rowsMade += n;
+      }
+    }
+    setSplitting(false);
+    await loadWiring();
+    toast({
+      title: 'Разбито по рамкам',
+      description: `Моделей: ${models}, строк разметки: ${rowsMade}. Теперь выберите проводку для каждого периода.`,
     });
   };
 
@@ -251,6 +278,7 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
         <PeriodsList
           rows={generations}
           onSplit={splitByFrames}
+          onSplitAll={splitAll}
           busy={splitting}
         />
       ) : !loaded && view === 'wiring' ? (
@@ -388,22 +416,37 @@ const Empty = () => (
 const PeriodsList = ({
   rows,
   onSplit,
+  onSplitAll,
   busy,
 }: {
   rows: PeriodRow[];
   onSplit: (row: PeriodRow) => void;
+  onSplitAll: () => void;
   busy: boolean;
 }) => {
   if (!rows.length) return <Empty />;
+  const total = rows.reduce((n, r) => n + r.periods.length, 0);
   return (
     <>
-      <div className="mt-5 border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
-        Покупатель сначала выбирает рамку — и тем самым говорит, какая у
-        него машина и каких годов. Здесь модели, где на несколько периодов
-        рамок приходится одна строка разметки: Rio 2006 (камеры не бывает,
-        проводка одна) и Rio 2012 (камера возможна, вариантов несколько)
-        получают один и тот же ответ. Кнопка режет разметку по годам рамок,
-        дальше в каждую строку выбираете проводку.
+      <div className="mt-5 flex flex-wrap items-start justify-between gap-4 border-t border-border pt-4">
+        <p className="max-w-[46em] text-[0.82rem] text-muted-foreground">
+          Покупатель сначала выбирает рамку — и тем самым говорит, какая у
+          него машина и каких годов. Здесь модели, где на несколько периодов
+          рамок приходится одна строка разметки: Rio 2006 (камеры не бывает,
+          проводка одна) и Rio 2012 (камера возможна, вариантов несколько)
+          получают один и тот же ответ. Кнопка режет разметку по годам рамок,
+          дальше в каждую строку выбираете проводку.
+        </p>
+        <button
+          disabled={busy}
+          onClick={onSplitAll}
+          className="flex flex-none items-center gap-2 border border-foreground bg-foreground px-4 py-2.5 text-[0.72rem] uppercase tracking-[0.08em] text-background transition-opacity hover:opacity-80 disabled:opacity-50"
+        >
+          <Icon name={busy ? 'Loader' : 'Scissors'} size={14} />
+          {busy
+            ? 'Разбиваем…'
+            : `Разбить все (${rows.length} моделей → ${total} строк)`}
+        </button>
       </div>
       <div className="mt-2">
         {rows.map((r) => (
