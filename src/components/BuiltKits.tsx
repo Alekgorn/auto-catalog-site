@@ -226,7 +226,7 @@ const BuiltKits = () => {
 
       <div className="pb-12">
         <Link
-          to="/scenario/vse-po-mashine"
+          to="/catalog"
           className="inline-flex items-center gap-2 border border-foreground px-6 py-4 font-head text-[0.85rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
         >
           Подобрать на свою машину

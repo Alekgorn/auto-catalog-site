@@ -94,7 +94,7 @@ const CategoryPage = () => {
     }
     if (picked.length !== 1) {
       window.sessionStorage.setItem("shtatno.filters", JSON.stringify(next));
-      navigate("/scenario/vse-po-mashine");
+      navigate("/catalog");
       return;
     }
     setFilters(next);
@@ -172,7 +172,7 @@ const CategoryPage = () => {
           canonical: `${SITE_URL}/catalog/${slug}`,
           jsonLd: [
             crumbsJsonLd([
-              { label: "Каталог", to: "/scenario/vse-po-mashine" },
+              { label: "Каталог", to: "/catalog" },
               { label: category },
             ]),
             {
@@ -222,7 +222,7 @@ const CategoryPage = () => {
       <Header />
       <main className="section-pad">
         <Breadcrumbs
-          items={[{ label: "Каталог", to: "/scenario/vse-po-mashine" }, { label: category }]}
+          items={[{ label: "Каталог", to: "/catalog" }, { label: category }]}
         />
 
         <div className="rule" />

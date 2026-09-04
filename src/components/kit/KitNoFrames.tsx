@@ -206,7 +206,7 @@ const KitNoFrames = ({ vehicle, scenario }: Props) => {
 
       <div className="mt-5 flex flex-wrap gap-3 border-t border-border pt-5">
         <Link
-          to="/scenario/vse-po-mashine"
+          to="/catalog"
           className="flex items-center gap-2 border border-foreground px-5 py-3 font-head text-[0.8rem] font-medium uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
         >
           Что ещё подойдёт на {vehicle.brand} {vehicle.model}

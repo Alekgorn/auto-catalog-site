@@ -9,7 +9,7 @@ import DealerDialog from '@/components/DealerDialog';
 import VehicleBadge from '@/components/VehicleBadge';
 
 const NAV: { id: string; label: string; route?: string }[] = [
-  { id: 'catalog', label: 'Каталог', route: '/scenario/vse-po-mashine' },
+  { id: 'catalog', label: 'Каталог', route: '/catalog' },
   { id: 'select', label: 'Подбор' },
   { id: 'guides', label: 'Инструкции', route: '/guides' },
   { id: 'faq', label: 'FAQ' },

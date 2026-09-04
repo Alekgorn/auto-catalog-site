@@ -104,7 +104,7 @@ const SharedKit = () => {
                 Соберите комплект под свою машину — это займёт пару минут.
               </p>
               <Link
-                to="/scenario/vse-po-mashine"
+                to="/catalog"
                 className="mt-6 inline-flex items-center gap-2 border border-foreground bg-foreground px-5 py-3 text-[0.8rem] uppercase tracking-[0.1em] text-background transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
                 Открыть каталог
