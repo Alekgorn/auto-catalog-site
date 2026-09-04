@@ -318,6 +318,106 @@ const checkFrameSize = (
   };
 };
 
+/* ─────────── поколения: разметка против рамок ─────────── */
+
+export interface GenerationRow {
+  brand: string;
+  model: string;
+  /** Годы начала поколений, как их видно по рамкам: 2006, 2011, 2017, 2020 */
+  starts: number[];
+  /** Что записано в разметке подбора: «2006–2019», «2020–2026» */
+  covered: string[];
+  /** Сколько поколений попало в одну строку разметки — грубость ошибки */
+  worst: number;
+}
+
+/**
+ * Модели, где разметка подбора грубее, чем поколения по рамкам.
+ *
+ * Рамка привязана к панели, а панель меняется со сменой поколения. Значит
+ * рамки — самый честный источник границ: Kia Rio по ним делится на 2006,
+ * 2011, 2017 и 2020. Если в разметке стоит одна строка «2006–2019», то
+ * три разных поколения получают одну и ту же проводку, хотя разъёмы у
+ * них разные.
+ *
+ * Показываем только явные случаи — когда в одну строку разметки попало
+ * два и больше поколений. Обратную сторону (разметка дробнее рамок) не
+ * трогаем: там человек знает больше, чем видно по каталогу.
+ */
+export const findGenerationGaps = (
+  products: AdminProduct[],
+  wiring: VehicleWiring[],
+): GenerationRow[] => {
+  /* Границы поколений по рамкам. Годы начала, отличающиеся на год,
+     считаем одним поколением: поставщики пишут «2011» и «2012» про одну
+     и ту же машину, и дробить по ним значит выдумывать разницу */
+  const byModel = new Map<string, { brand: string; model: string; years: number[] }>();
+  products
+    .filter(
+      (p) =>
+        p.isActive &&
+        p.category === FRAMES_CATEGORY &&
+        p.fitMode !== 'universal' &&
+        p.yearFrom &&
+        /* Рамка «1989–2026» — это позиция, размеченная на всю марку
+           скопом. Она ничего не говорит про поколение, а её год начала
+           тянул бы вниз границу у каждой модели. Порог в 14 лет: одно
+           поколение живёт 5–8, два подряд — до дюжины */
+        (!p.yearTo || p.yearTo - p.yearFrom <= 14),
+    )
+    .forEach((p) => {
+      pairsOf(p).forEach(({ key, brand, model }) => {
+        const cell = byModel.get(key);
+        if (cell) cell.years.push(p.yearFrom);
+        else byModel.set(key, { brand, model, years: [p.yearFrom] });
+      });
+    });
+
+  const rows: GenerationRow[] = [];
+
+  byModel.forEach(({ brand, model, years }, key) => {
+    const sorted = [...new Set(years)].sort((a, b) => a - b);
+    const starts: number[] = [];
+    sorted.forEach((y) => {
+      if (!starts.length || y - starts[starts.length - 1] > 1) starts.push(y);
+    });
+    if (starts.length < 2) return;
+
+    const marks = wiring.filter(
+      (w) => `${w.brand.toLowerCase()}|${w.model.toLowerCase()}` === key,
+    );
+    if (!marks.length) return;
+
+    /* Сколько поколений накрывает самая грубая строка разметки. Начало
+       поколения считаем попавшим внутрь, если строка захватывает его и
+       хотя бы одно предыдущее — тогда машины разных лет неразличимы */
+    let worst = 0;
+    marks.forEach((w) => {
+      const inside = starts.filter(
+        (s) => s >= w.years[0] - 1 && s <= w.years[1],
+      ).length;
+      if (inside > worst) worst = inside;
+    });
+    if (worst < 2) return;
+
+    rows.push({
+      brand,
+      model,
+      starts,
+      covered: marks.map((w) => `${w.years[0]}–${w.years[1]}`),
+      worst,
+    });
+  });
+
+  // Сверху самые грубые: там под одну проводку слито больше всего машин
+  return rows.sort(
+    (a, b) =>
+      b.worst - a.worst ||
+      a.brand.localeCompare(b.brand) ||
+      a.model.localeCompare(b.model),
+  );
+};
+
 /* ─────────── разметка подбора проводки ─────────── */
 
 /**

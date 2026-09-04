@@ -6,10 +6,12 @@ import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
 import {
+  GenerationRow,
   KIT_RULE_TITLES,
   KitGapRow,
   auditKitProducts,
   auditWiring,
+  findGenerationGaps,
   findKitGaps,
 } from '@/lib/kit-audit';
 
@@ -19,7 +21,7 @@ interface Props {
   onEdit: (product: AdminProduct) => void;
 }
 
-type View = 'products' | 'wiring' | 'gaps';
+type View = 'products' | 'wiring' | 'gaps' | 'generations';
 
 /** Проводка из каталога — то, из чего выбираем в разметке */
 interface WireOption {
@@ -106,6 +108,11 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
     );
   }, [products, wiringRows]);
 
+  const generations = useMemo(
+    () => findGenerationGaps(products, wiringRows),
+    [products, wiringRows],
+  );
+
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
     const list = view === 'products' ? productIssues : wiringIssues;
@@ -125,6 +132,11 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
     { id: 'products', label: 'Рамки и проводки', count: productIssues.length },
     { id: 'wiring', label: 'Разметка подбора', count: wiringIssues.length },
     { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
+    {
+      id: 'generations',
+      label: 'Поколения',
+      count: generations.length,
+    },
   ];
 
   return (
@@ -171,6 +183,8 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
 
       {view === 'gaps' ? (
         <GapsList rows={gaps} wires={wires} onSaved={loadWiring} />
+      ) : view === 'generations' ? (
+        <GenerationsList rows={generations} />
       ) : !loaded && view === 'wiring' ? (
         <div className="mt-8 py-10 text-center text-[0.87rem] text-muted-foreground">
           Загружаем разметку…
@@ -295,6 +309,51 @@ const Empty = () => (
     </p>
   </div>
 );
+
+/**
+ * Модели, где разметка подбора грубее реальных поколений.
+ *
+ * Показываем рядом две строки: как машина делится по рамкам и что
+ * записано в разметке. Из такого сравнения сразу видно, где вместо
+ * одной строки «2006–2019» нужны три.
+ */
+const GenerationsList = ({ rows }: { rows: GenerationRow[] }) => {
+  if (!rows.length) return <Empty />;
+  return (
+    <>
+      <div className="mt-5 border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
+        Границы поколений видно по рамкам: рамка привязана к панели, а
+        панель меняется вместе с поколением. Здесь модели, где в одну
+        строку разметки попало несколько поколений — значит машинам разных
+        лет подбирается одна и та же проводка. Поправить можно во вкладке
+        «Марки» или через файл разметки.
+      </div>
+      <div className="mt-2">
+        {rows.map((r) => (
+          <div
+            key={`${r.brand}-${r.model}`}
+            className="border-b border-border py-3"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <div className="font-head text-[0.92rem] font-bold">
+                {r.brand} {r.model}
+              </div>
+              <div className="text-[0.75rem] uppercase tracking-[0.06em] text-primary">
+                поколений в одной строке: {r.worst}
+              </div>
+            </div>
+            <div className="mt-1.5 grid gap-x-6 gap-y-1 text-[0.8rem] sm:grid-cols-[8.5rem_1fr]">
+              <span className="text-muted-foreground">Рамки делят на</span>
+              <span>{r.starts.join(' · ')}</span>
+              <span className="text-muted-foreground">В разметке</span>
+              <span>{r.covered.join(' · ')}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
 
 /**
  * Машины, под которые есть рамка, но нет проводки.
