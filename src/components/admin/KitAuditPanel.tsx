@@ -1,0 +1,302 @@
+import { useEffect, useMemo, useState } from 'react';
+import Icon from '@/components/ui/icon';
+import { adminFetch } from '@/lib/api';
+import { AdminBrand } from '@/components/admin/BrandsEditor';
+import { AdminProduct } from '@/components/admin/product-editor/product-types';
+import { VehicleWiring } from '@/lib/wire-pick';
+import {
+  KIT_RULE_TITLES,
+  auditKitProducts,
+  auditWiring,
+  findKitGaps,
+} from '@/lib/kit-audit';
+
+interface Props {
+  products: AdminProduct[];
+  brands: AdminBrand[];
+  onEdit: (product: AdminProduct) => void;
+}
+
+type View = 'products' | 'wiring' | 'gaps';
+
+/**
+ * Проверка комплекта: рамки, проводки и разметка подбора.
+ *
+ * Здесь смотрят на связи между записями, а не внутрь одной карточки:
+ * годы в названии против поля, товары без привязки к машине, битые
+ * ссылки в разметке и машины, где рамка есть, а проводки нет.
+ */
+const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
+  const [view, setView] = useState<View>('products');
+  const [onlyActive, setOnlyActive] = useState(true);
+  const [rule, setRule] = useState('');
+  const [wiringRows, setWiringRows] = useState<VehicleWiring[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // Разметка подбора живёт в своей таблице — тянем отдельно от товаров
+  useEffect(() => {
+    adminFetch('?action=vehicle-wiring')
+      .then((r) => r.json())
+      .then((d) => {
+        const rows = (d.rows ?? []).map(
+          (r: {
+            brand: string;
+            model: string;
+            yearFrom: number;
+            yearTo: number;
+            mode: string;
+            wireSlug: string;
+            ask?: Record<string, boolean>;
+            wheel?: string;
+            bodies?: string[];
+          }) =>
+            ({
+              ...r,
+              years: [r.yearFrom, r.yearTo],
+            }) as unknown as VehicleWiring,
+        );
+        setWiringRows(rows);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  const productIssues = useMemo(
+    () => auditKitProducts(products, onlyActive),
+    [products, onlyActive],
+  );
+
+  const wiringIssues = useMemo(
+    () => auditWiring(wiringRows, products, brands),
+    [wiringRows, products, brands],
+  );
+
+  const gaps = useMemo(() => findKitGaps(products), [products]);
+
+  /** Сколько записей на каждое правило — для кнопок-фильтров */
+  const counts = useMemo(() => {
+    const list = view === 'products' ? productIssues : wiringIssues;
+    const map: Record<string, number> = {};
+    list.forEach((i) => {
+      map[i.rule] = (map[i.rule] ?? 0) + 1;
+    });
+    return map;
+  }, [view, productIssues, wiringIssues]);
+
+  const shown = useMemo(() => {
+    const list = view === 'products' ? productIssues : wiringIssues;
+    return rule ? list.filter((i) => i.rule === rule) : list;
+  }, [view, rule, productIssues, wiringIssues]);
+
+  const VIEWS: { id: View; label: string; count: number }[] = [
+    { id: 'products', label: 'Рамки и проводки', count: productIssues.length },
+    { id: 'wiring', label: 'Разметка подбора', count: wiringIssues.length },
+    { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
+  ];
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="max-w-[46em]">
+          <p className="text-[0.87rem] leading-relaxed text-muted-foreground">
+            Смотрим связи между записями: годы в названии против поля,
+            товары без привязки к машине, битые ссылки в разметке подбора
+            и машины, где рамка есть, а проводки нет. Ничего не меняется —
+            только список того, что стоит посмотреть.
+          </p>
+        </div>
+        {view === 'products' && (
+          <button
+            onClick={() => setOnlyActive((v) => !v)}
+            className="flex flex-none items-center gap-2 border border-border px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-foreground"
+          >
+            <Icon name={onlyActive ? 'SquareCheck' : 'Square'} size={15} />
+            Только видимые на сайте
+          </button>
+        )}
+      </div>
+
+      {/* Переключатель между тремя видами проверок */}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {VIEWS.map((v) => (
+          <button
+            key={v.id}
+            onClick={() => {
+              setView(v.id);
+              setRule('');
+            }}
+            className={`border px-4 py-2 text-[0.78rem] uppercase tracking-[0.08em] transition-colors ${
+              view === v.id
+                ? 'border-foreground bg-foreground text-background'
+                : 'border-border text-muted-foreground hover:border-foreground'
+            }`}
+          >
+            {v.label} ({v.count})
+          </button>
+        ))}
+      </div>
+
+      {view === 'gaps' ? (
+        <GapsList rows={gaps} />
+      ) : !loaded && view === 'wiring' ? (
+        <div className="mt-8 py-10 text-center text-[0.87rem] text-muted-foreground">
+          Загружаем разметку…
+        </div>
+      ) : shown.length === 0 && Object.keys(counts).length === 0 ? (
+        <Empty />
+      ) : (
+        <>
+          {/* Фильтр по виду замечания */}
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+            <button
+              onClick={() => setRule('')}
+              className={`border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em] transition-colors ${
+                rule === ''
+                  ? 'border-foreground bg-foreground text-background'
+                  : 'border-border text-muted-foreground hover:border-foreground'
+              }`}
+            >
+              Все ({view === 'products' ? productIssues.length : wiringIssues.length})
+            </button>
+            {Object.entries(counts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([key, n]) => (
+                <button
+                  key={key}
+                  onClick={() => setRule(key === rule ? '' : key)}
+                  className={`border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em] transition-colors ${
+                    rule === key
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border text-muted-foreground hover:border-foreground'
+                  }`}
+                >
+                  {KIT_RULE_TITLES[key] ?? key} ({n})
+                </button>
+              ))}
+          </div>
+
+          <div className="mt-2">
+            {shown.map((issue, i) => {
+              const product =
+                'product' in issue ? issue.product : undefined;
+              return (
+                <div
+                  key={`${issue.rule}-${issue.title}-${i}`}
+                  className="border-b border-border py-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      {product ? (
+                        <button
+                          onClick={() => onEdit(product)}
+                          className="text-left font-head text-[0.95rem] font-bold transition-colors hover:text-primary"
+                        >
+                          {issue.title}
+                        </button>
+                      ) : (
+                        <span className="font-head text-[0.95rem] font-bold">
+                          {issue.title}
+                        </span>
+                      )}
+                      {product && (
+                        <div className="mt-0.5 text-[0.75rem] text-muted-foreground">
+                          {product.category}
+                          {product.sku ? ` · ${product.sku}` : ''}
+                        </div>
+                      )}
+                    </div>
+                    {product && (
+                      <button
+                        onClick={() => onEdit(product)}
+                        className="flex flex-none items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground"
+                      >
+                        <Icon name="Pencil" size={13} />
+                        Открыть
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex items-start gap-2 text-[0.82rem]">
+                    <Icon
+                      name={issue.level === 'error' ? 'TriangleAlert' : 'Info'}
+                      size={14}
+                      className={`mt-0.5 flex-none ${
+                        issue.level === 'error'
+                          ? 'text-primary'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                    <span className="min-w-0">
+                      <span
+                        className={
+                          issue.level === 'error' ? 'text-foreground' : ''
+                        }
+                      >
+                        {issue.text}
+                      </span>
+                      {issue.hint && (
+                        <span className="block text-[0.76rem] text-muted-foreground">
+                          {issue.hint}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const Empty = () => (
+  <div className="mt-8 border border-border bg-surface px-6 py-14 text-center">
+    <Icon name="CircleCheck" size={30} className="mx-auto text-success" />
+    <div className="mt-4 font-head text-lg font-bold uppercase tracking-tight">
+      Расхождений нет
+    </div>
+    <p className="mx-auto mt-2 max-w-[34em] text-[0.87rem] text-muted-foreground">
+      Всё сходится.
+    </p>
+  </div>
+);
+
+/** Машины, под которые есть рамка, но нет проводки */
+const GapsList = ({
+  rows,
+}: {
+  rows: { brand: string; model: string; years: string; example: string }[];
+}) => {
+  if (!rows.length) return <Empty />;
+  return (
+    <>
+      <div className="mt-5 border-t border-border pt-4 text-[0.82rem] text-muted-foreground">
+        Под эти машины рамка в каталоге есть, а проводки нет — покупатель
+        дойдёт до второго шага и остановится. Проверьте, чем закрыть:
+        часто подходит переходник, размеченный на всю марку.
+      </div>
+      <div className="mt-2">
+        {rows.map((r, i) => (
+          <div
+            key={`${r.brand}-${r.model}-${i}`}
+            className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-border py-3"
+          >
+            <div className="font-head text-[0.92rem] font-bold capitalize">
+              {r.brand} {r.model}
+              <span className="ml-2 font-body text-[0.78rem] font-normal text-muted-foreground">
+                {r.years}
+              </span>
+            </div>
+            <div className="min-w-0 text-[0.76rem] text-muted-foreground">
+              {r.example}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+};
+
+export default KitAuditPanel;

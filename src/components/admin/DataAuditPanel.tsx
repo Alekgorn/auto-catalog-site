@@ -7,6 +7,8 @@ interface Props {
   products: AdminProduct[];
   /** Открыть карточку в редакторе — чинить сразу, не уходя со списка */
   onEdit: (product: AdminProduct) => void;
+  /** Внутри общего раздела диагностики — свой заголовок не нужен */
+  bare?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ interface Props {
  * список — правки делает человек, потому что часть «ошибок» на деле
  * особенность товара, и решать это должен тот, кто знает ассортимент.
  */
-const DataAuditPanel = ({ products, onEdit }: Props) => {
+const DataAuditPanel = ({ products, onEdit, bare }: Props) => {
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState<string>('');
 
@@ -50,12 +52,14 @@ const DataAuditPanel = ({ products, onEdit }: Props) => {
   ).length;
 
   return (
-    <div className="py-8">
+    <div className={bare ? '' : 'py-8'}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-[46em]">
-          <div className="font-head text-xl font-bold uppercase tracking-tight">
-            Проверка данных
-          </div>
+          {!bare && (
+            <div className="font-head text-xl font-bold uppercase tracking-tight">
+              Проверка данных
+            </div>
+          )}
           <p className="mt-2 text-[0.87rem] leading-relaxed text-muted-foreground">
             Ищем расхождения внутри карточек: год в названии не сходится с
             полем годов, диапазон задом наперёд, пустое описание. Здесь
