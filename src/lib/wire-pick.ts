@@ -232,18 +232,22 @@ const wheelOk = (p: Product, wheel?: '' | 'left' | 'right' | null): boolean =>
 /**
  * Сверяем ответ покупателя с тем, что проводка подключает.
  *
- * «Да, усилитель есть» — нужна проводка с этой галочкой, иначе звука не
- * будет. «Нет» — не отсеиваем ничего: проводка, которая умеет больше,
- * работает и на простой машине, просто стоит дороже. Прятать её нельзя,
- * это лишает человека выбора.
+ * «Да, камера есть» — нужна проводка с этой галочкой, иначе картинки не
+ * будет. «Нет» — подходит простая: проводка под камеру физически встанет
+ * и на машину без неё, но покупатель переплатит за то, чем не
+ * пользуется. Поэтому точное совпадение идёт в рекомендации, а остальное
+ * не выбрасываем — прячем под пометку «может не подойти».
+ *
+ * «Не знаю» (null) не отсеивает ничего: гадать за человека нельзя.
  */
 const featureOk = (
   p: Product,
   key: string,
   answer?: boolean | BodyType | null,
 ): boolean => {
-  if (answer !== true) return true;
-  return (p.wireFeatures || []).includes(key);
+  if (answer === undefined || answer === null) return true;
+  const has = (p.wireFeatures || []).includes(key);
+  return answer === true ? has : !has;
 };
 
 /**
@@ -343,9 +347,8 @@ export const pickWires = (
      * подключать. Отвечать на все вопросы необязательно, считаем по тем,
      * что уже заданы.
      */
-    const needs = asked.filter((f) => answers[f.id] === true).map((f) => f.id);
     const fits2 = fromFrame.filter((p) =>
-      needs.every((k) => (p.wireFeatures || []).includes(k)),
+      asked.every((f) => featureOk(p, f.id, answers[f.id])),
     );
 
     /* Все вопросы, которые различают эти проводки. Показываем их разом:
@@ -359,10 +362,12 @@ export const pickWires = (
      * Вопрос ещё есть — показываем всё и ничего не советуем: советовать
      * до ответа значит гадать.
      */
+    /* Пока не ответили — списка нет вовсе. Показывать четыре похожие
+       коробки до вопросов значит предлагать выбрать наугад */
     if (next) {
       return {
         pickMode: 'select',
-        full: [...fromFrame].sort(byPrice),
+        full: [],
         budget: [],
         question: next,
         questions: list,
@@ -383,6 +388,7 @@ export const pickWires = (
      */
     const good = fits2.length ? fits2 : fromFrame;
     const rest = fromFrame.filter((p) => !good.includes(p));
+
 
     /* Всегда «рекомендуем», даже когда подходят обе: человек ответил на
        вопросы и ждёт ответа, а не списка равных вариантов. Первой идёт

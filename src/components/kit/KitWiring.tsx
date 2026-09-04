@@ -473,7 +473,7 @@ const KitWiring = ({
             посмотреть в своей машине.
           */}
           {frame?.wireHint && res.full.length > 1 && (
-            <div className="flex items-start gap-2.5 border border-border bg-surface p-4">
+            <div className="flex items-start gap-2.5 border-2 border-primary bg-primary/5 p-4">
               <Icon
                 name="Info"
                 size={17}
