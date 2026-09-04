@@ -17,6 +17,8 @@ interface Props {
   products: AdminProduct[];
   brands: AdminBrand[];
   onEdit: (product: AdminProduct) => void;
+  /** Перечитать каталог: правки уходят прямо в карточку проводки */
+  onReload?: () => void;
 }
 
 type View = 'products' | 'gaps';
@@ -36,7 +38,7 @@ interface WireOption {
  * годы в названии против поля, товары без привязки к машине, битые
  * ссылки в разметке и машины, где рамка есть, а проводки нет.
  */
-const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
+const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
   const [view, setView] = useState<View>('products');
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
@@ -86,23 +88,11 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
   );
 
   /*
-   * Машины без проводки, кроме тех, что уже закрыты разметкой.
-   *
-   * Разметка «Фиксированный» говорит подбору, какую проводку показать,
-   * даже если у самого товара эта машина не отмечена: для Газели это
-   * обычный ISO-переходник, размеченный на всю марку. Такая машина уже
-   * не дыра, и держать её в списке — значит гонять по кругу.
+   * Машины без проводки. Режима «Жёстко» больше нет: проводку назначает
+   * не строка марки, а привязка к рамке — там же, где её видно.
+   * Закрытой считаем машину, у которой проводка отмечена совместимостью.
    */
-  const gaps = useMemo(() => {
-    const covered = new Set(
-      wiringRows
-        .filter((r) => r.mode === 'fixed' && r.wireSlug)
-        .map((r) => `${r.brand.toLowerCase()}|${r.model.toLowerCase()}`),
-    );
-    return findKitGaps(products).filter(
-      (g) => !covered.has(`${g.brand.toLowerCase()}|${g.model.toLowerCase()}`),
-    );
-  }, [products, wiringRows]);
+  const gaps = useMemo(() => findKitGaps(products), [products]);
 
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
@@ -167,7 +157,15 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
       </div>
 
       {view === 'gaps' ? (
-        <GapsList rows={gaps} wires={wires} onSaved={loadWiring} />
+        <GapsList
+          rows={gaps}
+          wires={wires}
+          products={products}
+          onSaved={() => {
+            loadWiring();
+            onReload?.();
+          }}
+        />
       ) : shown.length === 0 && Object.keys(counts).length === 0 ? (
         <Empty />
       ) : (
@@ -300,10 +298,13 @@ const Empty = () => (
 const GapsList = ({
   rows,
   wires,
+  products,
   onSaved,
 }: {
   rows: KitGapRow[];
   wires: WireOption[];
+  /** Каталог целиком — правим совместимость самой проводки */
+  products: AdminProduct[];
   onSaved: () => void;
 }) => {
   const { toast } = useToast();
@@ -317,27 +318,27 @@ const GapsList = ({
   const rowKey = (r: KitGapRow) => `${r.brand}|${r.model}|${r.yearFrom}`;
 
   /**
-   * Записываем строку разметки.
+   * Отмечаем машину в самой проводке.
    *
-   * fixed со slug — «для этой машины вот эта проводка», select без него —
-   * «вариантов несколько, показать все подходящие».
+   * Раньше здесь создавалась строка «Жёстко» — она назначала проводку в
+   * обход каталога, и товар при этом оставался неразмеченным. Теперь
+   * машина дописывается в совместимость проводки: одна правда вместо
+   * двух, и видно её прямо в карточке товара.
    */
-  const save = async (r: KitGapRow, mode: 'fixed' | 'select', slug = '') => {
+  const save = async (r: KitGapRow, slug: string) => {
+    // Берём товар целиком из каталога: в коротком списке проводок нет
+    // совместимости, а править надо именно её
+    const wire = products.find((x) => x.slug === slug);
+    if (!wire) return;
+    const fits = { ...(wire.fits ?? {}) };
+    const models: string[] = fits[r.brand] ?? [];
+    if (!models.some((m) => m.toLowerCase() === r.model.toLowerCase()))
+      fits[r.brand] = [...models, r.model];
+
     setBusy(true);
-    const res = await adminFetch('?action=vehicle-wiring', {
-      method: 'POST',
-      body: JSON.stringify({
-        brand: r.brand,
-        model: r.model,
-        yearFrom: r.yearFrom || 1990,
-        yearTo: r.yearTo || 2100,
-        mode,
-        wireSlug: slug,
-        reason: '',
-        ask: {},
-        wheel: '',
-        bodies: [],
-      }),
+    const res = await adminFetch('?action=product', {
+      method: 'PUT',
+      body: JSON.stringify({ ...wire, fits }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -349,9 +350,7 @@ const GapsList = ({
     onSaved();
     toast({
       title: 'Сохранено',
-      description: `${r.brand} ${r.model}: ${
-        mode === 'fixed' ? 'проводка выбрана' : 'показываем все подходящие'
-      }`,
+      description: `${r.brand} ${r.model} добавлена в совместимость проводки`,
     });
   };
 
@@ -430,7 +429,7 @@ const GapsList = ({
                         <button
                           key={w.slug}
                           disabled={busy}
-                          onClick={() => save(r, 'fixed', w.slug)}
+                          onClick={() => save(r, w.slug ?? '')}
                           className="flex w-full items-baseline justify-between gap-4 border-b border-border py-2 text-left transition-colors hover:text-primary disabled:opacity-50"
                         >
                           <span className="min-w-0 text-[0.82rem]">

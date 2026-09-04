@@ -139,7 +139,12 @@ const DiagnosticsPanel = ({
           />
         )}
         {section === 'kit' && (
-          <KitAuditPanel products={products} brands={brands} onEdit={onEdit} />
+          <KitAuditPanel
+            products={products}
+            brands={brands}
+            onEdit={onEdit}
+            onReload={onReload}
+          />
         )}
         {section === 'wiring' && <WiringPanel bare />}
       </div>

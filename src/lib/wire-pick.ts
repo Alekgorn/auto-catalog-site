@@ -31,6 +31,11 @@ export interface VehicleWiring {
   brand: string;
   model: string;
   years: [number, number];
+  /**
+   * Устарело. Режим «Жёстко» назначал проводку в обход каталога и
+   * конфликтовал с привязкой к рамке — подбор его больше не читает.
+   * Поле оставлено, чтобы старые записи открывались без ошибок.
+   */
   mode: 'fixed' | 'select';
   wireSlug: string;
   ask: Record<string, boolean>;
@@ -318,28 +323,6 @@ export const pickWires = (
       question: next ? { id: next.id, ...questionFor(next) } : null,
       fallback: false,
     };
-  }
-
-  /*
-   * Машина помечена как «фиксированная» — проводка известна точно.
-   * Спрашивать про усилитель и CAN-шину незачем: решение уже принято
-   * человеком, который разбирается. Каждый лишний вопрос теряет покупателя.
-   */
-  if (wiring?.mode === 'fixed' && wiring.wireSlug) {
-    const one = fits.find((p) => p.id === wiring.wireSlug);
-    if (one) {
-      return {
-        pickMode: 'fixed',
-        full: [one],
-        // Остальные подходящие прячем под «другие варианты»: они рабочие,
-        // но с ограничениями — точный выбор уже сделан за покупателя
-        budget: fits
-          .filter((p) => p.id !== one.id && isMarked(p))
-          .sort((a, b) => a.price - b.price),
-        question: null,
-        fallback: false,
-      };
-    }
   }
 
   const marked = fits.filter(isMarked);
