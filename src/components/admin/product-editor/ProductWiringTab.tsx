@@ -70,6 +70,28 @@ const ProductWiringTab = ({ form, set }: Props) => {
         </p>
       </div>
 
+      {/* Комплект «рамка + проводка». Ставится у рамки: покупателю,
+          выбравшему её, шаг с проводкой показывать нельзя — он купит
+          вторую и вернётся с претензией */}
+      <label className="flex cursor-pointer items-start gap-3 border border-border p-4 transition-colors hover:border-foreground">
+        <input
+          type="checkbox"
+          checked={!!form.wireIncluded}
+          onChange={(e) => set('wireIncluded', e.target.checked)}
+          className="mt-0.5 h-4 w-4 flex-none accent-primary"
+        />
+        <span>
+          <span className="font-head text-sm font-bold uppercase tracking-tight">
+            Проводка уже в комплекте
+          </span>
+          <span className="mt-1 block text-sm text-muted-foreground">
+            Для рамок, которые продаются вместе с проводкой. При выборе
+            такой рамки шаг «Подключение» пропускается — покупателю не
+            предложат купить то, что у него уже есть в коробке.
+          </span>
+        </span>
+      </label>
+
       <div>
         <div className="font-head text-sm font-bold uppercase tracking-tight">
           С чем работает
