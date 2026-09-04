@@ -20,6 +20,11 @@ export interface WireQuestion {
   id: string;
   title: string;
   hint: string;
+  /**
+   * Короткое имя для свёрнутой строки: «камера», «кнопки на руле».
+   * Полный вопрос туда не влезает, а понимать, что ты ответил, надо.
+   */
+  short: string;
   /** Для кузова — из чего выбирать (у машины их обычно два) */
   bodies?: BodyType[];
 }
@@ -178,11 +183,15 @@ const QUESTIONS: Record<string, { title: string; hint: string }> = {
 };
 
 /** Текст вопроса: выверенный для знакомых признаков, иначе из названия */
-const questionFor = (f: WireFeature): { title: string; hint: string } =>
-  QUESTIONS[f.id] ?? {
+const questionFor = (
+  f: WireFeature,
+): { title: string; hint: string; short: string } => ({
+  short: f.label.toLowerCase(),
+  ...(QUESTIONS[f.id] ?? {
     title: `В машине есть «${f.label.toLowerCase()}»?`,
     hint: 'От этого зависит, какая проводка подойдёт.',
-  };
+  }),
+});
 
 /**
  * Кузов, который выдала выбранная рамка.
@@ -410,6 +419,7 @@ export const pickWires = (
       id: 'body',
       title: 'Какой у вас кузов?',
       hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
+      short: 'кузов',
       bodies,
     });
   }
