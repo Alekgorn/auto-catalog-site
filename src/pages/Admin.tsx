@@ -437,6 +437,7 @@ const Admin = () => {
             onEdit={setEditing}
             dataIssues={dataIssues}
             fitsIssues={fitsIssues}
+            onReload={load}
           />
         )}
 

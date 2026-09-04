@@ -8,10 +8,8 @@ import { VehicleWiring } from '@/lib/wire-pick';
 import {
   KIT_RULE_TITLES,
   KitGapRow,
-  PeriodRow,
   auditKitProducts,
   auditWiring,
-  findGenerationGaps,
   findKitGaps,
 } from '@/lib/kit-audit';
 
@@ -21,7 +19,7 @@ interface Props {
   onEdit: (product: AdminProduct) => void;
 }
 
-type View = 'products' | 'wiring' | 'gaps' | 'generations';
+type View = 'products' | 'gaps';
 
 /** Проводка из каталога — то, из чего выбираем в разметке */
 interface WireOption {
@@ -39,14 +37,11 @@ interface WireOption {
  * ссылки в разметке и машины, где рамка есть, а проводки нет.
  */
 const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
-  const { toast } = useToast();
   const [view, setView] = useState<View>('products');
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
   const [wiringRows, setWiringRows] = useState<VehicleWiring[]>([]);
   const [wires, setWires] = useState<WireOption[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [splitting, setSplitting] = useState(false);
 
   // Разметка подбора живёт в своей таблице — тянем отдельно от товаров
   const loadWiring = () =>
@@ -73,13 +68,11 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
         );
         setWiringRows(rows);
         setWires(d.wires ?? []);
-        setLoaded(true);
       })
-      .catch(() => setLoaded(true));
+      .catch(() => undefined);
 
   useEffect(() => {
     loadWiring();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const productIssues = useMemo(
@@ -111,116 +104,6 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
     );
   }, [products, wiringRows]);
 
-  const generations = useMemo(
-    () => findGenerationGaps(products, wiringRows),
-    [products, wiringRows],
-  );
-
-  /**
-   * Приводим разметку модели к годам рамок.
-   *
-   * Годы пишем ровно как на рамках, внахлёст: 2006–2011 и 2011–2017.
-   * Подгонять границы нельзя — рамка «2011» реально продаётся под машину
-   * 2011 года, и отнимать у неё этот год значит врать о товаре. Стык
-   * разруливает подбор: берёт старший период и предупреждает покупателя.
-   *
-   * Повторный запуск ничего не ломает: на каждый период остаётся ровно
-   * одна строка. Лишние пустые — прежние автосозданные и промахи — сносим,
-   * а строки с ручной работой (выбранная проводка, обоснование) не трогаем
-   * никогда: их писал человек.
-   */
-  const splitOne = async (row: PeriodRow): Promise<number> => {
-    const key = `${row.brand.toLowerCase()}|${row.model.toLowerCase()}`;
-    const marks = wiringRows.filter(
-      (w) => `${w.brand.toLowerCase()}|${w.model.toLowerCase()}` === key,
-    );
-    const handmade = (w: VehicleWiring) =>
-      !!w.wireSlug || !!w.reason || w.mode === 'fixed';
-
-    const used = new Set<number>();
-    let done = 0;
-
-    for (const p of row.periods) {
-      // Строка ровно на этот период — берём её, чтобы не плодить дубли
-      const exact = marks.find(
-        (w) =>
-          !used.has(w.id ?? -1) && w.years[0] === p.from && w.years[1] === p.to,
-      );
-      // Иначе переиспользуем свободную пустую: правим годы вместо новой
-      const reuse =
-        exact ??
-        marks.find((w) => !used.has(w.id ?? -1) && !handmade(w) && w.id);
-      if (reuse?.id) used.add(reuse.id);
-
-      const res = await adminFetch('?action=vehicle-wiring', {
-        method: 'POST',
-        body: JSON.stringify({
-          id: reuse?.id,
-          brand: row.brand,
-          model: row.model,
-          yearFrom: p.from,
-          yearTo: p.to,
-          mode: reuse?.mode || 'select',
-          wireSlug: reuse?.wireSlug || '',
-          reason: reuse?.reason || '',
-          ask: reuse?.ask || {},
-          wheel: reuse?.wheel || '',
-          bodies: reuse?.bodies || [],
-        }),
-      });
-      if (res.ok) done += 1;
-    }
-
-    // Пустые остатки от прежних запусков — в них нет ничьей работы
-    for (const w of marks) {
-      if (!w.id || used.has(w.id) || handmade(w)) continue;
-      await adminFetch(`?action=vehicle-wiring`, {
-        method: 'DELETE',
-        body: JSON.stringify({ id: w.id }),
-      });
-    }
-    return done;
-  };
-
-  const splitByFrames = async (row: PeriodRow) => {
-    setSplitting(true);
-    const done = await splitOne(row);
-    setSplitting(false);
-    await loadWiring();
-    toast({
-      title: 'Разбито по рамкам',
-      description: `${row.brand} ${row.model}: ${done} ${
-        done === 1 ? 'период' : 'периода'
-      }. Теперь выберите проводку для каждого.`,
-    });
-  };
-
-  /**
-   * Разбиваем все модели списка разом.
-   *
-   * Триста моделей руками не пройти, а операция безопасная: годы берутся
-   * из рамок, уже выбранные проводки сохраняются за первым периодом.
-   * Дальше остаётся только проставить проводки там, где их не было.
-   */
-  const splitAll = async () => {
-    setSplitting(true);
-    let models = 0;
-    let rowsMade = 0;
-    for (const row of generations) {
-      const n = await splitOne(row);
-      if (n) {
-        models += 1;
-        rowsMade += n;
-      }
-    }
-    setSplitting(false);
-    await loadWiring();
-    toast({
-      title: 'Разбито по рамкам',
-      description: `Моделей: ${models}, строк разметки: ${rowsMade}. Теперь выберите проводку для каждого периода.`,
-    });
-  };
-
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
     const list = view === 'products' ? productIssues : wiringIssues;
@@ -238,13 +121,7 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
 
   const VIEWS: { id: View; label: string; count: number }[] = [
     { id: 'products', label: 'Рамки и проводки', count: productIssues.length },
-    { id: 'wiring', label: 'Разметка подбора', count: wiringIssues.length },
     { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
-    {
-      id: 'generations',
-      label: 'Годы рамок',
-      count: generations.length,
-    },
   ];
 
   return (
@@ -291,17 +168,6 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
 
       {view === 'gaps' ? (
         <GapsList rows={gaps} wires={wires} onSaved={loadWiring} />
-      ) : view === 'generations' ? (
-        <PeriodsList
-          rows={generations}
-          onSplit={splitByFrames}
-          onSplitAll={splitAll}
-          busy={splitting}
-        />
-      ) : !loaded && view === 'wiring' ? (
-        <div className="mt-8 py-10 text-center text-[0.87rem] text-muted-foreground">
-          Загружаем разметку…
-        </div>
       ) : shown.length === 0 && Object.keys(counts).length === 0 ? (
         <Empty />
       ) : (
@@ -422,108 +288,6 @@ const Empty = () => (
     </p>
   </div>
 );
-
-/**
- * Модели, где разметка проводок грубее деления по рамкам.
- *
- * Показываем периоды рамок и то, что записано в разметке. Кнопка режет
- * разметку по границам рамок: на каждый период появляется своя строка,
- * и дальше в неё выбирают проводку — отдельно для Rio 2006 и Rio 2012.
- */
-const PeriodsList = ({
-  rows,
-  onSplit,
-  onSplitAll,
-  busy,
-}: {
-  rows: PeriodRow[];
-  onSplit: (row: PeriodRow) => void;
-  onSplitAll: () => void;
-  busy: boolean;
-}) => {
-  if (!rows.length) return <Empty />;
-  const total = rows.reduce((n, r) => n + r.periods.length, 0);
-  return (
-    <>
-      <div className="mt-5 flex flex-wrap items-start justify-between gap-4 border-t border-border pt-4">
-        <p className="max-w-[46em] text-[0.82rem] text-muted-foreground">
-          Покупатель сначала выбирает рамку — и тем самым говорит, какая у
-          него машина и каких годов. Здесь модели, где на несколько периодов
-          рамок приходится одна строка разметки: Rio 2006 (камеры не бывает,
-          проводка одна) и Rio 2012 (камера возможна, вариантов несколько)
-          получают один и тот же ответ. Кнопка режет разметку по годам рамок,
-          дальше в каждую строку выбираете проводку.
-        </p>
-        <button
-          disabled={busy}
-          onClick={onSplitAll}
-          className="flex flex-none items-center gap-2 border border-foreground bg-foreground px-4 py-2.5 text-[0.72rem] uppercase tracking-[0.08em] text-background transition-opacity hover:opacity-80 disabled:opacity-50"
-        >
-          <Icon name={busy ? 'Loader' : 'Scissors'} size={14} />
-          {busy
-            ? 'Разбиваем…'
-            : `Разбить все (${rows.length} моделей → ${total} строк)`}
-        </button>
-      </div>
-      <div className="mt-2">
-        {rows.map((r) => (
-          <div
-            key={`${r.brand}-${r.model}`}
-            className="border-b border-border py-3"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-              <div className="font-head text-[0.92rem] font-bold">
-                {r.brand} {r.model}
-                <span className="ml-2 font-body text-[0.75rem] font-normal uppercase tracking-[0.06em] text-primary">
-                  периодов в одной строке: {r.worst}
-                </span>
-              </div>
-              <button
-                disabled={busy}
-                onClick={() => onSplit(r)}
-                className="flex flex-none items-center gap-1.5 border border-foreground px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background disabled:opacity-50"
-              >
-                <Icon name="Scissors" size={13} />
-                Разбить по рамкам
-              </button>
-            </div>
-
-            <div className="mt-2 grid gap-x-6 gap-y-1 text-[0.8rem] sm:grid-cols-[9.5rem_1fr]">
-              <span className="text-muted-foreground">Рамки делят на</span>
-              <span className="flex flex-wrap gap-x-5 gap-y-3">
-                {r.periods.map((p) => (
-                  <span key={`${p.from}-${p.to}`} className="block">
-                    {p.from}–{p.to}
-                    <span className="ml-1 text-[0.72rem] text-muted-foreground">
-                      {p.frames} шт
-                    </span>
-                    {/* Фото решают то, чего не решают годы: две рамки
-                        рядом — и сразу видно, что панели разные */}
-                    {p.images.length > 0 && (
-                      <span className="mt-1 flex gap-1">
-                        {p.images.map((src) => (
-                          <img
-                            key={src}
-                            src={src}
-                            alt=""
-                            loading="lazy"
-                            className="h-12 w-12 flex-none border border-border bg-card object-contain p-0.5"
-                          />
-                        ))}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </span>
-              <span className="text-muted-foreground">Сейчас в разметке</span>
-              <span>{r.covered.join(' · ')}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-};
 
 /**
  * Машины, под которые есть рамка, но нет проводки.

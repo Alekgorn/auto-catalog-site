@@ -485,6 +485,8 @@ def row_to_product(r: dict) -> dict:
         'wireBodies': r.get('wire_bodies') or [],
         'wireWheel': r.get('wire_wheel') or '',
         'wireNote': r.get('wire_note') or '',
+        # Проводки, подходящие к этой рамке. Пусто — ещё не размечено
+        'frameWires': r.get('frame_wires') or [],
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -2448,6 +2450,28 @@ def handler(event: dict, context) -> dict:
             elif op == 'delete':
                 cur.execute(f"DELETE FROM {schema()}.product_guides WHERE product_id IN ({id_list})")
                 cur.execute(f"DELETE FROM {schema()}.products WHERE id IN ({id_list})")
+            elif op == 'frame-wires':
+                # Проводки сразу всей группе рамок одного периода: на 9",
+                # 10" и 12,3" под одну машину проводка одна и та же, и
+                # проставлять её каждой отдельно — тройная работа
+                slugs = [
+                    str(x).strip()
+                    for x in (body.get('frameWires') or [])
+                    if str(x).strip()
+                ][:20]
+                cur.execute(
+                    f"UPDATE {schema()}.products SET frame_wires = {qjson(slugs)}, "
+                    f"updated_at = NOW() WHERE id IN ({id_list})"
+                )
+            elif op == 'wire-tech':
+                # Разметка проводок пачкой: у похожих позиций набор
+                # «камера / усилитель / CAN» совпадает, и щёлкать каждую
+                # по отдельности — терять время на 434 товарах
+                tech = clean_wire_tech(body.get('wireTech') or {})
+                cur.execute(
+                    f"UPDATE {schema()}.products SET wire_tech = {qjson(tech)}, "
+                    f"updated_at = NOW() WHERE id IN ({id_list})"
+                )
             elif op in ('show', 'hide'):
                 flag = 'TRUE' if op == 'show' else 'FALSE'
                 cur.execute(
@@ -3341,6 +3365,9 @@ def handler(event: dict, context) -> dict:
                     body.get('wireWheel')
                     if body.get('wireWheel') in WHEEL_SIDES
                     else ''
+                ),
+                'frame_wires': qjson(
+                    [str(x) for x in (body.get('frameWires') or []) if x][:20]
                 ),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),

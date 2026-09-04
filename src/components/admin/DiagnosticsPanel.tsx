@@ -5,6 +5,8 @@ import DataAuditPanel from '@/components/admin/DataAuditPanel';
 import FitsCheckPanel from '@/components/admin/FitsCheckPanel';
 import KitAuditPanel from '@/components/admin/KitAuditPanel';
 import WiringPanel from '@/components/admin/WiringPanel';
+import FrameWiresPanel from '@/components/admin/FrameWiresPanel';
+import WireTechPanel from '@/components/admin/WireTechPanel';
 
 interface Props {
   products: AdminProduct[];
@@ -13,9 +15,17 @@ interface Props {
   /** Счётчики для подписей — считаются на уровне админки */
   dataIssues: number;
   fitsIssues: number;
+  /** Перечитать каталог после массовых правок */
+  onReload?: () => void;
 }
 
-type Section = 'cards' | 'fits' | 'kit' | 'wiring';
+type Section =
+  | 'frames'
+  | 'tech'
+  | 'cards'
+  | 'fits'
+  | 'kit'
+  | 'wiring';
 
 /**
  * Проверка данных — одно место для всей диагностики каталога.
@@ -31,11 +41,22 @@ const DiagnosticsPanel = ({
   onEdit,
   dataIssues,
   fitsIssues,
+  onReload,
 }: Props) => {
-  const [section, setSection] = useState<Section>('cards');
+  const [section, setSection] = useState<Section>('frames');
 
   const SECTIONS: { id: Section; label: string; count?: number; hint: string }[] =
     [
+      {
+        id: 'frames',
+        label: 'Проводки к рамкам',
+        hint: 'Какие проводки подходят к рамке — основа подбора',
+      },
+      {
+        id: 'tech',
+        label: 'Признаки проводок',
+        hint: 'Усилитель, камера, CAN — чем проводки отличаются друг от друга',
+      },
       {
         id: 'cards',
         label: 'Расхождения в карточках',
@@ -92,6 +113,12 @@ const DiagnosticsPanel = ({
       </div>
 
       <div className="mt-2">
+        {section === 'frames' && (
+          <FrameWiresPanel products={products} onReload={onReload} />
+        )}
+        {section === 'tech' && (
+          <WireTechPanel products={products} onReload={onReload} />
+        )}
         {section === 'cards' && (
           <DataAuditPanel products={products} onEdit={onEdit} bare />
         )}
