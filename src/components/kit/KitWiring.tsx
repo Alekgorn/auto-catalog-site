@@ -207,20 +207,35 @@ const KitWiring = ({
 
   return (
     <div className="border border-border bg-background p-6">
-      <div className="flex items-center gap-3">
-        <span className="flex h-9 w-9 items-center justify-center bg-foreground text-background">
-          <Icon name="Cable" size={18} />
-        </span>
-        <div>
-          <div className="font-head text-lg font-bold uppercase tracking-tight">
-            Подключение
-          </div>
-          {vehicle && (
-            <div className="text-sm text-muted-foreground">
-              {vehicle.brand} {vehicle.model} {vehicle.year} г.
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span className="flex h-9 w-9 items-center justify-center bg-foreground text-background">
+            <Icon name="Cable" size={18} />
+          </span>
+          <div>
+            <div className="font-head text-lg font-bold uppercase tracking-tight">
+              Подключение
             </div>
-          )}
+            {vehicle && (
+              <div className="text-sm text-muted-foreground">
+                {vehicle.brand} {vehicle.model} {vehicle.year} г.
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Подключение — самый частый повод засомневаться: разъёмы
+            похожи, и ошибка стоит возврата. Живой человек должен быть
+            под рукой прямо здесь, а не в подвале сайта */}
+        <a
+          href={contacts.whatsapp}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2 border-2 border-primary px-4 py-2 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          <Icon name="MessageCircle" size={15} />
+          Нужна консультация
+        </a>
       </div>
 
       {/*
