@@ -401,6 +401,56 @@ const KitWiring = ({
                 </span>
               </button>
             )}
+
+            {/*
+              Более дешёвые варианты — ячейкой той же сетки, сразу справа
+              от рекомендованной проводки. Полосой под списком было
+              непонятно: она читалась как подпись ко всему шагу, а не как
+              «вот альтернатива этой карточке».
+            */}
+            {res.pickMode === 'fixed' && res.budget.length > 0 && (
+              <button
+                onClick={() => setOpenBudget((v) => !v)}
+                className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Icon
+                  name={openBudget ? 'X' : 'Wallet'}
+                  size={22}
+                  className="flex-none"
+                />
+                <span className="font-head text-[0.8rem] font-bold uppercase leading-tight tracking-[0.06em]">
+                  {openBudget
+                    ? 'Скрыть'
+                    : res.budget[0].price < res.full[0].price
+                      ? 'Дешевле, но без части функций'
+                      : 'Другие варианты'}
+                </span>
+                <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
+                  {openBudget
+                    ? 'вернуть как было'
+                    : res.budget[0].price < res.full[0].price
+                      ? `от ${formatPrice(res.budget[0].price)}`
+                      : `ещё ${res.budget.length}`}
+                </span>
+              </button>
+            )}
+
+            {/* Раскрытые варианты идут той же сеткой — встают следом за
+                кнопкой, а не отдельным блоком внизу */}
+            {res.pickMode === 'fixed' &&
+              openBudget &&
+              res.budget.map((w) => (
+                <ProductCard
+                  key={w.id}
+                  product={w}
+                  vehicle={vehicle}
+                  picked={pickedId === w.id}
+                  /* Сразу не выбираем: сначала честно предупреждаем,
+                     что часть функций не заработает */
+                  onPick={() => setWarnFor(w.id)}
+                  showWireFeatures
+                />
+              ))}
           </div>
 
           {/* Пояснение админа к рекомендованной проводке. В карточке для
@@ -411,38 +461,6 @@ const KitWiring = ({
                 {res.full[0]?.wireNote || wiring?.reason}
               </p>
             )}
-
-          {/* Точный вариант известен — остальные прячем, чтобы не путать,
-              но оставляем доступными: вдруг нужен вариант подешевле */}
-          {res.pickMode === 'fixed' &&
-            res.budget.length > 0 &&
-            (!openBudget ? (
-              <button
-                onClick={() => setOpenBudget(true)}
-                className="flex w-full items-center justify-center gap-2 border border-border px-5 py-3 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-              >
-                <Icon name="Wallet" size={15} />
-                {res.budget[0].price < res.full[0].price
-                  ? `Дешевле, но без части функций — от ${formatPrice(res.budget[0].price)}`
-                  : 'Другие подходящие варианты'}
-                <Icon name="ChevronDown" size={15} />
-              </button>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {res.budget.map((w) => (
-                  <ProductCard
-                    key={w.id}
-                    product={w}
-                    vehicle={vehicle}
-                    picked={pickedId === w.id}
-                    /* Сразу не выбираем: сначала честно предупреждаем,
-                       что часть функций не заработает */
-                    onPick={() => setWarnFor(w.id)}
-                    showWireFeatures
-                  />
-                ))}
-              </div>
-            ))}
 
           {/* Предупреждение о неполном варианте. Стоит под сеткой: в
               карточке каталога места для него нет, а сказать надо до
