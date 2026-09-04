@@ -58,6 +58,10 @@ const KitWiring = ({
   const { contacts, wireFeatures } = useCatalog();
   const [answers, setAnswers] = useState<WireAnswers>({});
   const [openBudget, setOpenBudget] = useState(false);
+  /** Какая подсказка раскрыта — она нужна не всем и занимает место */
+  const [openHint, setOpenHint] = useState<string | null>(null);
+  /** Вернулись править ответы у свёрнутого блока */
+  const [editQuestions, setEditQuestions] = useState(false);
   /* Сколько вариантов показываем сразу. Ряд в каталоге — пять карточек,
      берём два ряда: столько влезает без прокрутки на ноутбуке */
   const [shown, setShown] = useState(STEP_MORE);
@@ -180,6 +184,7 @@ const KitWiring = ({
             id: 'body',
             title: 'Какой у вас кузов?',
             hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
+            short: 'кузов',
             bodies: bodyChoice,
           },
         ]
@@ -187,13 +192,18 @@ const KitWiring = ({
     ...res.questions,
   ];
 
-  const answer = (id: string, val: boolean | BodyType | null) =>
+  const answer = (id: string, val: boolean | BodyType | null) => {
     setAnswers((a) => ({ ...a, [id]: val }));
+    // Поправили ответ — блок снова сворачивается сам, место уходит
+    // товарам. Иначе развёрнутый список висел бы до перезагрузки
+    setEditQuestions(false);
+    setOpenHint(null);
+  };
 
-  /** Сколько уже отвечено — по нему считаем «3 из 4» */
-  const doneCount = questions.filter(
-    (q) => answers[q.id] !== undefined,
-  ).length;
+  /** Ответили на всё — блок можно свернуть в одну строку */
+  const allAnswered =
+    questions.length > 0 &&
+    questions.every((q) => answers[q.id] !== undefined);
 
   return (
     <div className="border border-border bg-background p-6">
@@ -214,99 +224,136 @@ const KitWiring = ({
       </div>
 
       {/*
-        Все вопросы разом, а не по одному. Цепочка «ответил — появился
-        следующий» скрывала длину пути: человек не понимал, где конец, и
-        бросал на середине. Теперь список виден целиком, отвечать можно в
-        любом порядке, а незаполненное подсвечено.
+        Вопросы компактно: строка на вопрос, кнопки справа, подсказка
+        прячется под знак вопроса. Развёрнутые пояснения занимали на
+        телефоне полтора экрана — до товаров человек не доходил.
+
+        Ответил на всё — блок схлопывается в одну строку с итогом, и
+        место отдаётся проводкам, ради которых сюда и пришли.
       */}
-      {questions.length > 0 && (
-        <div className="mt-5 border border-border bg-card p-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
+      {questions.length > 0 &&
+        (allAnswered && !editQuestions ? (
+          <button
+            onClick={() => setEditQuestions(true)}
+            className="mt-5 flex w-full flex-wrap items-center gap-x-2 gap-y-1 border border-border bg-card px-4 py-3 text-left transition-colors hover:border-foreground"
+          >
+            <Icon name="CircleCheck" size={16} className="flex-none text-success" />
+            <span className="text-sm text-muted-foreground">
+              {questions
+                .map((q) => {
+                  const v = answers[q.id];
+                  if (q.id === 'body') return bodyTypeLabel(String(v));
+                  if (v === null) return `${q.short} — не знаю`;
+                  return `${q.short} ${v ? 'есть' : 'нет'}`;
+                })
+                .join(' · ')}
+            </span>
+            <span className="text-sm text-primary underline underline-offset-4">
+              изменить
+            </span>
+          </button>
+        ) : (
+          <div className="mt-5 border border-border bg-card p-4 sm:p-5">
             <div className="font-head text-base font-bold uppercase tracking-tight">
               Уточните про вашу машину
             </div>
-            <div className="text-[0.8rem] text-muted-foreground">
-              {doneCount} из {questions.length}
-            </div>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {doneCount === questions.length
-              ? 'Спасибо — ниже подходящие варианты.'
-              : 'Отвечать можно в любом порядке. Не знаете — так и отметьте, покажем все варианты.'}
-          </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {allAnswered
+                ? 'Ниже — подходящие варианты.'
+                : 'Ответьте, и мы оставим только нужное. Не знаете — так и отметьте.'}
+            </p>
 
-          <div className="mt-4 divide-y divide-border">
-            {questions.map((q) => {
-              const val = answers[q.id];
-              const done = val !== undefined;
-              return (
-                <div
-                  key={q.id}
-                  className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 md:flex-row md:items-center md:justify-between md:gap-6"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start gap-2">
-                      <Icon
-                        name={done ? 'CircleCheck' : 'Circle'}
-                        size={16}
-                        className={`mt-0.5 shrink-0 ${
-                          done ? 'text-success' : 'text-muted-foreground'
-                        }`}
-                      />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium leading-snug">
+            <div className="mt-3 divide-y divide-border">
+              {questions.map((q) => {
+                const val = answers[q.id];
+                const done = val !== undefined;
+                const open = openHint === q.id;
+                return (
+                  <div key={q.id} className="py-2.5 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <span className="min-w-0 text-sm leading-snug">
                           {q.title}
-                        </div>
-                        {!done && (
-                          <p className="mt-0.5 text-[0.8rem] leading-relaxed text-muted-foreground">
-                            {q.hint}
-                          </p>
-                        )}
+                        </span>
+                        {/* Подсказка под знаком вопроса: нужна не всем,
+                            а места на телефоне занимала три строки */}
+                        <button
+                          onClick={() => setOpenHint(open ? null : q.id)}
+                          aria-label="Подсказка"
+                          className="flex-none text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          <Icon
+                            name={open ? 'CircleX' : 'CircleHelp'}
+                            size={15}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="flex flex-none gap-1.5">
+                        {q.id === 'body'
+                          ? (q.bodies || []).map((b) => (
+                              <button
+                                key={b}
+                                onClick={() => answer('body', b)}
+                                className={`border px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                                  val === b
+                                    ? 'border-foreground bg-foreground text-background'
+                                    : 'border-border hover:border-foreground'
+                                }`}
+                              >
+                                {bodyTypeLabel(b)}
+                              </button>
+                            ))
+                          : (
+                              [
+                                { v: true, label: 'Есть' },
+                                { v: false, label: 'Нет' },
+                              ] as const
+                            ).map((o) => (
+                              <button
+                                key={String(o.v)}
+                                onClick={() => answer(q.id, o.v)}
+                                className={`border px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                                  done && val === o.v
+                                    ? 'border-foreground bg-foreground text-background'
+                                    : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
+                                }`}
+                              >
+                                {o.label}
+                              </button>
+                            ))}
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-none flex-wrap gap-1.5 pl-6 md:pl-0">
-                    {q.id === 'body'
-                      ? (q.bodies || []).map((b) => (
-                          <button
-                            key={b}
-                            onClick={() => answer('body', b)}
-                            className={`border px-3.5 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                              val === b
-                                ? 'border-foreground bg-foreground text-background'
-                                : 'border-border hover:border-foreground'
-                            }`}
-                          >
-                            {bodyTypeLabel(b)}
-                          </button>
-                        ))
-                      : (
-                          [
-                            { v: true, label: 'Есть' },
-                            { v: false, label: 'Нет' },
-                            { v: null, label: 'Не знаю' },
-                          ] as const
-                        ).map((o) => (
-                          <button
-                            key={String(o.v)}
-                            onClick={() => answer(q.id, o.v)}
-                            className={`border px-3.5 py-2 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                              done && val === o.v
-                                ? 'border-foreground bg-foreground text-background'
-                                : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
-                            }`}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
+                    {open && (
+                      <p className="mt-1.5 text-[0.8rem] leading-relaxed text-muted-foreground">
+                        {q.hint}
+                      </p>
+                    )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+
+            {/* «Не знаю» отдельной кнопкой у каждого вопроса выглядела
+                как равный ответ. На деле это «покажите всё» — место ей
+                внизу, ссылкой */}
+            {!allAnswered && (
+              <button
+                onClick={() => {
+                  const next = { ...answers };
+                  questions.forEach((q) => {
+                    if (next[q.id] === undefined) next[q.id] = null;
+                  });
+                  setAnswers(next);
+                }}
+                className="mt-3 text-sm text-muted-foreground underline underline-offset-4 transition-colors hover:text-foreground"
+              >
+                Не знаю — покажите все варианты
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        ))}
 
       <div className="mt-5 space-y-4">
           {/*
