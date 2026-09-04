@@ -17,6 +17,7 @@ import {
   wiringBodyChoice,
   bodyFromFrame,
 } from '@/lib/wire-pick';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   /** Товары раздела проводок */
@@ -45,6 +46,7 @@ const WireCard = ({
   picked,
   onPick,
   note,
+  limited,
 }: {
   wire: Product;
   recommended: boolean;
@@ -52,9 +54,10 @@ const WireCard = ({
   onPick: () => void;
   /** Пояснение админа — почему этот вариант такой */
   note?: string;
+  /** Вариант из скрытого списка: работает, но с ограничениями */
+  limited?: boolean;
 }) => {
   const photos = productImages(wire);
-  const full = wire.wireLevel === 'full';
   const keeps = wire.wireKeeps || {};
   const rows = Object.keys(KEEP_LABELS).filter((k) => k in keeps);
   const text = note || wire.wireNote;
@@ -65,21 +68,23 @@ const WireCard = ({
         recommended ? 'border-foreground bg-card' : 'border-border bg-card/60'
       }`}
     >
-      <div className="flex flex-wrap items-center gap-2">
-        {recommended && (
-          <span className="bg-foreground px-2 py-1 font-head text-[0.65rem] font-bold uppercase tracking-[0.08em] text-background">
-            Рекомендуем
-          </span>
-        )}
-        <span
-          className={`flex items-center gap-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] ${
-            full ? 'text-success' : 'text-[#B45309]'
-          }`}
-        >
-          <Icon name={full ? 'CircleCheck' : 'TriangleAlert'} size={14} />
-          {full ? 'Полная совместимость' : 'Базовое подключение'}
-        </span>
-      </div>
+      {(recommended || limited) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {recommended && (
+            <span className="bg-foreground px-2 py-1 font-head text-[0.65rem] font-bold uppercase tracking-[0.08em] text-background">
+              Рекомендуем
+            </span>
+          )}
+          {/* Про ограничения предупреждаем только у скрытых вариантов —
+              у остальных ярлык «полная совместимость» лишний шум */}
+          {limited && (
+            <span className="flex items-center gap-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-[#B45309]">
+              <Icon name="TriangleAlert" size={14} />
+              Ограниченная совместимость
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col gap-5 sm:flex-row">
         <button
@@ -180,6 +185,7 @@ const KitWiring = ({
   pickedId,
   onPick,
 }: Props) => {
+  const { contacts } = useCatalog();
   const [answers, setAnswers] = useState<WireAnswers>({});
   const [openBudget, setOpenBudget] = useState(false);
   const [warnFor, setWarnFor] = useState<string | null>(null);
@@ -316,27 +322,79 @@ const KitWiring = ({
         </div>
       ) : (
         <div className="mt-5 space-y-4">
-          {res.full.map((w, i) => (
-            <WireCard
-              key={w.id}
-              wire={w}
-              recommended={i === 0}
-              picked={pickedId === w.id}
-              onPick={() => onPick(w)}
-              /* Обоснование поколения показываем у рекомендуемого варианта,
-                 если у самой проводки своего текста нет */
-              note={i === 0 ? w.wireNote || wiring?.reason : undefined}
-            />
-          ))}
+          {/*
+            Несколько проводок и точного ответа нет — честно говорим об этом.
+            Молча показать одну наугад хуже: покупатель закажет не ту деталь
+            и вернётся с претензией. Лучше признать предел и предложить помощь.
+          */}
+          {res.pickMode === 'select' && res.full.length + res.budget.length > 1 && (
+            <div className="border border-[#B45309] bg-[#B45309]/5 p-5">
+              <div className="flex items-start gap-2.5">
+                <Icon
+                  name="TriangleAlert"
+                  size={18}
+                  className="mt-0.5 shrink-0 text-[#B45309]"
+                />
+                <div>
+                  <div className="font-head text-sm font-bold uppercase tracking-tight text-[#B45309]">
+                    На ваш автомобиль есть несколько вариантов проводки
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Мы, конечно, специалисты, но, увы, не всесильные — угадать,
+                    какая стоит именно у вас, не получится. Ниже список всех
+                    подходящих вариантов.
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Точно определим по фото: пришлите нам снимок магнитолы или
+                    проводов — либо сравните разъём с фотографиями ниже сами.
+                  </p>
+                  <a
+                    href={contacts.whatsapp}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 bg-foreground px-4 py-2.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-background transition-opacity hover:opacity-90"
+                  >
+                    <Icon name="Camera" size={15} />
+                    Отправить фото — подберём точно
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
-          {res.budget.length > 0 &&
-            (!openBudget && res.full.length > 0 ? (
+          {res.pickMode === 'select'
+            ? /* Режим подбора: все варианты равны, ничего не прячем */
+              [...res.full, ...res.budget].map((w) => (
+                <WireCard
+                  key={w.id}
+                  wire={w}
+                  recommended={false}
+                  picked={pickedId === w.id}
+                  onPick={() => onPick(w)}
+                />
+              ))
+            : res.full.map((w, i) => (
+                <WireCard
+                  key={w.id}
+                  wire={w}
+                  recommended={i === 0}
+                  picked={pickedId === w.id}
+                  onPick={() => onPick(w)}
+                  note={i === 0 ? w.wireNote || wiring?.reason : undefined}
+                />
+              ))}
+
+          {/* Точный вариант известен — остальные прячем, чтобы не путать,
+              но оставляем доступными: вдруг нужен вариант подешевле */}
+          {res.pickMode === 'fixed' &&
+            res.budget.length > 0 &&
+            (!openBudget ? (
               <button
                 onClick={() => setOpenBudget(true)}
                 className="flex w-full items-center justify-center gap-2 border border-border px-5 py-3 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
                 <Icon name="Wallet" size={15} />
-                Есть вариант дешевле — за {formatPrice(res.budget[0].price)}
+                Другие варианты — от {formatPrice(res.budget[0].price)}
                 <Icon name="ChevronDown" size={15} />
               </button>
             ) : (
@@ -344,11 +402,10 @@ const KitWiring = ({
                 <div key={w.id} className="space-y-3">
                   <WireCard
                     wire={w}
-                    recommended={res.full.length === 0}
+                    recommended={false}
+                    limited
                     picked={pickedId === w.id}
-                    onPick={() =>
-                      res.full.length ? setWarnFor(w.id) : onPick(w)
-                    }
+                    onPick={() => setWarnFor(w.id)}
                   />
                   {warnFor === w.id && pickedId !== w.id && (
                     <div className="border border-primary bg-primary/5 p-4">

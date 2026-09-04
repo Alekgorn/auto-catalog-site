@@ -90,6 +90,12 @@ export const wiringBodyChoice = (
 };
 
 export interface WirePick {
+  /**
+   * Как показывать результат:
+   * fixed — проводка известна точно, остальное прячем в «другие варианты»;
+   * select — точного ответа нет, честно показываем все подходящие.
+   */
+  pickMode: 'fixed' | 'select';
   /** Полностью размеченные варианты: их показываем по-новому */
   full: Product[];
   /** Что теряется у бюджетных вариантов */
@@ -197,6 +203,7 @@ export const pickWires = (
   frame?: Product | null,
 ): WirePick => {
   const empty: WirePick = {
+    pickMode: 'select',
     full: [],
     budget: [],
     question: null,
@@ -218,8 +225,13 @@ export const pickWires = (
     const one = fits.find((p) => p.id === wiring.wireSlug);
     if (one) {
       return {
+        pickMode: 'fixed',
         full: [one],
-        budget: fits.filter((p) => p.id !== one.id && isMarked(p)),
+        // Остальные подходящие прячем под «другие варианты»: они рабочие,
+        // но с ограничениями — точный выбор уже сделан за покупателя
+        budget: fits
+          .filter((p) => p.id !== one.id && isMarked(p))
+          .sort((a, b) => a.price - b.price),
         question: null,
         fallback: false,
       };
@@ -277,6 +289,7 @@ export const pickWires = (
   const budget = left.filter((p) => p.wireLevel && p.wireLevel !== 'full');
 
   return {
+    pickMode: 'select',
     full: full.sort((a, b) => a.price - b.price),
     budget: budget.sort((a, b) => a.price - b.price),
     question,
