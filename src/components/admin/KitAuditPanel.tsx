@@ -117,50 +117,67 @@ const KitAuditPanel = ({ products, brands, onEdit }: Props) => {
   );
 
   /**
-   * Режем разметку модели по годам рамок.
+   * Приводим разметку модели к годам рамок.
    *
-   * Первый период забирает существующую строку — вместе с уже выбранной
-   * проводкой и ответами, чтобы не терять сделанную работу. На остальные
-   * заводим новые строки в режиме «Подбор»: какая там проводка, решает
-   * человек, а угадывать за него мы не вправе.
+   * Годы пишем ровно как на рамках, внахлёст: 2006–2011 и 2011–2017.
+   * Подгонять границы нельзя — рамка «2011» реально продаётся под машину
+   * 2011 года, и отнимать у неё этот год значит врать о товаре. Стык
+   * разруливает подбор: берёт старший период и предупреждает покупателя.
+   *
+   * Повторный запуск ничего не ломает: на каждый период остаётся ровно
+   * одна строка. Лишние пустые — прежние автосозданные и промахи — сносим,
+   * а строки с ручной работой (выбранная проводка, обоснование) не трогаем
+   * никогда: их писал человек.
    */
   const splitOne = async (row: PeriodRow): Promise<number> => {
     const key = `${row.brand.toLowerCase()}|${row.model.toLowerCase()}`;
     const marks = wiringRows.filter(
       (w) => `${w.brand.toLowerCase()}|${w.model.toLowerCase()}` === key,
     );
+    const handmade = (w: VehicleWiring) =>
+      !!w.wireSlug || !!w.reason || w.mode === 'fixed';
 
-    /* Годы пишем ровно как на рамках, внахлёст: 2006–2011 и 2011–2017.
-       Подгонять границы нельзя — рамка «2011» реально продаётся под
-       машину 2011 года, и отнимать у неё этот год значит врать о товаре.
-       Спорный год разруливает подбор: берёт строку старшего периода и
-       предупреждает покупателя, что год переходной */
+    const used = new Set<number>();
     let done = 0;
-    for (const [i, p] of row.periods.entries()) {
-      // Строка, которая уже стоит на этом периоде — её и правим
-      const own =
-        marks.find((w) => p.from >= w.years[0] - 1 && p.to <= w.years[1] + 1) ??
-        (i === 0 ? marks[0] : undefined);
-      const base = own ?? marks[0];
+
+    for (const p of row.periods) {
+      // Строка ровно на этот период — берём её, чтобы не плодить дубли
+      const exact = marks.find(
+        (w) =>
+          !used.has(w.id ?? -1) && w.years[0] === p.from && w.years[1] === p.to,
+      );
+      // Иначе переиспользуем свободную пустую: правим годы вместо новой
+      const reuse =
+        exact ??
+        marks.find((w) => !used.has(w.id ?? -1) && !handmade(w) && w.id);
+      if (reuse?.id) used.add(reuse.id);
 
       const res = await adminFetch('?action=vehicle-wiring', {
         method: 'POST',
         body: JSON.stringify({
-          // id есть только у первого периода: остальные — новые строки
-          id: i === 0 ? base?.id : undefined,
+          id: reuse?.id,
           brand: row.brand,
           model: row.model,
           yearFrom: p.from,
           yearTo: p.to,
-          mode: i === 0 ? base?.mode || 'select' : 'select',
-          wireSlug: i === 0 ? base?.wireSlug || '' : '',
-          reason: i === 0 ? base?.reason || '' : '',
-          ask: i === 0 ? base?.ask || {} : {},
-          wheel: base?.wheel || '',
-          bodies: [],
+          mode: reuse?.mode || 'select',
+          wireSlug: reuse?.wireSlug || '',
+          reason: reuse?.reason || '',
+          ask: reuse?.ask || {},
+          wheel: reuse?.wheel || '',
+          bodies: reuse?.bodies || [],
         }),
       });
       if (res.ok) done += 1;
+    }
+
+    // Пустые остатки от прежних запусков — в них нет ничьей работы
+    for (const w of marks) {
+      if (!w.id || used.has(w.id) || handmade(w)) continue;
+      await adminFetch(`?action=vehicle-wiring`, {
+        method: 'DELETE',
+        body: JSON.stringify({ id: w.id }),
+      });
     }
     return done;
   };
