@@ -14,6 +14,9 @@ import {
   WireAnswers,
   KEEP_LABELS,
   VehicleWiring,
+  findWiring,
+  wiringBodyChoice,
+  bodyFromFrame,
 } from '@/lib/wire-pick';
 
 interface Props {
@@ -22,8 +25,8 @@ interface Props {
   vehicle: Vehicle | null;
   /** Кузова, которые бывают у этой модели — из справочника марок */
   modelBodies: BodyType[];
-  /** Настройка машины: фиксированная проводка или какие вопросы задавать */
-  wiring?: VehicleWiring | null;
+  /** Все настройки подбора — какая подойдёт, решаем по кузову */
+  wirings?: VehicleWiring[];
   /** Выбранная рамка — по ней узнаём кузов, не спрашивая покупателя */
   frame?: Product | null;
   pickedId?: string;
@@ -166,7 +169,7 @@ const KitWiring = ({
   products,
   vehicle,
   modelBodies,
-  wiring,
+  wirings = [],
   frame,
   pickedId,
   onPick,
@@ -175,6 +178,30 @@ const KitWiring = ({
   const [openBudget, setOpenBudget] = useState(false);
   const [warnFor, setWarnFor] = useState<string | null>(null);
 
+  /*
+   * Кузов знаем из ответа покупателя или из выбранной рамки. Он решает,
+   * какая настройка подходит: у Civic 2006–2011 их две — под хэтчбек с
+   * дорогим интерфейсом и общая с обычным переходником.
+   */
+  const knownBody = answers.body ?? bodyFromFrame(frame);
+  const wiring = useMemo(
+    () => findWiring(wirings, vehicle, knownBody),
+    [wirings, vehicle, knownBody],
+  );
+  /*
+   * Кузова для вопроса. Если одна настройка привязана к хэтчбеку, а вторая
+   * общая — выбор всё равно есть, просто вторая описана «для остальных».
+   * Поэтому дополняем кузовами модели: спросить надо «хэтчбек или седан»,
+   * а не показать единственную кнопку.
+   */
+  const bodyChoice = useMemo(() => {
+    if (knownBody) return [];
+    const fromWirings = wiringBodyChoice(wirings, vehicle);
+    if (!fromWirings.length) return [];
+    const all = new Set<BodyType>([...fromWirings, ...modelBodies]);
+    return [...all];
+  }, [wirings, vehicle, knownBody, modelBodies]);
+
   const res = useMemo(
     () => pickWires(products, vehicle, answers, modelBodies, wiring, frame),
     [products, vehicle, answers, modelBodies, wiring, frame],
@@ -182,6 +209,18 @@ const KitWiring = ({
 
   // Разметки нет — пусть работает привычный список
   if (res.fallback) return null;
+
+  /* Настройки расходятся по кузову, а кузов неизвестен — сначала спросим.
+     Иначе показали бы дорогую проводку владельцу седана */
+  const question =
+    bodyChoice.length > 1
+      ? {
+          id: 'body' as const,
+          title: 'Какой у вас кузов?',
+          hint: 'От кузова зависит форма штатного разъёма — проводки разные.',
+          bodies: bodyChoice,
+        }
+      : res.question;
 
   const answer = (id: string, val: boolean | BodyType | null) =>
     setAnswers((a) => ({ ...a, [id]: val }));
@@ -226,17 +265,17 @@ const KitWiring = ({
         </div>
       )}
 
-      {res.question ? (
+      {question ? (
         <div className="mt-5 border border-foreground bg-card p-5">
           <div className="font-head text-base font-bold uppercase tracking-tight">
-            {res.question.title}
+            {question.title}
           </div>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            {res.question.hint}
+            {question.hint}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            {res.question.id === 'body' ? (
-              (res.question.bodies || []).map((b) => (
+            {question.id === 'body' ? (
+              (question.bodies || []).map((b) => (
                 <button
                   key={b}
                   onClick={() => answer('body', b)}
@@ -248,19 +287,19 @@ const KitWiring = ({
             ) : (
               <>
                 <button
-                  onClick={() => answer(res.question!.id, true)}
+                  onClick={() => answer(question!.id, true)}
                   className="border border-foreground px-5 py-2.5 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
                 >
                   Да, есть
                 </button>
                 <button
-                  onClick={() => answer(res.question!.id, false)}
+                  onClick={() => answer(question!.id, false)}
                   className="border border-foreground px-5 py-2.5 font-head text-[0.72rem] font-semibold uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
                 >
                   Нет
                 </button>
                 <button
-                  onClick={() => answer(res.question!.id, null)}
+                  onClick={() => answer(question!.id, null)}
                   className="border border-border px-5 py-2.5 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
                 >
                   Не знаю

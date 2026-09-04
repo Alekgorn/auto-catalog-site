@@ -6,7 +6,7 @@ import KitNoFrames from "@/components/kit/KitNoFrames";
 import KitWiring from "@/components/kit/KitWiring";
 import { useCatalog } from "@/context/CatalogContext";
 import { modelBodyTypes } from "@/data/catalog";
-import { pickWires, findWiring } from "@/lib/wire-pick";
+import { pickWires } from "@/lib/wire-pick";
 import {
   FRAMES_CATEGORY,
   WIRES_CATEGORY,
@@ -129,7 +129,7 @@ const ScenarioKit = ({
           vehicle,
           {},
           modelBodyTypes(brands, vehicle.brand, vehicle.model),
-          findWiring(vehicleWiring, vehicle),
+          null,
         ).fallback;
 
       return (
@@ -141,7 +141,7 @@ const ScenarioKit = ({
               products={products.filter((p) => p.category === step.category)}
               vehicle={vehicle}
               modelBodies={modelBodyTypes(brands, vehicle!.brand, vehicle!.model)}
-              wiring={findWiring(vehicleWiring, vehicle!)}
+              wirings={vehicleWiring}
               frame={products.find(
                 (p) => p.id === picks[FRAMES_CATEGORY],
               )}

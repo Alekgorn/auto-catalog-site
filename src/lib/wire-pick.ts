@@ -34,20 +34,59 @@ export interface VehicleWiring {
 }
 
 /** Настройка для конкретной машины: марка, модель и попадание в годы */
+/** Все настройки, подходящие машине по марке, модели и году */
+export const matchingWirings = (
+  list: VehicleWiring[],
+  vehicle: Vehicle | null,
+): VehicleWiring[] => {
+  if (!vehicle) return [];
+  return list.filter(
+    (v) =>
+      v.brand.toLowerCase() === vehicle.brand.toLowerCase() &&
+      v.model.toLowerCase() === vehicle.model.toLowerCase() &&
+      vehicle.year >= v.years[0] &&
+      vehicle.year <= v.years[1],
+  );
+};
+
+/**
+ * Настройка для машины с учётом того, что известно про кузов.
+ *
+ * На один период у модели бывает несколько строк: Civic 2006–2011 хэтчбек
+ * идёт на дорогой интерфейс, а тот же период без уточнения кузова — на
+ * обычный переходник. Пока кузов неизвестен, выбирать между ними нельзя:
+ * возьмём первую попавшуюся — и покажем дорогую проводку владельцу седана.
+ *
+ * Поэтому: знаем кузов — берём строку под него, иначе самую общую (без
+ * ограничений). А спросить кузов должен вызывающий код.
+ */
 export const findWiring = (
   list: VehicleWiring[],
   vehicle: Vehicle | null,
+  body?: BodyType | null,
 ): VehicleWiring | null => {
-  if (!vehicle) return null;
-  return (
-    list.find(
-      (v) =>
-        v.brand.toLowerCase() === vehicle.brand.toLowerCase() &&
-        v.model.toLowerCase() === vehicle.model.toLowerCase() &&
-        vehicle.year >= v.years[0] &&
-        vehicle.year <= v.years[1],
-    ) ?? null
-  );
+  const all = matchingWirings(list, vehicle);
+  if (!all.length) return null;
+  if (all.length === 1) return all[0];
+
+  if (body) {
+    const exact = all.find((v) => (v.bodies || []).includes(body));
+    if (exact) return exact;
+  }
+  // Кузов не известен — общая строка честнее: она не обещает лишнего
+  return all.find((v) => !(v.bodies || []).length) ?? all[0];
+};
+
+/** Кузова, которые различают настройки — по ним и спрашиваем покупателя */
+export const wiringBodyChoice = (
+  list: VehicleWiring[],
+  vehicle: Vehicle | null,
+): BodyType[] => {
+  const all = matchingWirings(list, vehicle);
+  if (all.length < 2) return [];
+  const set = new Set<BodyType>();
+  all.forEach((v) => (v.bodies || []).forEach((b) => set.add(b)));
+  return set.size > 0 ? [...set] : [];
 };
 
 export interface WirePick {
