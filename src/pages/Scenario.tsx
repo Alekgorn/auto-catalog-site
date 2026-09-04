@@ -20,7 +20,12 @@ import {
   screenSize,
 } from "@/lib/kit-filter";
 import { findScenario } from "@/data/scenarios";
-import { scenarioWith, visibleScenarios } from "@/lib/scenario-settings";
+import {
+  scenarioWith,
+  visibleScenarios,
+  CATALOG_SLUG,
+  CATALOG_PATH,
+} from "@/lib/scenario-settings";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
 import { scenarioTitle, scenarioDescription } from "@/lib/scenario-seo";
@@ -45,7 +50,14 @@ import { findFitModels } from "@/lib/fits-match";
 const PAGE_SIZE = 12;
 
 const ScenarioPage = () => {
-  const { slug = "" } = useParams();
+  const { slug: fromUrl = "" } = useParams();
+  /*
+   * Каталог живёт по короткому адресу /catalog, но открывает тот же
+   * сценарий: подбор по марке, модели и году. Отдельная страница со
+   * списком разделов была бы шагом назад — при 1300 рамках человеку
+   * нужен не перечень категорий, а ответ, что встанет в его машину.
+   */
+  const slug = fromUrl || CATALOG_SLUG;
   const [params, setParams] = useSearchParams();
 
   /** Марка из ссылки — «популярные марки» в футере ведут сюда */
@@ -457,7 +469,12 @@ const ScenarioPage = () => {
             scenario.intro,
             found.map((h) => h.product),
           ),
-          canonical: `${SITE_URL}/scenario/${scenario.slug}`,
+          /* Каталог доступен по двум адресам — главным для поиска
+             объявляем короткий, иначе страницы считались бы дублями */
+          canonical:
+            scenario.slug === CATALOG_SLUG
+              ? `${SITE_URL}${CATALOG_PATH}`
+              : `${SITE_URL}/scenario/${scenario.slug}`,
           // Разметка вопросов — поисковики показывают их прямо в выдаче
           jsonLd: [
             crumbsJsonLd([

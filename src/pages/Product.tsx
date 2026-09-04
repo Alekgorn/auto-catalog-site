@@ -89,7 +89,7 @@ const Product = () => {
     () =>
       product
         ? [
-            { label: "Каталог", to: "/scenario/vse-po-mashine" },
+            { label: "Каталог", to: "/catalog" },
             {
               label: product.category,
               to: `/catalog/${slugify(product.category)}`,

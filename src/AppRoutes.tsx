@@ -61,6 +61,10 @@ const AppRoutes = () => (
       }
     />
     <Route path="/scenario/:slug" element={<ScenarioPage />} />
+    {/* Короткий адрес каталога — та же страница подбора по машине.
+        Прежний /scenario/vse-po-mashine продолжает работать: по нему
+        уже расходились ссылки */}
+    <Route path="/catalog" element={<ScenarioPage />} />
     <Route path="/catalog/:slug" element={<CategoryPage />} />
     <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />
