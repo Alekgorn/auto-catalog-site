@@ -23,8 +23,12 @@ interface Props {
   /** Умолчание «как подбирается» у каждой категории */
   categoryFitModes?: Record<string, FitMode>;
   brands: AdminBrand[];
+  /** Каталог целиком — для связи «рамка ↔ проводка» */
+  products?: AdminProduct[];
   onClose: () => void;
   onSave: (p: AdminProduct) => void;
+  /** Открыть другой товар: связь правится с обеих сторон */
+  onOpen?: (p: AdminProduct) => void;
 }
 
 const ProductEditor = ({
@@ -33,8 +37,10 @@ const ProductEditor = ({
   categorySpecs = {},
   categoryFitModes = {},
   brands,
+  products = [],
   onClose,
   onSave,
+  onOpen,
 }: Props) => {
   const [form, setForm] = useState<AdminProduct>({
     ...product,
@@ -169,6 +175,16 @@ const ProductEditor = ({
   const missingFields = (categorySpecs[form.category] ?? []).filter(
     (f) => !form.specs.some(([k]) => k.trim().toLowerCase() === f.trim().toLowerCase()),
   );
+
+  /*
+   * Переход на связанный товар. Сначала сохраняем текущую карточку:
+   * человек только что отметил проводки и кликнул по фото — потерять
+   * эти галочки на полпути хуже, чем лишний раз записать в базу.
+   */
+  const openOther = (next: AdminProduct) => {
+    if (form.name.trim() && form.category.trim()) submit();
+    onOpen?.(next);
+  };
 
   const submit = () => {
     if (!form.name.trim()) return setError('Укажите название');
@@ -309,7 +325,14 @@ const ProductEditor = ({
             </div>
           )}
 
-          {section === 'wiring' && <ProductWiringTab form={form} set={set} />}
+          {section === 'wiring' && (
+            <ProductWiringTab
+              form={form}
+              set={set}
+              products={products}
+              onOpen={openOther}
+            />
+          )}
 
           {section === 'fits' && (
             <ProductFitsTab

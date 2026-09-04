@@ -10,6 +10,8 @@ interface Props {
   products: AdminProduct[];
   /** Перечитать каталог после сохранения */
   onReload?: () => void;
+  /** Открыть карточку товара — правки делаются там, где они видны */
+  onEdit?: (p: AdminProduct) => void;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * Размечаем группами: на Kia Rio 2017–2019 идёт четыре рамки (9", 10",
  * с кнопкой и без), панель у них общая — и проводка одна и та же.
  */
-const FrameWiresPanel = ({ products, onReload }: Props) => {
+const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlyEmpty, setOnlyEmpty] = useState(true);
@@ -130,6 +132,7 @@ const FrameWiresPanel = ({ products, onReload }: Props) => {
               busy={busy}
               onToggle={() => setOpen(open === g.key ? null : g.key)}
               onSave={(slugs) => save(g, slugs)}
+              onEdit={onEdit}
             />
           ))}
           {shown.length > 300 && (
@@ -151,6 +154,7 @@ const GroupRow = ({
   busy,
   onToggle,
   onSave,
+  onEdit,
 }: {
   group: FrameGroup;
   products: AdminProduct[];
@@ -158,6 +162,7 @@ const GroupRow = ({
   busy: boolean;
   onToggle: () => void;
   onSave: (slugs: string[]) => void;
+  onEdit?: (p: AdminProduct) => void;
 }) => {
   const [picked, setPicked] = useState<string[]>(group.wires);
   const candidates = useMemo(
@@ -219,6 +224,39 @@ const GroupRow = ({
 
       {isOpen && (
         <div className="pb-4 pl-8">
+          {/* Сами рамки группы — чтобы поправить название, годы или
+              отметить комплект, не выходя из разметки */}
+          <div className="mb-4">
+            <div className="text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+              Рамки этой группы
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {group.frames.map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => onEdit?.(f)}
+                  title={f.name}
+                  className="flex w-[13rem] items-center gap-2 border border-border p-2 text-left transition-colors hover:border-foreground"
+                >
+                  <img
+                    src={f.images?.[0] ?? ''}
+                    alt=""
+                    loading="lazy"
+                    className="h-10 w-10 flex-none bg-card object-contain"
+                  />
+                  <span className="min-w-0 flex-1 text-[0.72rem] leading-tight">
+                    <span className="line-clamp-2">{f.name}</span>
+                    {f.wireIncluded && (
+                      <span className="mt-0.5 block text-success">
+                        проводка в комплекте
+                      </span>
+                    )}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {candidates.length === 0 ? (
             <p className="text-[0.82rem] text-muted-foreground">
               Под эту машину и годы проводок в каталоге нет. Проверьте
@@ -238,12 +276,21 @@ const GroupRow = ({
                       onChange={() => toggle(w.slug ?? '')}
                       className="h-4 w-4 flex-none accent-primary"
                     />
-                    <img
-                      src={w.images?.[0] ?? ''}
-                      alt=""
-                      loading="lazy"
-                      className="h-10 w-10 flex-none bg-card object-contain"
-                    />
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        onEdit?.(w);
+                      }}
+                      title="Открыть карточку"
+                      className="flex-none"
+                    >
+                      <img
+                        src={w.images?.[0] ?? ''}
+                        alt=""
+                        loading="lazy"
+                        className="h-10 w-10 bg-card object-contain transition-opacity hover:opacity-70"
+                      />
+                    </button>
                     <span className="min-w-0 flex-1 text-[0.82rem] leading-snug">
                       {w.name}
                       <span className="mt-0.5 block text-[0.72rem] text-muted-foreground">

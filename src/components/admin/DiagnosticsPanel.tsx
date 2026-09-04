@@ -114,10 +114,18 @@ const DiagnosticsPanel = ({
 
       <div className="mt-2">
         {section === 'frames' && (
-          <FrameWiresPanel products={products} onReload={onReload} />
+          <FrameWiresPanel
+            products={products}
+            onReload={onReload}
+            onEdit={onEdit}
+          />
         )}
         {section === 'tech' && (
-          <WireTechPanel products={products} onReload={onReload} />
+          <WireTechPanel
+            products={products}
+            onReload={onReload}
+            onEdit={onEdit}
+          />
         )}
         {section === 'cards' && (
           <DataAuditPanel products={products} onEdit={onEdit} bare />
