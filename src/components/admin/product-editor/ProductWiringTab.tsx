@@ -1,13 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, WireFeature } from '@/data/catalog';
+import { adminFetch } from '@/lib/api';
 import { FRAMES_CATEGORY, WIRES_CATEGORY } from '@/lib/kit-filter';
-import {
-  AdminProduct,
-  SetField,
-  WIRE_TECH,
-  WireTechValue,
-} from './product-types';
+import { AdminProduct, SetField } from './product-types';
 
 interface Props {
   form: AdminProduct;
@@ -17,15 +13,6 @@ interface Props {
   /** Открыть другой товар: связь редактируется с обеих сторон */
   onOpen?: (product: AdminProduct) => void;
 }
-
-/** Признаки, по которым проводки отличаются друг от друга */
-const KEYS = ['amp', 'camera', 'can'];
-
-const TECH_OPTS: { id: WireTechValue; label: string; hint: string }[] = [
-  { id: 'yes', label: 'Только с ним', hint: 'Проводка нужна, если это есть' },
-  { id: 'no', label: 'Только без', hint: 'Проводка не рассчитана на это' },
-  { id: 'any', label: 'Неважно', hint: 'Подходит в любом случае' },
-];
 
 /** Совпадают ли товары хотя бы по одной машине и пересекаются ли годы */
 const related = (a: AdminProduct, b: AdminProduct): boolean => {
@@ -63,14 +50,25 @@ const ProductWiringTab = ({ form, set, products = [], onOpen }: Props) => {
   const [search, setSearch] = useState('');
   const isFrame = form.category === FRAMES_CATEGORY;
   const isWire = form.category === WIRES_CATEGORY;
-  const tech = form.wireTech || {};
+  /* Справочник признаков живёт в настройках: список правится там, а
+     карточка просто рисует по нему галочки */
+  const [dict, setDict] = useState<WireFeature[]>([]);
+  useEffect(() => {
+    adminFetch('?action=settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.settings?.wire_features))
+          setDict(d.settings.wire_features);
+      })
+      .catch(() => undefined);
+  }, []);
 
-  const setTech = (id: string, val: WireTechValue) => {
-    const next = { ...tech };
-    if (next[id] === val) delete next[id];
-    else next[id] = val;
-    set('wireTech', next);
-  };
+  const marks = form.wireFeatures ?? [];
+  const toggleFeature = (id: string) =>
+    set(
+      'wireFeatures',
+      marks.includes(id) ? marks.filter((x) => x !== id) : [...marks, id],
+    );
 
   /* Рамки, к которым привязана эта проводка. Связь хранится у рамки, но
      смотреть на неё удобно с обеих сторон: открыли проводку — видно, где
@@ -186,11 +184,18 @@ const ProductWiringTab = ({ form, set, products = [], onOpen }: Props) => {
                         <div className="mt-0.5 text-[0.72rem] text-muted-foreground">
                           {w.yearFrom || '…'}–{w.yearTo || '…'} ·{' '}
                           {formatPrice(w.price)} ·{' '}
-                          {KEYS.every((k) => (w.wireTech || {})[k]) ? (
-                            <span className="text-success">признаки есть</span>
+                          {/* Что отмечено у проводки — видно сразу, без
+                              захода в её карточку */}
+                          {w.wireFeatures?.length ? (
+                            <span className="text-success">
+                              {dict
+                                .filter((f) => w.wireFeatures?.includes(f.id))
+                                .map((f) => f.label.toLowerCase())
+                                .join(', ')}
+                            </span>
                           ) : (
                             <span className="text-primary">
-                              признаки не заполнены
+                              не указано, что подключает
                             </span>
                           )}
                         </div>
@@ -209,38 +214,44 @@ const ProductWiringTab = ({ form, set, products = [], onOpen }: Props) => {
         <>
           <div>
             <div className="font-head text-sm font-bold uppercase tracking-tight">
-              Чем отличается от других
+              Что подключается
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              Когда к рамке подходит несколько проводок, выбрать нужную
-              помогают эти три признака — по ним подбор и задаёт вопрос
-              покупателю. «Неважно» значит, что вопрос не задаётся.
+              Галочка стоит — проводка это подключает. Не стоит — нет.
+              Список правится в «Настройках», там же указывается, по каким
+              пунктам спрашивать покупателя при подборе.
             </p>
-            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-4">
-              {WIRE_TECH.filter((t) => KEYS.includes(t.id)).map((t) => (
-                <div key={t.id}>
-                  <div className="text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground">
-                    {t.label}
-                  </div>
-                  <div className="mt-1.5 flex">
-                    {TECH_OPTS.map((o) => (
-                      <button
-                        key={o.id}
-                        title={o.hint}
-                        onClick={() => setTech(t.id, o.id)}
-                        className={`border px-3 py-1.5 text-[0.72rem] transition-colors ${
-                          tech[t.id] === o.id
-                            ? 'border-foreground bg-foreground text-background'
-                            : 'border-border text-muted-foreground hover:border-foreground'
-                        }`}
+
+            {dict.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Справочник пуст. Добавьте признаки в «Настройках».
+              </p>
+            ) : (
+              <div className="mt-4 grid grid-cols-1 gap-x-8 gap-y-2 sm:grid-cols-2">
+                {dict.map((f) => (
+                  <label
+                    key={f.id}
+                    className="flex cursor-pointer items-center gap-2.5 py-1"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={marks.includes(f.id)}
+                      onChange={() => toggleFeature(f.id)}
+                      className="h-4 w-4 flex-none accent-primary"
+                    />
+                    <span className="text-sm">{f.label}</span>
+                    {f.ask && (
+                      <span
+                        title="По этому пункту спрашиваем покупателя"
+                        className="text-[0.65rem] uppercase tracking-[0.08em] text-muted-foreground"
                       >
-                        {o.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                        вопрос
+                      </span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>

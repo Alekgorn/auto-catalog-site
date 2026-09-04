@@ -5,6 +5,7 @@ import {
   Guide,
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
+  WireFeature,
 } from '@/data/catalog';
 import { VehicleWiring } from '@/lib/wire-pick';
 import { CATALOG_URL } from '@/lib/api';
@@ -34,6 +35,7 @@ export interface PrerenderData {
   guides?: Guide[];
   settings?: {
     card_fields?: string[];
+    wire_features?: WireFeature[];
     contacts?: Partial<SiteContacts>;
     faq?: FaqItem[];
     filter_blocks?: FilterBlockKey[];
@@ -63,6 +65,8 @@ interface CatalogValue {
   categories: string[];
   categorySpecs: Record<string, string[]>;
   cardFields: string[];
+  /** Справочник признаков подключения — по нему подбор задаёт вопросы */
+  wireFeatures: WireFeature[];
   contacts: SiteContacts;
   faq: FaqItem[];
   filterBlocks: FilterBlockKey[];
@@ -211,6 +215,9 @@ export const CatalogProvider = ({
       ? seed.settings.card_fields
       : DEFAULT_CARD_FIELDS,
   );
+  const [wireFeatures, setWireFeatures] = useState<WireFeature[]>(
+    seed?.settings?.wire_features ?? [],
+  );
   const [contacts, setContacts] = useState<SiteContacts>({
     ...DEFAULT_CONTACTS,
     ...(seed?.settings?.contacts ?? {}),
@@ -305,6 +312,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.card_fields)) {
           setCardFields(data.settings.card_fields);
         }
+        if (Array.isArray(data.settings?.wire_features)) {
+          setWireFeatures(data.settings.wire_features);
+        }
         if (data.settings?.contacts && typeof data.settings.contacts === 'object') {
           setContacts({ ...DEFAULT_CONTACTS, ...data.settings.contacts });
         }
@@ -367,6 +377,7 @@ export const CatalogProvider = ({
     categories,
     categorySpecs,
     cardFields,
+    wireFeatures,
     contacts,
     faq,
     filterBlocks,

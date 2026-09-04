@@ -68,7 +68,7 @@ const ScenarioKit = ({
   onNeedLead,
   onSkip,
 }: Props) => {
-  const { brands, vehicleWiring } = useCatalog();
+  const { brands, vehicleWiring, wireFeatures } = useCatalog();
   /*
    * Комплект держится на переходной рамке: без неё магнитоле некуда встать.
    * Если под выбранную машину рамок нет, выбирать нечего ни на одном шаге —
@@ -165,6 +165,8 @@ const ScenarioKit = ({
           {},
           modelBodyTypes(brands, vehicle.brand, vehicle.model),
           null,
+          null,
+          wireFeatures,
         ).fallback;
 
       return (
