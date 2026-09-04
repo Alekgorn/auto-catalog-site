@@ -28,7 +28,7 @@ XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 # Типы кузова автомобиля. Одна модель может выпускаться в нескольких —
 # Rio бывает и седаном, и хэтчбеком, поэтому храним список.
 BODY_TYPES = (
-    'sedan', 'hatchback', 'liftback', 'wagon', 'suv',
+    'sedan', 'hatchback', 'liftback', 'wagon', 'crossover', 'suv', 'jeep',
     'pickup', 'minivan', 'van', 'coupe', 'cabrio',
 )
 
@@ -966,7 +966,9 @@ BODY_RU = {
     'hatchback': 'Хэтчбек',
     'liftback': 'Лифтбек',
     'wagon': 'Универсал',
+    'crossover': 'Кроссовер',
     'suv': 'Внедорожник',
+    'jeep': 'Джип',
     'pickup': 'Пикап',
     'minivan': 'Минивэн',
     'van': 'Фургон',
@@ -985,9 +987,10 @@ RU_BODY.update(
         'хэтчбэк 5 дв': 'hatchback',
         'лифтбэк': 'liftback',
         'вагон': 'wagon',
-        'кроссовер': 'suv',
-        'джип': 'suv',
-        'внедорожник/кроссовер': 'suv',
+        'паркетник': 'crossover',
+        'внедорожник/кроссовер': 'crossover',
+        'рамный внедорожник': 'jeep',
+        'микроавтобус': 'minivan',
         'минивен': 'minivan',
         'вэн': 'van',
         'кабрио': 'cabrio',

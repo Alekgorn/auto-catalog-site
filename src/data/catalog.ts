@@ -12,6 +12,8 @@ export type BodyType =
   | 'liftback'
   | 'wagon'
   | 'suv'
+  | 'crossover'
+  | 'jeep'
   | 'pickup'
   | 'minivan'
   | 'van'
@@ -24,7 +26,9 @@ export const BODY_TYPES: { id: BodyType; label: string }[] = [
   { id: 'hatchback', label: 'Хэтчбек' },
   { id: 'liftback', label: 'Лифтбек' },
   { id: 'wagon', label: 'Универсал' },
+  { id: 'crossover', label: 'Кроссовер' },
   { id: 'suv', label: 'Внедорожник' },
+  { id: 'jeep', label: 'Джип' },
   { id: 'pickup', label: 'Пикап' },
   { id: 'minivan', label: 'Минивэн' },
   { id: 'van', label: 'Фургон' },
