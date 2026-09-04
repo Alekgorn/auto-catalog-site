@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { compareNames } from '@/lib/slug';
-import { BodyType } from '@/data/catalog';
+import { BODY_TYPES, BodyType } from '@/data/catalog';
 
 export interface AdminBrand {
   name: string;
@@ -22,6 +22,8 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
   const { toast } = useToast();
   const [list, setList] = useState<AdminBrand[]>(brands);
   const [busy, setBusy] = useState(false);
+  /** Какая марка раскрыта на кузовах — открыт всегда один список */
+  const [openBodies, setOpenBodies] = useState<number | null>(null);
   /** У какой марки раскрыт список кузовов */
   /** У какой марки раскрыт подбор проводки */
   const fileRef = useRef<HTMLInputElement>(null);
@@ -88,6 +90,27 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
       if (fileRef.current) fileRef.current.value = '';
     }
   };
+
+  /** Сколько моделей марки уже с кузовом — счётчик у кнопки */
+  const bodiesCount = (b: AdminBrand) =>
+    Object.values(b.modelBodies ?? {}).filter((v) => v?.length).length;
+
+  /* Кузов модели: щёлкнули по типу — включили или выключили. Пустой
+     список убираем целиком, чтобы в справочнике не копился мусор */
+  const toggleBody = (idx: number, model: string, kind: BodyType) =>
+    setList((l) =>
+      l.map((b, i) => {
+        if (i !== idx) return b;
+        const now = b.modelBodies?.[model] ?? [];
+        const next = now.includes(kind)
+          ? now.filter((x) => x !== kind)
+          : [...now, kind];
+        const bodies = { ...(b.modelBodies ?? {}) };
+        if (next.length) bodies[model] = next;
+        else delete bodies[model];
+        return { ...b, modelBodies: bodies };
+      }),
+    );
 
   return (
     <div className="py-6">
@@ -171,6 +194,71 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
               </button>
             </div>
 
+            {/* Кузова моделей. Нужны там, где от кузова зависит панель:
+                у Civic до 2011 хэтчбек и седан — это разные разъёмы, и
+                подбор обязан спросить об этом покупателя */}
+            <div className="md:col-span-12">
+              <button
+                onClick={() => setOpenBodies(openBodies === i ? null : i)}
+                className="mt-1 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
+              >
+                <Icon
+                  name={openBodies === i ? 'ChevronDown' : 'ChevronRight'}
+                  size={13}
+                />
+                Кузова моделей
+                {bodiesCount(b) > 0 && (
+                  <span className="text-success">· {bodiesCount(b)}</span>
+                )}
+              </button>
+
+              {openBodies === i && (
+                <div className="mt-3 border-l-2 border-border pl-4">
+                  {b.models.filter(Boolean).length === 0 ? (
+                    <p className="text-[0.82rem] text-muted-foreground">
+                      Сначала добавьте модели этой марки.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {b.models.filter(Boolean).map((m) => (
+                        <div
+                          key={m}
+                          className="flex flex-wrap items-center gap-x-4 gap-y-1.5"
+                        >
+                          <span className="min-w-[9rem] text-[0.85rem]">
+                            {m}
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {BODY_TYPES.map((t) => {
+                              const on = (b.modelBodies?.[m] ?? []).includes(
+                                t.id,
+                              );
+                              return (
+                                <button
+                                  key={t.id}
+                                  onClick={() => toggleBody(i, m, t.id)}
+                                  className={`border px-2.5 py-1 text-[0.72rem] transition-colors ${
+                                    on
+                                      ? 'border-foreground bg-foreground text-background'
+                                      : 'border-border text-muted-foreground hover:border-foreground'
+                                  }`}
+                                >
+                                  {t.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      <p className="pt-1 text-[0.75rem] text-muted-foreground">
+                        Ничего не отмечено — подбор считает, что кузов не
+                        важен, и вопрос о нём не задаёт.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
