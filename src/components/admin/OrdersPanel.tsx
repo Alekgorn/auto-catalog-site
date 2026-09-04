@@ -3,6 +3,9 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { formatPrice } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
+import { useCatalog } from '@/context/CatalogContext';
+import { showcaseHref } from '@/components/admin/ShowcaseEditor';
+import { ShowcaseKit } from '@/lib/site-settings';
 
 export interface AdminOrder {
   id: number;
@@ -41,12 +44,21 @@ const formatDate = (iso: string | null) => {
   });
 };
 
+/**
+ * Заголовок карточки из машины в заказе: «Kia Rio, 2015» → «Kia Rio 2015».
+ * Запятая в базе появилась от формата заявки, на витрине она лишняя.
+ */
+const kitTitle = (vehicle: string): string =>
+  (vehicle || '').replace(/,\s*/g, ' ').trim();
+
 const OrdersPanel = () => {
   const { toast } = useToast();
+  const { products } = useCatalog();
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -83,6 +95,59 @@ const OrdersPanel = () => {
       body: JSON.stringify({ id: order.id, status: order.status, adminNote: note }),
     });
     toast({ title: 'Комментарий сохранён' });
+  };
+
+  /*
+   * Заказ → карточка витрины.
+   *
+   * Переносим только состав и машину: цену витрина считает по каталогу
+   * сама, иначе однажды показала бы стоимость на день заказа. Позиции,
+   * которых уже нет в каталоге, молча пропускаем — но если не осталось
+   * ни одной, честно говорим, что переносить нечего.
+   */
+  const toShowcase = async (order: AdminOrder) => {
+    const ids = order.items
+      .map((it) => it.slug)
+      .filter((id) => products.some((p) => p.id === id));
+
+    if (!ids.length) {
+      toast({
+        title: 'Нечего переносить',
+        description: 'В заявке нет товаров, которые есть в каталоге',
+      });
+      return;
+    }
+
+    setBusy(order.id);
+    const cur = await adminFetch('?action=settings').then((r) => r.json());
+    const list: ShowcaseKit[] = Array.isArray(cur.settings?.showcase)
+      ? cur.settings.showcase
+      : [];
+
+    const kit: ShowcaseKit = {
+      title: kitTitle(order.vehicle) || `Заказ №${order.id}`,
+      ids,
+      term: '',
+    };
+
+    const res = await adminFetch('?action=settings', {
+      method: 'PUT',
+      body: JSON.stringify({
+        settings: {
+          showcase: [...list, { ...kit, href: showcaseHref(kit) }],
+        },
+      }),
+    });
+    setBusy(null);
+
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось сохранить' });
+      return;
+    }
+    toast({
+      title: 'Карточка создана',
+      description: 'Вкладка «Сайт» — добавьте фото и срок поставки',
+    });
   };
 
   const remove = async (order: AdminOrder) => {
@@ -189,6 +254,19 @@ const OrdersPanel = () => {
                 >
                   {expanded === o.id ? 'Свернуть' : 'Подробнее'}
                 </button>
+                {/* Кнопка только там, где есть что показать: заявка на
+                    подбор без товаров карточкой стать не может */}
+                {o.items.length > 0 && (
+                  <button
+                    onClick={() => toShowcase(o)}
+                    disabled={busy === o.id}
+                    title="Создать карточку в блоке «Что мы уже собрали»"
+                    className="flex items-center gap-2 border border-primary px-4 py-2 text-[0.75rem] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-60"
+                  >
+                    <Icon name="LayoutGrid" size={14} />
+                    {busy === o.id ? 'Создаём…' : 'В витрину'}
+                  </button>
+                )}
                 <button
                   onClick={() => remove(o)}
                   aria-label="Удалить"
