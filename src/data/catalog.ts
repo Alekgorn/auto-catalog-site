@@ -89,6 +89,8 @@ export interface Product {
   wireIncluded?: boolean;
   /** Что подключает — id из справочника признаков */
   wireFeatures?: string[];
+  /** Подсказка к выбору проводки — пишется у рамки, видна покупателю */
+  wireHint?: string;
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];

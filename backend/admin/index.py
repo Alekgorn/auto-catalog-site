@@ -491,6 +491,8 @@ def row_to_product(r: dict) -> dict:
         'wireIncluded': bool(r.get('wire_included')),
         # Что подключает — id из справочника wire_features
         'wireFeatures': r.get('wire_features') or [],
+        # Подсказка покупателю: на что смотреть при выборе проводки
+        'wireHint': r.get('wire_hint') or '',
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -3387,6 +3389,7 @@ def handler(event: dict, context) -> dict:
                 'wire_features': qjson(
                     [str(x) for x in (body.get('wireFeatures') or []) if x][:30]
                 ),
+                'wire_hint': q(str(body.get('wireHint') or '')[:2000]),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),
