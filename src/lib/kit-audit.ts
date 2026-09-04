@@ -441,7 +441,18 @@ export const findGenerationGaps = (
       ).length;
       if (inside > worst) worst = inside;
     });
-    if (worst < 2) return;
+
+    /* Разметка совпадает с рамками, когда на каждый период есть ровно
+       одна строка с теми же годами. Всё прочее — повод показать модель:
+       периоды слиты в одну строку, остались лишние пустые строки от
+       прежних запусков или годы записаны наоборот. */
+    const exact = new Set(
+      marks
+        .filter((w) => periods.some((p) => p.from === w.years[0] && p.to === w.years[1]))
+        .map((w) => `${w.years[0]}-${w.years[1]}`),
+    );
+    const tidy = exact.size === periods.length && marks.length === periods.length;
+    if (worst < 2 && tidy) return;
 
     // Кто именно накрывает период — подсказка, какую строку дробить
     periods.forEach((p) => {
@@ -460,10 +471,12 @@ export const findGenerationGaps = (
     });
   });
 
-  // Сверху самые грубые: там под одну проводку слито больше всего машин
+  /* Сверху самые грубые: там под одну проводку слито больше всего машин.
+     Дальше — те, где строк развелось больше, чем периодов */
   return rows.sort(
     (a, b) =>
       b.worst - a.worst ||
+      b.covered.length - b.periods.length - (a.covered.length - a.periods.length) ||
       a.brand.localeCompare(b.brand) ||
       a.model.localeCompare(b.model),
   );
@@ -485,8 +498,7 @@ export type WiringIssue = KitIssue;
  *
  * Разметка живёт отдельно от товаров, поэтому легко рассыпается:
  * товар удалили — ссылка повисла, модель переименовали — строка больше
- * ни к чему не относится, два поколения наложились друг на друга —
- * покупателю покажут проводку от чужой машины.
+ * ни к чему не относится, проводка выбрана из удалённого товара.
  */
 export const auditWiring = (
   rows: VehicleWiring[],
@@ -577,37 +589,10 @@ export const auditWiring = (
     }
   });
 
-  /* Наложение поколений: две строки на одну машину с пересечением по
-     годам, одинаковым кузовом и рулём. Подбор возьмёт первую попавшуюся,
-     то есть результат зависит от порядка в базе — а это лотерея. */
-  const byModel = new Map<string, VehicleWiring[]>();
-  rows.forEach((r) => {
-    const key = `${r.brand.toLowerCase()}|${r.model.toLowerCase()}`;
-    const arr = byModel.get(key);
-    if (arr) arr.push(r);
-    else byModel.set(key, [r]);
-  });
-
-  byModel.forEach((list) => {
-    for (let i = 0; i < list.length; i += 1) {
-      for (let j = i + 1; j < list.length; j += 1) {
-        const a = list[i];
-        const b = list[j];
-        if (a.years[0] > b.years[1] || b.years[0] > a.years[1]) continue;
-        if ((a.wheel || '') !== (b.wheel || '')) continue;
-        const ab = [...(a.bodies ?? [])].sort().join(',');
-        const bb = [...(b.bodies ?? [])].sort().join(',');
-        if (ab !== bb) continue;
-        out.push({
-          rule: 'overlap',
-          level: 'warning',
-          title: `${a.brand} ${a.model}`,
-          text: `Две строки на одни годы: ${a.years[0]}–${a.years[1]} и ${b.years[0]}–${b.years[1]}`,
-          hint: 'Кузов и руль совпадают — какая сработает, зависит от порядка',
-        });
-      }
-    }
-  });
+  /* Пересечение годов больше не считаем ошибкой: рамки продаются с
+     такими годами («2006–2011» и «2011–2017»), и подгонять границы
+     значило бы врать о товаре. Стык разруливает подбор — берёт старший
+     период и предупреждает покупателя, что год переходный. */
 
   return out;
 };
@@ -667,5 +652,4 @@ export const KIT_RULE_TITLES: Record<string, string> = {
   'no-brand': 'Марки нет в справочнике',
   'no-model': 'Модели нет в справочнике',
   'years-order': 'Годы наоборот',
-  overlap: 'Поколения наложились',
 };
