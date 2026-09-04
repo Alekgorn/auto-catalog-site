@@ -8,6 +8,7 @@ import ProductTrust from "@/components/ProductTrust";
 import FitsList from "@/components/FitsList";
 import FitsCheck from "@/components/FitsCheck";
 import ProductRelated from "@/components/ProductRelated";
+import ProductKits from "@/components/ProductKits";
 import RequestDialog from "@/components/RequestDialog";
 import ProductTabs, { ProductTab } from "@/components/ProductTabs";
 import {
@@ -451,6 +452,11 @@ const Product = () => {
             </div>
           </div>
         </section>
+
+        {/* Готовые комплекты с этим товаром — выше похожих позиций:
+            человеку, который ищет рамку, полезнее увидеть собранное
+            решение, чем ещё десять рамок */}
+        <ProductKits id={product.id} />
 
         {/* Похожее — тот же раздел и те же машины. Нет подходящего —
             блока не будет вовсе, пустой заголовок только мешает */}
