@@ -150,6 +150,15 @@ const ShowcaseEditor = ({ value, onChange, products }: Props) => {
                   />
                 </label>
                 <label className="block">
+                  <span className="eyebrow">Комментарий к сборке</span>
+                  <input
+                    value={kit.note ?? ''}
+                    placeholder="Авто со штатным усилителем"
+                    onChange={(e) => setAt(i, { note: e.target.value })}
+                    className={input}
+                  />
+                </label>
+                <label className="block sm:col-span-2">
                   <span className="eyebrow">Перенести состав из ссылки</span>
                   <input
                     placeholder="Вставьте ссылку /sborka?p=..."
