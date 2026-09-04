@@ -529,9 +529,9 @@ const KitWiring = ({
           {/* Пояснение админа к рекомендованной проводке. В карточке для
               него места нет, а прочитать его надо: оно объясняет цену */}
           {res.pickMode === 'fixed' &&
-            (res.full[0]?.wireNote || wiring?.reason) && (
+            wiring?.reason && (
               <p className="text-sm leading-relaxed text-muted-foreground">
-                {res.full[0]?.wireNote || wiring?.reason}
+                {wiring.reason}
               </p>
             )}
 
@@ -551,8 +551,8 @@ const KitWiring = ({
                     Часть функций работать не будет
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {res.budget.find((w) => w.id === warnFor)?.wireNote ||
-                      'Магнитола заработает, но не всё из того, что вы отметили: сверьтесь со списком в карточке.'}
+                    Магнитола заработает, но не всё из того, что вы
+                    отметили: сверьтесь со списком в карточке.
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button

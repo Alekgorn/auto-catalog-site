@@ -1,40 +1,12 @@
 import { GuideBlock, FitMode, BodyType } from '@/data/catalog';
 import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
 
-/** yes — для машин с этим, no — для машин без, any — не влияет на подбор */
-export type WireTechValue = 'yes' | 'no' | 'any';
-/** Насколько полно проводка сохраняет штатные функции */
-export type WireLevel = 'full' | 'basic' | 'limited';
-
-/** С чем проводка умеет работать — по этому отсеиваем неподходящее */
-export const WIRE_TECH: { id: string; label: string }[] = [
-  { id: 'power', label: 'Питание' },
-  { id: 'sound', label: 'Акустика' },
-  { id: 'wheel', label: 'Кнопки на руле' },
-  { id: 'amp', label: 'Штатный усилитель' },
-  { id: 'camera', label: 'Штатная камера' },
-  { id: 'can', label: 'CAN-шина' },
-];
-
-/** Что останется работать у клиента после установки */
-export const WIRE_KEEPS: { id: string; label: string }[] = [
-  { id: 'climate', label: 'Климат-контроль на экране' },
-  { id: 'wheel', label: 'Кнопки на руле' },
-  { id: 'camera', label: 'Штатная камера' },
-  { id: 'amp', label: 'Штатный усилитель' },
-  { id: 'parktronic', label: 'Парктроники' },
-];
-
+/** Сторона руля: у праворульных машин штатный разъём другой */
 export const WHEEL_SIDES: { id: 'left' | 'right'; label: string }[] = [
   { id: 'left', label: 'Левый руль' },
   { id: 'right', label: 'Правый руль' },
 ];
 
-export const WIRE_LEVELS: { id: WireLevel; label: string; hint: string }[] = [
-  { id: 'full', label: 'Полная', hint: 'Сохраняет всё нужное' },
-  { id: 'basic', label: 'Базовая', hint: 'Часть функций теряется' },
-  { id: 'limited', label: 'Ограниченная', hint: 'Существенные ограничения' },
-];
 
 export interface AdminProduct {
   id?: number;
@@ -72,14 +44,6 @@ export interface AdminProduct {
    * Пусто — берём умолчание категории.
    */
   fitMode?: '' | FitMode;
-  /**
-   * Подбор проводки. Два блока, и путать их нельзя:
-   * wireTech — для каких машин проводка (фильтр, прячет неподходящее),
-   * wireKeeps — что останется работать у клиента (объясняет цену).
-   */
-  wireTech?: Record<string, WireTechValue>;
-  wireKeeps?: Record<string, boolean>;
-  wireLevel?: '' | WireLevel;
   /** Кузова, на которые встаёт проводка. Пусто — любой */
   wireBodies?: BodyType[];
   /** Сторона руля. Пусто — подходит любой */
@@ -93,7 +57,6 @@ export interface AdminProduct {
   /** Подсказка к выбору проводки — пишется у рамки, видна покупателю */
   wireHint?: string;
   /** Текст про потерю функций — его видит покупатель */
-  wireNote?: string;
   /** Сколько штук на складе. 0 — только под заказ */
   stock?: number;
   /** Что писать покупателю, когда склад пуст */
@@ -129,16 +92,12 @@ export const emptyProduct = (): AdminProduct => ({
   extraTitle: '',
   fits: {},
   fitMode: '',
-  wireTech: {},
-  wireKeeps: {},
-  wireLevel: '',
   wireBodies: [],
   wireWheel: '',
   frameWires: [],
   wireIncluded: false,
   wireFeatures: [],
   wireHint: '',
-  wireNote: '',
   sortOrder: 100,
   isActive: true,
 });

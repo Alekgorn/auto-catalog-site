@@ -155,7 +155,7 @@ export interface WirePick {
 
 /** Товар размечен, если у него проставлен уровень совместимости */
 export const isMarked = (p: Product): boolean =>
-  !!p.wireLevel || !!(p.wireFeatures || []).length;
+  !!(p.wireFeatures || []).length;
 
 /*
  * Подсказки к вопросам. Для привычных признаков текст выверен и живёт
@@ -442,10 +442,3 @@ export const pickWires = (
 };
 
 /** Что сохраняет проводка — человеческими словами, для карточки */
-export const KEEP_LABELS: Record<string, string> = {
-  climate: 'Климат-контроль на экране',
-  wheel: 'Кнопки на руле',
-  camera: 'Штатная камера',
-  amp: 'Штатный усилитель',
-  parktronic: 'Парктроники',
-};

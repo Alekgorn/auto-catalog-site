@@ -53,12 +53,8 @@ const ProductEditor = ({
     extra: product.extra ?? [],
     extraTitle: product.extraTitle ?? '',
     fits: product.fits ?? {},
-    wireTech: product.wireTech ?? {},
-    wireKeeps: product.wireKeeps ?? {},
-    wireLevel: product.wireLevel ?? '',
     wireBodies: product.wireBodies ?? [],
     wireWheel: product.wireWheel ?? '',
-    wireNote: product.wireNote ?? '',
   });
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
