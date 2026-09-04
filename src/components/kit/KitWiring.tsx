@@ -78,12 +78,13 @@ const WireCard = ({
               Рекомендуем
             </span>
           )}
-          {/* Про ограничения предупреждаем только у скрытых вариантов —
-              у остальных ярлык «полная совместимость» лишний шум */}
+          {/* Скрытый вариант: подойдёт, но не даст того, что человек
+              просил. «Ограниченная совместимость» звучало как «может не
+              подойти» — пугало там, где проводка исправна */}
           {limited && (
             <span className="flex items-center gap-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] text-[#B45309]">
               <Icon name="TriangleAlert" size={14} />
-              Ограниченная совместимость
+              Не всё, что вы просили
             </span>
           )}
         </div>
@@ -526,7 +527,9 @@ const KitWiring = ({
                 className="flex w-full items-center justify-center gap-2 border border-border px-5 py-3 font-head text-[0.72rem] font-medium uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
               >
                 <Icon name="Wallet" size={15} />
-                Другие варианты — от {formatPrice(res.budget[0].price)}
+                {res.budget[0].price < res.full[0].price
+                  ? `Дешевле, но без части функций — от ${formatPrice(res.budget[0].price)}`
+                  : 'Другие подходящие варианты'}
                 <Icon name="ChevronDown" size={15} />
               </button>
             ) : (
@@ -553,7 +556,7 @@ const KitWiring = ({
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
                             {w.wireNote ||
-                              'С этой проводкой магнитола заработает, но часть штатных функций не сохранится.'}
+                              'Магнитола заработает, но не всё из того, что вы отметили: сверьтесь со списком выше.'}
                           </p>
                           <div className="mt-3 flex flex-wrap gap-2">
                             <button
