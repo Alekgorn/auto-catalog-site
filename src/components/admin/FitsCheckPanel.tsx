@@ -8,6 +8,8 @@ interface Props {
   products: AdminProduct[];
   brands: AdminBrand[];
   onEdit: (product: AdminProduct) => void;
+  /** Внутри общего раздела диагностики — свой заголовок не нужен */
+  bare?: boolean;
 }
 
 /** Что именно не так с записью совместимости */
@@ -56,7 +58,7 @@ const suggestFrom = (list: string[], raw: string): string | undefined => {
  * выбирает свою машину и не видит подходящую позицию. После загрузки
  * прайса от поставщика это первое место, куда стоит заглянуть.
  */
-const FitsCheckPanel = ({ products, brands, onEdit }: Props) => {
+const FitsCheckPanel = ({ products, brands, onEdit, bare }: Props) => {
   const [onlyActive, setOnlyActive] = useState(true);
 
   const rows = useMemo<Row[]>(() => {
@@ -113,12 +115,14 @@ const FitsCheckPanel = ({ products, brands, onEdit }: Props) => {
   );
 
   return (
-    <div className="py-8">
+    <div className={bare ? '' : 'py-8'}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-[46em]">
-          <div className="font-head text-xl font-bold uppercase tracking-tight">
-            Проверка совместимости
-          </div>
+          {!bare && (
+            <div className="font-head text-xl font-bold uppercase tracking-tight">
+              Проверка совместимости
+            </div>
+          )}
           <p className="mt-2 text-[0.87rem] leading-relaxed text-muted-foreground">
             Здесь товары, у которых марка или модель записаны не так, как в
             справочнике марок. Такие позиции покупатель не найдёт при подборе

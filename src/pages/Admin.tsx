@@ -16,8 +16,7 @@ import GuideEditor, {
 } from "@/components/admin/GuideEditor";
 import SettingsPanel from "@/components/admin/SettingsPanel";
 import SupplierPanel from "@/components/admin/SupplierPanel";
-import DataAuditPanel from "@/components/admin/DataAuditPanel";
-import WiringPanel from "@/components/admin/WiringPanel";
+import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 import { auditProducts } from "@/lib/data-audit";
 import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
@@ -27,7 +26,6 @@ import AdminHeader from "@/components/admin/AdminHeader";
 import AdminTabs, { AdminTab } from "@/components/admin/AdminTabs";
 import AdminGuidesTab from "@/components/admin/AdminGuidesTab";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
-import FitsCheckPanel from "@/components/admin/FitsCheckPanel";
 import MissingFitPanel from "@/components/admin/MissingFitPanel";
 
 const Admin = () => {
@@ -427,18 +425,14 @@ const Admin = () => {
 
         {tab === "categories" && <CategoriesEditor onSaved={load} />}
 
-        {tab === "fits" && (
-          <FitsCheckPanel
+        {tab === "audit" && (
+          <DiagnosticsPanel
             products={products}
             brands={brands}
             onEdit={setEditing}
+            dataIssues={dataIssues}
+            fitsIssues={fitsIssues}
           />
-        )}
-
-        {tab === "wiring" && <WiringPanel />}
-
-        {tab === "audit" && (
-          <DataAuditPanel products={products} onEdit={setEditing} />
         )}
 
         {tab === "missing-fit" && (

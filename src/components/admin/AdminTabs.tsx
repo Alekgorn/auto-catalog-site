@@ -5,8 +5,6 @@ export type AdminTab =
   | "dealers"
   | "brands"
   | "categories"
-  | "fits"
-  | "wiring"
   | "audit"
   | "missing-fit"
   | "site"
@@ -21,11 +19,11 @@ interface Props {
   guidesCount: number;
   brandsCount: number;
   categoriesCount: number;
-  /** Сколько товаров с ошибками совместимости — счётчик у вкладки */
+  /** Сколько товаров с ошибками совместимости — входит в счётчик проверки */
   fitsIssues: number;
   /** Машины, под которые не собрался комплект */
   missingFits: number;
-  /** Карточки с расхождениями в данных — счётчик у вкладки */
+  /** Карточки с расхождениями в данных — входит в счётчик проверки */
   dataIssues: number;
 }
 
@@ -51,15 +49,12 @@ const AdminTabs = ({
         ["brands", `Марки (${brandsCount})`],
         ["categories", `Категории (${categoriesCount})`],
         [
-          "fits",
-          fitsIssues > 0
-            ? `Совместимость (${fitsIssues})`
-            : "Совместимость",
-        ],
-        ["wiring", "Подбор проводки"],
-        [
+          // Вся диагностика каталога живёт внутри одного раздела:
+          // расхождения в карточках, совместимость, комплект, разметка
           "audit",
-          dataIssues > 0 ? `Проверка данных (${dataIssues})` : "Проверка данных",
+          dataIssues + fitsIssues > 0
+            ? `Проверка данных (${dataIssues + fitsIssues})`
+            : "Проверка данных",
         ],
         [
           "missing-fit",
@@ -77,7 +72,7 @@ const AdminTabs = ({
         className={`border-b-2 pb-2 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
           tab === key
             ? "border-primary text-primary"
-            : (key === "fits" && fitsIssues > 0) ||
+            : (key === "audit" && fitsIssues > 0) ||
                 (key === "missing-fit" && missingFits > 0)
               ? // Ошибки совместимости прячут товары от покупателя, а машины
                 // без решения — это упущенный спрос. И то и другое видно сразу

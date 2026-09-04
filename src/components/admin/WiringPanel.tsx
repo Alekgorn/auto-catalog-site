@@ -38,7 +38,12 @@ interface Result {
  * первые полсотни строк и закрыть основную часть потерянных сделок,
  * а остальное доразметить когда-нибудь потом.
  */
-const WiringPanel = () => {
+interface Props {
+  /** Внутри общего раздела диагностики — свой заголовок не нужен */
+  bare?: boolean;
+}
+
+const WiringPanel = ({ bare }: Props = {}) => {
   const { toast } = useToast();
   const [scope, setScope] = useState<Scope>('hot');
   const [busy, setBusy] = useState(false);
@@ -109,9 +114,11 @@ const WiringPanel = () => {
   return (
     <div className="space-y-6">
       <div>
-        <div className="font-head text-lg font-bold uppercase tracking-tight">
-          Подбор проводки
-        </div>
+        {!bare && (
+          <div className="font-head text-lg font-bold uppercase tracking-tight">
+            Подбор проводки
+          </div>
+        )}
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           Файл на два листа: у проводок отмечаете, с чем они работают и какие
           штатные функции сохраняют; у машин — известна проводка точно или
