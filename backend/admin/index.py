@@ -1182,9 +1182,11 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
         ('Модель', 20),
         ('Год от', 9),
         ('Год по', 9),
+        ('Кузов (пусто — любой)', 22),
+        ('Руль (пусто — любой)', 18),
         ('Тип подбора', 16),
         ('Код проводки (для «Фиксированный»)', 34),
-        ('Обоснование (для своих)', 46),
+        ('Обоснование — увидит покупатель', 46),
         ('Спросить про усилитель', 13),
         ('Спросить про камеру', 13),
         ('Спросить про CAN', 13),
@@ -1199,38 +1201,62 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
     w2.row_dimensions[2].height = 34
     w2.freeze_panes = 'E3'
 
-    have = {(s['brand'], s['model']): s for s in saved}
-    for r, row in enumerate(vehicle_rows(products, brands, scope), start=3):
-        s = have.get((row['brand'], row['model'])) or {}
-        ask = s.get('ask') or {}
-        vals = [
-            row['wires'],
-            row['spread'] or '',
-            row['brand'],
-            row['model'],
-            s.get('yearFrom') or '',
-            s.get('yearTo') or '',
-            MODE_RU.get(s.get('mode') or '', ''),
-            s.get('wireSlug') or '',
-            s.get('reason') or '',
-            'Да' if ask.get('amp') else '',
-            'Да' if ask.get('camera') else '',
-            'Да' if ask.get('can') else '',
-        ]
-        for i, v in enumerate(vals, start=1):
-            cell = w2.cell(r, i, v)
-            cell.alignment = Alignment(vertical='top', wrap_text=i in (4, 9))
-            if i <= 2:
-                cell.font = Font(color='888888', size=9)
+    # У модели бывает несколько поколений — выгружаем каждое своей строкой
+    have = {}
+    for v in saved:
+        have.setdefault((v['brand'], v['model']), []).append(v)
+
+    r = 3
+    for row in vehicle_rows(products, brands, scope):
+        gens = have.get((row['brand'], row['model'])) or [{}]
+        for s_row in gens:
+            ask = s_row.get('ask') or {}
+            vals = [
+                row['wires'],
+                row['spread'] or '',
+                row['brand'],
+                row['model'],
+                s_row.get('yearFrom') or '',
+                s_row.get('yearTo') if (s_row.get('yearTo') or 2100) < 2100 else '',
+                ', '.join(
+                    BODY_RU.get(b, b) for b in (s_row.get('bodies') or [])
+                ),
+                WHEEL_RU.get(s_row.get('wheel') or '', ''),
+                MODE_RU.get(s_row.get('mode') or '', ''),
+                s_row.get('wireSlug') or '',
+                s_row.get('reason') or '',
+                'Да' if ask.get('amp') else '',
+                'Да' if ask.get('camera') else '',
+                'Да' if ask.get('can') else '',
+            ]
+            for i, v in enumerate(vals, start=1):
+                cell = w2.cell(r, i, v)
+                cell.alignment = Alignment(vertical='top', wrap_text=i in (4, 11))
+                if i <= 2:
+                    cell.font = Font(color='888888', size=9)
+            r += 1
 
     dv4 = DataValidation(
         type='list', formula1='"Фиксированный,Подбор"', allow_blank=True
     )
     w2.add_data_validation(dv4)
-    dv4.add('G3:G3000')
+    dv4.add('I3:I3000')
     dv5 = DataValidation(type='list', formula1='"Да,Нет"', allow_blank=True)
     w2.add_data_validation(dv5)
-    dv5.add('J3:L3000')
+    dv5.add('L3:N3000')
+    dv_b = DataValidation(
+        type='list',
+        formula1='"' + ','.join(BODY_RU.values()) + '"',
+        allow_blank=True,
+        showErrorMessage=False,
+    )
+    w2.add_data_validation(dv_b)
+    dv_b.add('G3:G3000')
+    dv_w = DataValidation(
+        type='list', formula1='"Левый,Правый"', allow_blank=True
+    )
+    w2.add_data_validation(dv_w)
+    dv_w.add('H3:H3000')
 
     # ---------- Лист 3: подсказки ----------
     w3 = wb.create_sheet('Как заполнять')
@@ -1289,10 +1315,16 @@ def build_wiring_xlsx(products: list, brands: list, saved: list, scope: str) -> 
             'зависит, какая проводка нужна».',
         ),
         (
-            'Годы',
-            'Если по годам проводки разные — сделайте несколько строк на одну '
-            'модель: Civic 2006-2011 и Civic 2012-2015. Пустые годы — правило '
-            'действует на все года.',
+            'Несколько поколений',
+            'У модели может быть несколько строк: Civic 2006-2011 хэтчбек и '
+            'Civic 2012-2020 седан. Просто добавьте вторую строку с той же '
+            'маркой и моделью — она не затрёт первую.',
+        ),
+        (
+            'Кузов и руль',
+            'Заполняйте, только если для этого поколения проводка своя. Пусто '
+            'значит любой. По кузову система различает поколения: владельцу '
+            'седана не покажет проводку для хэтчбека.',
         ),
         (
             'Пустые строки',
@@ -1396,7 +1428,7 @@ def parse_wiring_xlsx(data: bytes) -> dict:
         ws = wb['Подбор проводки']
         for r, row in enumerate(ws.iter_rows(min_row=3), start=3):
             brand, model = cell(row, 2), cell(row, 3)
-            mode_raw = cell(row, 6).lower()
+            mode_raw = cell(row, 8).lower()
             if not brand or not model or not mode_raw:
                 continue
             mode = RU_MODE.get(mode_raw, '')
@@ -1417,7 +1449,28 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                     problems.append(f'Подбор, строка {r}: год «{raw}» — нужно число')
                     return default
 
-            wire_slug = cell(row, 7)
+            # Кузова поколения: «Хэтчбек» или «Седан, Универсал»
+            bodies = []
+            for part in cell(row, 6).split(','):
+                name = part.strip().lower()
+                if not name:
+                    continue
+                if name in RU_BODY:
+                    bodies.append(RU_BODY[name])
+                else:
+                    problems.append(
+                        f'Подбор, строка {r}: кузов «{part.strip()}» неизвестен'
+                    )
+
+            wheel_raw = cell(row, 7).lower()
+            wheel = RU_WHEEL.get(wheel_raw, '')
+            if wheel_raw and not wheel:
+                problems.append(
+                    f'Подбор, строка {r}: руль «{wheel_raw}» — '
+                    f'пишите Левый или Правый'
+                )
+
+            wire_slug = cell(row, 9)
             if mode == 'fixed' and not wire_slug:
                 problems.append(
                     f'Подбор, строка {r}: для «Фиксированный» нужен код проводки'
@@ -1429,13 +1482,15 @@ def parse_wiring_xlsx(data: bytes) -> dict:
                     'model': model,
                     'yearFrom': year(4, 1990),
                     'yearTo': year(5, 2100),
+                    'bodies': bodies,
+                    'wheel': wheel,
                     'mode': mode,
                     'wireSlug': wire_slug,
-                    'reason': cell(row, 8)[:600],
+                    'reason': cell(row, 10)[:600],
                     'ask': {
-                        'amp': cell(row, 9).lower() == 'да',
-                        'camera': cell(row, 10).lower() == 'да',
-                        'can': cell(row, 11).lower() == 'да',
+                        'amp': cell(row, 11).lower() == 'да',
+                        'camera': cell(row, 12).lower() == 'да',
+                        'can': cell(row, 13).lower() == 'да',
                     },
                 }
             )
@@ -2886,7 +2941,9 @@ def handler(event: dict, context) -> dict:
                     f"mode = {q(c['mode'])}, "
                     f"wire_slug = {q(c['wireSlug'])}, "
                     f"reason = {q(c['reason'])}, "
-                    f"ask = {qjson(c['ask'])}, updated_at = NOW()"
+                    f"ask = {qjson(c['ask'])}, "
+                    f"bodies = {qjson(c['bodies'])}, "
+                    f"wheel = {q(c['wheel'])}, updated_at = NOW()"
                 )
                 if found:
                     cur.execute(
@@ -2897,10 +2954,12 @@ def handler(event: dict, context) -> dict:
                     cur.execute(
                         f"INSERT INTO {schema()}.vehicle_wiring "
                         f"(brand, model, year_from, year_to, mode, wire_slug, "
-                        f"reason, ask) VALUES ({q(c['brand'])}, {q(c['model'])}, "
+                        f"reason, ask, bodies, wheel) "
+                        f"VALUES ({q(c['brand'])}, {q(c['model'])}, "
                         f"{qint(c['yearFrom'], 1990)}, {qint(c['yearTo'], 2100)}, "
                         f"{q(c['mode'])}, {q(c['wireSlug'])}, {q(c['reason'])}, "
-                        f"{qjson(c['ask'])})"
+                        f"{qjson(c['ask'])}, {qjson(c['bodies'])}, "
+                        f"{q(c['wheel'])})"
                     )
                 updated += 1
 
