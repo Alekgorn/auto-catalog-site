@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import { uploadImage } from '@/components/admin/BlocksEditor';
 import { ShowcaseKit } from '@/lib/site-settings';
 import { Product } from '@/data/catalog';
-import { buildShareUrl, readShareParams } from '@/lib/share-kit';
+import { readShareParams } from '@/lib/share-kit';
 import { useToast } from '@/hooks/use-toast';
 
 interface Props {
@@ -301,12 +301,5 @@ const ShowcaseEditor = ({ value, onChange, products }: Props) => {
     </div>
   );
 };
-
-/** Ссылка на комплект: собираем при сохранении, чтобы не хранить лишнее */
-export const showcaseHref = (kit: ShowcaseKit): string =>
-  buildShareUrl({
-    lines: kit.ids.map((id) => ({ id, qty: 1 })),
-    vehicle: null,
-  });
 
 export default ShowcaseEditor;
