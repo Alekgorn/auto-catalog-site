@@ -478,13 +478,9 @@ def row_to_product(r: dict) -> dict:
         # Пусто — значит товар наследует умолчание своей категории
         'fitMode': r.get('fit_mode') or '',
         # Подбор проводки: с чем работает / что сохраняет / почему такая цена
-        'wireTech': r.get('wire_tech') or {},
-        'wireKeeps': r.get('wire_keeps') or {},
-        'wireLevel': r.get('wire_level') or '',
         # Пусто — проводка встаёт на любой кузов
         'wireBodies': r.get('wire_bodies') or [],
         'wireWheel': r.get('wire_wheel') or '',
-        'wireNote': r.get('wire_note') or '',
         # Проводки, подходящие к этой рамке. Пусто — ещё не размечено
         'frameWires': r.get('frame_wires') or [],
         # Проводка уже в коробке — отдельно предлагать не надо
@@ -2469,15 +2465,6 @@ def handler(event: dict, context) -> dict:
                     f"UPDATE {schema()}.products SET frame_wires = {qjson(slugs)}, "
                     f"updated_at = NOW() WHERE id IN ({id_list})"
                 )
-            elif op == 'wire-tech':
-                # Разметка проводок пачкой: у похожих позиций набор
-                # «камера / усилитель / CAN» совпадает, и щёлкать каждую
-                # по отдельности — терять время на 434 товарах
-                tech = clean_wire_tech(body.get('wireTech') or {})
-                cur.execute(
-                    f"UPDATE {schema()}.products SET wire_tech = {qjson(tech)}, "
-                    f"updated_at = NOW() WHERE id IN ({id_list})"
-                )
             elif op == 'wire-features':
                 # Разметка пачкой: у похожих проводок набор совпадает, и
                 # щёлкать каждую отдельно — терять часы на сотнях позиций
@@ -3366,14 +3353,6 @@ def handler(event: dict, context) -> dict:
                 'fit_mode': q(
                     body.get('fitMode') if body.get('fitMode') in FIT_MODES else ''
                 ),
-                'wire_tech': qjson(clean_wire_tech(body.get('wireTech') or {})),
-                'wire_keeps': qjson(clean_wire_keeps(body.get('wireKeeps') or {})),
-                'wire_level': q(
-                    body.get('wireLevel')
-                    if body.get('wireLevel') in WIRE_LEVELS
-                    else ''
-                ),
-                'wire_note': q(str(body.get('wireNote') or '')[:600]),
                 'wire_bodies': qjson(
                     [b for b in (body.get('wireBodies') or []) if b in BODY_TYPES]
                 ),

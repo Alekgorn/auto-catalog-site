@@ -1,0 +1,58 @@
+{
+ "сделано": "2026-09-04",
+ "описание": "Снимок полей перед удалением: wire_tech, wire_keeps, wire_level, wire_note. Схема заменена галочками wire_features и подсказкой рамки wire_hint.",
+ "записи": [
+  {
+   "id": 1696,
+   "name": "Переходник Андроид магнитолы для Honda Civic 2006 - 2011 хэтчбэк",
+   "wire_note": "Полная совместимость, именно с этой проводкой заработает отображение климат контроля на штатной дисплее",
+   "wire_level": "full",
+   "wire_tech": {
+    "amp": "no",
+    "can": "yes",
+    "power": "yes",
+    "sound": "yes",
+    "wheel": "yes",
+    "camera": "no"
+   },
+   "wire_keeps": {
+    "wheel": true,
+    "climate": true
+   }
+  },
+  {
+   "id": 241,
+   "name": "Переходник Андроид магнитолы для Honda 2005-2010",
+   "wire_note": "второй текст",
+   "wire_level": "full",
+   "wire_tech": {
+    "amp": "no",
+    "can": "no",
+    "power": "yes",
+    "sound": "yes",
+    "wheel": "yes",
+    "camera": "no"
+   },
+   "wire_keeps": {
+    "wheel": true
+   }
+  },
+  {
+   "id": 271,
+   "name": "Переходник Андроид магнитолы для Suzuki,Honda",
+   "wire_note": "второй текст",
+   "wire_level": "full",
+   "wire_tech": {
+    "amp": "no",
+    "can": "no",
+    "power": "yes",
+    "sound": "yes",
+    "wheel": "yes",
+    "camera": "no"
+   },
+   "wire_keeps": {
+    "wheel": true
+   }
+  }
+ ]
+}
