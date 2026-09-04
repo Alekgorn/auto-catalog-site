@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Selection from "@/components/Selection";
-import NewArrivals from "@/components/NewArrivals";
+import BuiltKits from "@/components/BuiltKits";
 import HowToBuy from "@/components/HowToBuy";
 import Faq from "@/components/Faq";
 import Contacts from "@/components/Contacts";
@@ -139,7 +139,7 @@ const Index = () => {
         {/* Подбор по машине — главное преимущество, поэтому идёт
             сразу под заголовком, до поиска и сценариев */}
         <Hero selection={<Selection {...selectorProps} />} />
-        <NewArrivals vehicle={vehicle} />
+        <BuiltKits />
         <HowToBuy />
         <Faq />
         <Contacts />
