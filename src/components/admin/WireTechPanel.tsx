@@ -66,12 +66,42 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
     return wires.filter((p) => {
       if (onlyEmpty && isDone(p) && !(String(p.id) in draft)) return false;
       if (!q) return true;
-      return `${p.name} ${p.sku}`.toLowerCase().includes(q);
+      /* Ищем и по совместимости: марки часто нет в названии — «Переходник
+         ISO 16 pin» подходит десятку брендов, но не называет ни одного */
+      const brands = Object.keys(p.fits ?? {}).join(' ');
+      return `${p.name} ${p.sku} ${brands}`.toLowerCase().includes(q);
     });
   }, [wires, search, onlyEmpty, draft]);
 
   const done = wires.filter(isDone).length;
   const changed = Object.keys(draft).length;
+
+  /*
+   * Где разметки ещё нет — по маркам.
+   *
+   * Считать в штуках проводок бесполезно: «осталось 400» ничего не
+   * говорит о том, за что браться. А вот «Lada — 38 непокрытых» сразу
+   * показывает, где заполнение даст больше всего пользы покупателю.
+   */
+  const gaps = useMemo(() => {
+    const map = new Map<string, { left: number; total: number }>();
+
+    wires.forEach((p) => {
+      const brands = Object.keys(p.fits ?? {});
+      const ok = isDone(p);
+      brands.forEach((b) => {
+        const cur = map.get(b) ?? { left: 0, total: 0 };
+        map.set(b, { left: cur.left + (ok ? 0 : 1), total: cur.total + 1 });
+      });
+    });
+
+    return [...map.entries()]
+      .map(([brand, v]) => ({ brand, ...v }))
+      .filter((x) => x.left > 0)
+      .sort((a, b) => b.left - a.left);
+  }, [wires]);
+
+  const percent = wires.length ? Math.round((done / wires.length) * 100) : 0;
 
   const toggle = (p: AdminProduct, key: string) => {
     const now = marksOf(p);
@@ -132,9 +162,61 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
           правильный вопрос вместо списка наугад. Сам список признаков
           правится в «Настройках».
         </p>
-        <div className="text-[0.78rem] text-muted-foreground">
-          Размечено {done} из {wires.length}
+      </div>
+
+      <div className="mt-5 border border-border p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <div className="font-head text-lg font-bold uppercase tracking-tight">
+            Размечено {done} из {wires.length}
+          </div>
+          <div className="font-head text-lg font-bold text-primary">
+            {percent}%
+          </div>
         </div>
+
+        <div className="mt-3 h-2 w-full bg-surface">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+
+        {gaps.length > 0 ? (
+          <>
+            <div className="mt-4 text-[0.85rem] text-muted-foreground">
+              Марки, где разметка не закончена — сначала те, где непокрытых
+              больше всего:
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {gaps.slice(0, 24).map((g) => (
+                <button
+                  key={g.brand}
+                  onClick={() => {
+                    setSearch(g.brand);
+                    setOnlyEmpty(true);
+                  }}
+                  title={`Показать непокрытые: ${g.brand}`}
+                  className="border border-border px-3 py-1.5 text-[0.8rem] transition-colors hover:border-primary hover:text-primary"
+                >
+                  {g.brand}
+                  <span className="ml-2 text-muted-foreground">
+                    {g.left} из {g.total}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {gaps.length > 24 && (
+              <div className="mt-3 text-[0.8rem] text-muted-foreground">
+                И ещё {gaps.length - 24} марок
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="mt-4 flex items-center gap-2 text-[0.85rem] text-primary">
+            <Icon name="Check" size={15} />
+            Все проводки размечены
+          </div>
+        )}
       </div>
 
       {/* Кнопка сверху: список длинный, и уезжать за сохранением вниз
