@@ -269,60 +269,58 @@ const KitWiring = ({
                 const done = val !== undefined;
                 const open = openHint === q.id;
                 return (
-                  <div key={q.id} className="py-2.5 first:pt-0 last:pb-0">
-                    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                        <span className="min-w-0 text-sm leading-snug">
-                          {q.title}
-                        </span>
-                        {/* Подсказка под знаком вопроса: нужна не всем,
-                            а места на телефоне занимала три строки */}
-                        <button
-                          onClick={() => setOpenHint(open ? null : q.id)}
-                          aria-label="Подсказка"
-                          className="flex-none text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                          <Icon
-                            name={open ? 'CircleX' : 'CircleHelp'}
-                            size={15}
-                          />
-                        </button>
-                      </div>
+                  <div key={q.id} className="py-3 first:pt-0 last:pb-0">
+                    {/* Вопрос строкой, кнопки — сразу под ним. Справа они
+                        уезжали к краю экрана и терялись: глаз читает
+                        вопрос и ждёт ответ там же, а не в стороне */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="min-w-0 text-sm font-medium leading-snug">
+                        {q.title}
+                      </span>
+                      <button
+                        onClick={() => setOpenHint(open ? null : q.id)}
+                        aria-label="Подсказка"
+                        className="flex-none text-muted-foreground transition-colors hover:text-foreground"
+                      >
+                        <Icon name={open ? 'CircleX' : 'CircleHelp'} size={15} />
+                      </button>
+                    </div>
 
-                      <div className="flex flex-none gap-1.5">
-                        {q.id === 'body'
-                          ? (q.bodies || []).map((b) => (
-                              <button
-                                key={b}
-                                onClick={() => answer('body', b)}
-                                className={`border px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                                  val === b
-                                    ? 'border-foreground bg-foreground text-background'
-                                    : 'border-border hover:border-foreground'
-                                }`}
-                              >
-                                {bodyTypeLabel(b)}
-                              </button>
-                            ))
-                          : (
-                              [
-                                { v: true, label: 'Есть' },
-                                { v: false, label: 'Нет' },
-                              ] as const
-                            ).map((o) => (
-                              <button
-                                key={String(o.v)}
-                                onClick={() => answer(q.id, o.v)}
-                                className={`border px-3 py-1.5 font-head text-[0.7rem] font-semibold uppercase tracking-[0.06em] transition-colors ${
-                                  done && val === o.v
-                                    ? 'border-foreground bg-foreground text-background'
-                                    : 'border-border text-muted-foreground hover:border-foreground hover:text-foreground'
-                                }`}
-                              >
-                                {o.label}
-                              </button>
-                            ))}
-                      </div>
+                    {/* Акцентная рамка: раньше кнопки были серыми по
+                        серому и не читались как то, что надо нажать */}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {q.id === 'body'
+                        ? (q.bodies || []).map((b) => (
+                            <button
+                              key={b}
+                              onClick={() => answer('body', b)}
+                              className={`border-2 px-4 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.06em] transition-colors ${
+                                val === b
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'
+                              }`}
+                            >
+                              {bodyTypeLabel(b)}
+                            </button>
+                          ))
+                        : (
+                            [
+                              { v: true, label: 'Есть' },
+                              { v: false, label: 'Нет' },
+                            ] as const
+                          ).map((o) => (
+                            <button
+                              key={String(o.v)}
+                              onClick={() => answer(q.id, o.v)}
+                              className={`border-2 px-4 py-2 font-head text-[0.72rem] font-bold uppercase tracking-[0.06em] transition-colors ${
+                                done && val === o.v
+                                  ? 'border-primary bg-primary text-primary-foreground'
+                                  : 'border-primary text-primary hover:bg-primary hover:text-primary-foreground'
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
                     </div>
 
                     {open && (
@@ -355,6 +353,9 @@ const KitWiring = ({
           </div>
         ))}
 
+      {/* До ответов список скрыт целиком: десяток похожих коробок
+          заставляет выбирать наугад */}
+      {!res.question && (
       <div className="mt-5 space-y-4">
           {/*
             Несколько проводок и точного ответа нет — честно говорим об этом.
@@ -471,7 +472,7 @@ const KitWiring = ({
             с завода, человеку нужен не фильтр, а объяснение — куда
             посмотреть в своей машине.
           */}
-          {frame?.wireHint && mainList.length > 1 && (
+          {frame?.wireHint && res.full.length > 1 && (
             <div className="flex items-start gap-2.5 border border-border bg-surface p-4">
               <Icon
                 name="Info"
@@ -526,16 +527,12 @@ const KitWiring = ({
                 onClick={() => setOpenBudget(true)}
                 className="group flex min-h-[13rem] flex-col items-center justify-center gap-2 border border-dashed border-foreground bg-surface px-3 py-6 text-center transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
               >
-                <Icon name="Wallet" size={22} className="flex-none" />
+                <Icon name="EyeOff" size={22} className="flex-none" />
                 <span className="font-head text-[0.8rem] font-bold uppercase leading-tight tracking-[0.06em]">
-                  {res.budget[0].price < res.full[0].price
-                    ? 'Дешевле, но без части функций'
-                    : 'Другие варианты'}
+                  Могут не подойти
                 </span>
                 <span className="text-[0.78rem] text-muted-foreground transition-colors group-hover:text-primary-foreground/80">
-                  {res.budget[0].price < res.full[0].price
-                    ? `от ${formatPrice(res.budget[0].price)}`
-                    : `ещё ${res.budget.length}`}
+                  ещё {res.budget.length} · от {formatPrice(res.budget[0].price)}
                 </span>
               </button>
             )}
@@ -546,16 +543,32 @@ const KitWiring = ({
             {res.pickMode === 'fixed' && openBudget && (
               <>
                 {res.budget.map((w) => (
-                  <ProductCard
-                    key={w.id}
-                    product={w}
-                    vehicle={vehicle}
-                    picked={pickedId === w.id}
-                    /* Сразу не выбираем: сначала честно предупреждаем,
-                       что часть функций не заработает */
-                    onPick={() => setWarnFor(w.id)}
-                    showWireFeatures
-                  />
+                  /* Подпись у каждой карточки, а не одна на группу:
+                     раскрыв список, человек про заголовок забывает и
+                     видит просто товар рядом с рекомендованным */
+                  <div key={w.id} className="flex flex-col">
+                    <div className="flex items-center gap-1.5 border border-b-0 border-[#B45309] bg-[#B45309]/5 px-2.5 py-1.5">
+                      <Icon
+                        name="TriangleAlert"
+                        size={13}
+                        className="flex-none text-[#B45309]"
+                      />
+                      <span className="font-head text-[0.63rem] font-bold uppercase leading-tight tracking-[0.04em] text-[#B45309]">
+                        Может не подойти к вашей комплектации
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <ProductCard
+                        product={w}
+                        vehicle={vehicle}
+                        picked={pickedId === w.id}
+                        /* Сразу не выбираем: сначала честно
+                           предупреждаем о рисках */
+                        onPick={() => setWarnFor(w.id)}
+                        showWireFeatures
+                      />
+                    </div>
+                  </div>
                 ))}
                 <button
                   onClick={() => setOpenBudget(false)}
@@ -624,13 +637,17 @@ const KitWiring = ({
             </div>
           )}
 
-          {res.full.length === 0 && res.budget.length === 0 && (
+          {/* Ждём ответов — это не «ничего не нашлось», а «ещё не
+              спрашивали». Путать их нельзя: человек решит, что для его
+              машины товара нет, и уйдёт */}
+          {!res.question && res.full.length === 0 && res.budget.length === 0 && (
             <div className="border border-border bg-card p-5 text-sm text-muted-foreground">
               Под такое сочетание готового варианта нет — напишите нам, подберём
               вручную.
             </div>
           )}
       </div>
+      )}
     </div>
   );
 };

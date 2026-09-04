@@ -205,6 +205,18 @@ export const bodyFromFrame = (frame?: Product | null): BodyType | null => {
   return list.length === 1 ? list[0] : null;
 };
 
+/**
+ * Порядок рекомендации: сначала то, что есть на складе, внутри — от
+ * дешёвого к дорогому. Советовать позицию под заказ, когда рядом лежит
+ * такая же в наличии, значит задержать отправку заказа на недели.
+ * Нет в наличии ничего — просто самая дешёвая идёт первой.
+ */
+export const byStockThenPrice = (a: Product, b: Product): number => {
+  const av = (a.stock ?? 0) > 0 ? 0 : 1;
+  const bv = (b.stock ?? 0) > 0 ? 0 : 1;
+  return av !== bv ? av - bv : a.price - b.price;
+};
+
 /** Подходит ли проводка машине по кузову */
 const bodyOk = (p: Product, body?: BodyType | null): boolean => {
   const list = p.wireBodies || [];
@@ -324,7 +336,7 @@ export const pickWires = (
   }
 
   if (fromFrame.length > 1) {
-    const byPrice = (a: Product, b: Product) => a.price - b.price;
+    const byPrice = byStockThenPrice;
 
     /*
      * Требования покупателя: «да» на вопрос — проводка обязана это
@@ -435,17 +447,37 @@ export const pickWires = (
   const question =
     questions.find((q) => answers[q.id] === undefined) ?? null;
 
-  /* Раньше «полные» и «бюджетные» задавались вручную полем-уровнем.
-     Теперь полнота видна из галочек: чем больше проводка подключает, тем
-     она полнее. Показываем всё подходящее одним списком по цене */
-  const full = left;
-  const budget: Product[] = [];
+  /*
+   * Вопросы ещё остались — список не отдаём вовсе. Показывать проводки
+   * до ответов бессмысленно: человек видит десяток похожих коробок,
+   * выбирает наугад и ошибается. Сначала комплектация, потом товар.
+   */
+  if (question) {
+    return {
+      pickMode: 'select',
+      full: [],
+      budget: [],
+      question,
+      questions,
+      fallback: false,
+    };
+  }
+
+  /*
+   * Ответы получены — делим на «подходит» и «может не подойти».
+   *
+   * Второе не выбрасываем: у человека могла быть нестандартная
+   * комплектация или он ошибся в ответе. Но и рядом как равные ставить
+   * нельзя — прячем под кнопку с честной пометкой.
+   */
+  const base = marked.filter((p) => bodyOk(p, knownBody));
+  const rest = base.filter((p) => !left.includes(p));
 
   return {
-    pickMode: 'select',
-    full: full.sort((a, b) => a.price - b.price),
-    budget: budget.sort((a, b) => a.price - b.price),
-    question,
+    pickMode: 'fixed',
+    full: [...left].sort(byStockThenPrice),
+    budget: [...rest].sort(byStockThenPrice),
+    question: null,
     questions,
     fallback: false,
   };
