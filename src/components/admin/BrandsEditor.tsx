@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { compareNames } from '@/lib/slug';
 import BrandWiringEditor from '@/components/admin/BrandWiringEditor';
 import { BodyType } from '@/data/catalog';
+import { AdminProduct } from '@/components/admin/product-editor/product-types';
 
 export interface AdminBrand {
   name: string;
@@ -15,11 +16,13 @@ export interface AdminBrand {
 
 interface Props {
   brands: AdminBrand[];
+  /** Каталог целиком — из него берём рамки, чтобы показать их фото */
+  products: AdminProduct[];
   onSave: (brands: AdminBrand[]) => void;
   onReload?: () => void;
 }
 
-const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
+const BrandsEditor = ({ brands, products, onSave, onReload }: Props) => {
   const { toast } = useToast();
   const [list, setList] = useState<AdminBrand[]>(brands);
   const [busy, setBusy] = useState(false);
@@ -190,6 +193,7 @@ const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
                   <BrandWiringEditor
                     brand={b.name}
                     models={b.models.filter(Boolean)}
+                    products={products}
                   />
                 </div>
               )}

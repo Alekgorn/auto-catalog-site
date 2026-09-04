@@ -430,13 +430,28 @@ const PeriodsList = ({
 
             <div className="mt-2 grid gap-x-6 gap-y-1 text-[0.8rem] sm:grid-cols-[9.5rem_1fr]">
               <span className="text-muted-foreground">Рамки делят на</span>
-              <span className="flex flex-wrap gap-x-4 gap-y-1">
+              <span className="flex flex-wrap gap-x-5 gap-y-3">
                 {r.periods.map((p) => (
-                  <span key={`${p.from}-${p.to}`}>
+                  <span key={`${p.from}-${p.to}`} className="block">
                     {p.from}–{p.to}
                     <span className="ml-1 text-[0.72rem] text-muted-foreground">
                       {p.frames} шт
                     </span>
+                    {/* Фото решают то, чего не решают годы: две рамки
+                        рядом — и сразу видно, что панели разные */}
+                    {p.images.length > 0 && (
+                      <span className="mt-1 flex gap-1">
+                        {p.images.map((src) => (
+                          <img
+                            key={src}
+                            src={src}
+                            alt=""
+                            loading="lazy"
+                            className="h-12 w-12 flex-none border border-border bg-card object-contain p-0.5"
+                          />
+                        ))}
+                      </span>
+                    )}
                   </span>
                 ))}
               </span>

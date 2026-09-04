@@ -420,7 +420,12 @@ const Admin = () => {
         )}
 
         {tab === "brands" && (
-          <BrandsEditor brands={brands} onSave={saveBrands} onReload={load} />
+          <BrandsEditor
+            brands={brands}
+            products={products}
+            onSave={saveBrands}
+            onReload={load}
+          />
         )}
 
         {tab === "categories" && <CategoriesEditor onSaved={load} />}

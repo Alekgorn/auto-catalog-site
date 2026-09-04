@@ -326,6 +326,8 @@ export interface FramePeriod {
   to: number;
   /** Сколько рамок продаётся на этот период */
   frames: number;
+  /** Фото рамок — по ним разницу между периодами видно за секунду */
+  images: string[];
   /** Строка разметки, накрывающая период целиком. Нет — период не размечен */
   markedBy?: string;
 }
@@ -357,7 +359,11 @@ export interface PeriodRow {
 const framePeriods = (frames: AdminProduct[]): FramePeriod[] => {
   const spans = frames
     .filter((p) => p.yearFrom && (!p.yearTo || p.yearTo - p.yearFrom <= 14))
-    .map((p) => ({ from: p.yearFrom, to: p.yearTo || YEAR_MAX }))
+    .map((p) => ({
+      from: p.yearFrom,
+      to: p.yearTo || YEAR_MAX,
+      image: p.images?.[0] ?? '',
+    }))
     .sort((a, b) => a.from - b.from || a.to - b.to);
 
   const out: FramePeriod[] = [];
@@ -366,9 +372,15 @@ const framePeriods = (frames: AdminProduct[]): FramePeriod[] => {
     // Тот же период с точностью до года — это та же машина, не новая
     if (last && Math.abs(last.from - s.from) <= 1 && Math.abs(last.to - s.to) <= 1) {
       last.frames += 1;
+      if (s.image && last.images.length < 4) last.images.push(s.image);
       return;
     }
-    out.push({ from: s.from, to: s.to, frames: 1 });
+    out.push({
+      from: s.from,
+      to: s.to,
+      frames: 1,
+      images: s.image ? [s.image] : [],
+    });
   });
   return out;
 };
