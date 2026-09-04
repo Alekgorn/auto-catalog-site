@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
-import { SCENARIOS } from '@/data/scenarios';
+import { useCatalog } from '@/context/CatalogContext';
+import { visibleScenarios } from '@/lib/scenario-settings';
 
 /**
  * Сценарии использования — «живые» формулировки задач клиента.
@@ -9,6 +10,8 @@ import { SCENARIOS } from '@/data/scenarios';
  */
 const Scenarios = () => {
   const navigate = useNavigate();
+  const { scenarioSettings } = useCatalog();
+  const list = visibleScenarios(scenarioSettings);
 
   /** Открываем страницу сценария — там текст, подбор по машине и товары */
   const open = (slug: string) => navigate(`/scenario/${slug}`);
@@ -34,7 +37,7 @@ const Scenarios = () => {
     </div>
 
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {SCENARIOS.map((s) => (
+      {list.map((s) => (
         <button
           key={s.slug}
           type="button"

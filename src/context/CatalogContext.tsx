@@ -26,6 +26,10 @@ import {
   ShowcaseKit,
   SiteContacts,
 } from '@/lib/site-settings';
+import {
+  ScenarioOverride,
+  DEFAULT_SCENARIOS,
+} from '@/lib/scenario-settings';
 
 export interface PrerenderData {
   products?: Product[];
@@ -38,6 +42,7 @@ export interface PrerenderData {
     card_fields?: string[];
     wire_features?: WireFeature[];
     showcase?: ShowcaseKit[];
+    scenarios?: ScenarioOverride[];
     contacts?: Partial<SiteContacts>;
     faq?: FaqItem[];
     filter_blocks?: FilterBlockKey[];
@@ -70,6 +75,7 @@ interface CatalogValue {
   /** Справочник признаков подключения — по нему подбор задаёт вопросы */
   wireFeatures: WireFeature[];
   showcase: ShowcaseKit[];
+  scenarioSettings: ScenarioOverride[];
   contacts: SiteContacts;
   faq: FaqItem[];
   filterBlocks: FilterBlockKey[];
@@ -224,6 +230,9 @@ export const CatalogProvider = ({
   const [showcase, setShowcase] = useState<ShowcaseKit[]>(
     seed?.settings?.showcase ?? [],
   );
+  const [scenarioSettings, setScenarioSettings] = useState<ScenarioOverride[]>(
+    seed?.settings?.scenarios ?? DEFAULT_SCENARIOS,
+  );
   const [contacts, setContacts] = useState<SiteContacts>({
     ...DEFAULT_CONTACTS,
     ...(seed?.settings?.contacts ?? {}),
@@ -321,6 +330,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.showcase)) {
           setShowcase(data.settings.showcase);
         }
+        if (Array.isArray(data.settings?.scenarios) && data.settings.scenarios.length) {
+          setScenarioSettings(data.settings.scenarios);
+        }
         if (Array.isArray(data.settings?.wire_features)) {
           setWireFeatures(data.settings.wire_features);
         }
@@ -388,6 +400,7 @@ export const CatalogProvider = ({
     cardFields,
     wireFeatures,
     showcase,
+    scenarioSettings,
     contacts,
     faq,
     filterBlocks,
