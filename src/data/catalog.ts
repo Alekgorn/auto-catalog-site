@@ -87,6 +87,8 @@ export interface Product {
   frameWires?: string[];
   /** Проводка уже в комплекте рамки — шаг подключения пропускаем */
   wireIncluded?: boolean;
+  /** Что подключает — id из справочника признаков */
+  wireFeatures?: string[];
   /** Текст про сохранение функций — его видит покупатель */
   wireNote?: string;
   years: [number, number];
@@ -676,3 +678,12 @@ export const splitByFit = <T,>(
 
 export const formatPrice = (n: number): string =>
   n.toLocaleString('ru-RU') + ' ₽';
+/**
+ * Признак подключения из справочника (настройки админки).
+ * ask — задавать ли по нему вопрос покупателю при подборе.
+ */
+export interface WireFeature {
+  id: string;
+  label: string;
+  ask?: boolean;
+}

@@ -489,6 +489,8 @@ def row_to_product(r: dict) -> dict:
         'frameWires': r.get('frame_wires') or [],
         # Проводка уже в коробке — отдельно предлагать не надо
         'wireIncluded': bool(r.get('wire_included')),
+        # Что подключает — id из справочника wire_features
+        'wireFeatures': r.get('wire_features') or [],
         'sortOrder': r['sort_order'],
         'popularity': r.get('popularity') or 0,
         'stock': r.get('stock_qty') or 0,
@@ -2474,6 +2476,16 @@ def handler(event: dict, context) -> dict:
                     f"UPDATE {schema()}.products SET wire_tech = {qjson(tech)}, "
                     f"updated_at = NOW() WHERE id IN ({id_list})"
                 )
+            elif op == 'wire-features':
+                # Разметка пачкой: у похожих проводок набор совпадает, и
+                # щёлкать каждую отдельно — терять часы на сотнях позиций
+                feats = [
+                    str(x) for x in (body.get('wireFeatures') or []) if x
+                ][:30]
+                cur.execute(
+                    f"UPDATE {schema()}.products SET wire_features = {qjson(feats)}, "
+                    f"updated_at = NOW() WHERE id IN ({id_list})"
+                )
             elif op in ('show', 'hide'):
                 flag = 'TRUE' if op == 'show' else 'FALSE'
                 cur.execute(
@@ -3372,6 +3384,9 @@ def handler(event: dict, context) -> dict:
                     [str(x) for x in (body.get('frameWires') or []) if x][:20]
                 ),
                 'wire_included': 'TRUE' if body.get('wireIncluded') else 'FALSE',
+                'wire_features': qjson(
+                    [str(x) for x in (body.get('wireFeatures') or []) if x][:30]
+                ),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

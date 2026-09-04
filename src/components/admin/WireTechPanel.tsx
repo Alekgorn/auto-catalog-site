@@ -1,14 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import {
-  AdminProduct,
-  WIRE_TECH,
-  WireTechValue,
-} from '@/components/admin/product-editor/product-types';
+import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { WIRES_CATEGORY } from '@/lib/kit-filter';
-import { formatPrice } from '@/data/catalog';
+import { formatPrice, WireFeature } from '@/data/catalog';
 
 interface Props {
   products: AdminProduct[];
@@ -17,32 +13,33 @@ interface Props {
   onEdit?: (p: AdminProduct) => void;
 }
 
-/** Что спрашиваем у покупателя — эти три решают, какая проводка нужна */
-const KEYS = ['amp', 'camera', 'can'];
-
-const OPTS: { id: WireTechValue; label: string; hint: string }[] = [
-  { id: 'yes', label: 'Только с ним', hint: 'Проводка нужна, если это есть' },
-  { id: 'no', label: 'Только без', hint: 'Проводка не рассчитана на это' },
-  { id: 'any', label: 'Неважно', hint: 'Подходит в любом случае' },
-];
-
 /**
- * Быстрая разметка проводок: усилитель, камера, CAN-шина.
+ * Быстрая разметка проводок: что каждая подключает.
  *
  * Привязка к рамке отвечает, какие проводки вообще подходят. Но если их
- * две-три, надо понять, какая нужна конкретному человеку — и решают это
- * ровно три признака. Остальные параметры (питание, акустика) есть у
- * всех и ничего не отсеивают, поэтому их тут нет: экран для работы, а
- * не для полноты.
+ * две-три, надо понять, какая нужна конкретному человеку — это и решают
+ * галочки. Список признаков берётся из настроек, поэтому новый пункт
+ * появляется здесь сам, без правки кода.
  *
- * Значения ставятся прямо в строке, без открытия карточки товара: на
- * четырёхстах позициях каждый лишний клик стоит часов.
+ * Галочки ставятся прямо в строке, без открытия карточки: на четырёхстах
+ * позициях каждый лишний клик стоит часов.
  */
 const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlyEmpty, setOnlyEmpty] = useState(true);
   const [busy, setBusy] = useState('');
+  const [dict, setDict] = useState<WireFeature[]>([]);
+
+  useEffect(() => {
+    adminFetch('?action=settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.settings?.wire_features))
+          setDict(d.settings.wire_features);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const wires = useMemo(
     () =>
@@ -52,8 +49,9 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
     [products],
   );
 
-  const isDone = (p: AdminProduct) =>
-    KEYS.every((k) => !!(p.wireTech || {})[k]);
+  // Размечено — значит хоть одна галочка стоит: пустой список ничего не
+  // говорит подбору
+  const isDone = (p: AdminProduct) => !!(p.wireFeatures || []).length;
 
   const shown = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -66,16 +64,19 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
 
   const done = wires.filter(isDone).length;
 
-  /** Меняем один признак товара, остальные не трогаем */
-  const setTech = async (p: AdminProduct, key: string, val: WireTechValue) => {
-    const next = { ...(p.wireTech || {}), [key]: val };
+  /** Переключаем одну галочку, остальные не трогаем */
+  const toggle = async (p: AdminProduct, key: string) => {
+    const now = p.wireFeatures || [];
+    const next = now.includes(key)
+      ? now.filter((x) => x !== key)
+      : [...now, key];
     setBusy(p.slug ?? '');
     const res = await adminFetch('?action=bulk', {
       method: 'POST',
       body: JSON.stringify({
-        op: 'wire-tech',
+        op: 'wire-features',
         ids: [p.id],
-        wireTech: next,
+        wireFeatures: next,
       }),
     });
     setBusy('');
@@ -90,10 +91,10 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
     <div>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
-          Когда к рамке подходит несколько проводок, выбрать нужную помогают
-          три признака: штатный усилитель, камера и CAN-шина. Отметьте их —
-          и подбор задаст покупателю правильный вопрос вместо списка
-          вариантов наугад.
+          Отметьте, что подключает каждая проводка. Когда к рамке подходит
+          несколько вариантов, подбор по этим галочкам задаст покупателю
+          правильный вопрос вместо списка наугад. Сам список признаков
+          правится в «Настройках».
         </p>
         <div className="text-[0.78rem] text-muted-foreground">
           Размечено {done} из {wires.length}
@@ -153,31 +154,24 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                {WIRE_TECH.filter((t) => KEYS.includes(t.id)).map((t) => (
-                  <div key={t.id}>
-                    <div className="text-[0.68rem] uppercase tracking-[0.08em] text-muted-foreground">
-                      {t.label}
-                    </div>
-                    <div className="mt-1 flex">
-                      {OPTS.map((o) => (
-                        <button
-                          key={o.id}
-                          title={o.hint}
-                          disabled={busy === (p.slug ?? '')}
-                          onClick={() => setTech(p, t.id, o.id)}
-                          className={`border px-2.5 py-1 text-[0.7rem] transition-colors disabled:opacity-50 ${
-                            (p.wireTech || {})[t.id] === o.id
-                              ? 'border-foreground bg-foreground text-background'
-                              : 'border-border text-muted-foreground hover:border-foreground'
-                          }`}
-                        >
-                          {o.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {dict.map((f) => {
+                  const on = (p.wireFeatures || []).includes(f.id);
+                  return (
+                    <button
+                      key={f.id}
+                      disabled={busy === (p.slug ?? '')}
+                      onClick={() => toggle(p, f.id)}
+                      className={`border px-2.5 py-1 text-[0.72rem] transition-colors disabled:opacity-50 ${
+                        on
+                          ? 'border-foreground bg-foreground text-background'
+                          : 'border-border text-muted-foreground hover:border-foreground'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ))}

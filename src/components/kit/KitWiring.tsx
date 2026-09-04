@@ -11,7 +11,6 @@ import {
 import {
   pickWires,
   WireAnswers,
-  KEEP_LABELS,
   VehicleWiring,
   findWiring,
   wiringBodyChoice,
@@ -59,9 +58,11 @@ const WireCard = ({
   /** Вариант из скрытого списка: работает, но с ограничениями */
   limited?: boolean;
 }) => {
+  const { wireFeatures: features } = useCatalog();
   const photos = productImages(wire);
-  const keeps = wire.wireKeeps || {};
-  const rows = Object.keys(KEEP_LABELS).filter((k) => k in keeps);
+  /* Что подключает эта проводка. Показываем весь справочник: покупателю
+     важно не только что работает, но и чего он не получит */
+  const marks = wire.wireFeatures || [];
   const text = note || wire.wireNote;
 
   return (
@@ -124,26 +125,29 @@ const WireCard = ({
             </p>
           )}
 
-          {rows.length > 0 && (
+          {marks.length > 0 && features.length > 0 && (
             <ul className="mt-3 space-y-1.5">
-              {rows.map((k) => (
-                <li key={k} className="flex items-start gap-2 text-sm">
-                  <Icon
-                    name={keeps[k] ? 'Check' : 'X'}
-                    size={15}
-                    className={`mt-0.5 shrink-0 ${
-                      keeps[k] ? 'text-success' : 'text-primary'
-                    }`}
-                  />
-                  <span
-                    className={
-                      keeps[k] ? '' : 'text-muted-foreground line-through'
-                    }
-                  >
-                    {KEEP_LABELS[k]}
-                  </span>
-                </li>
-              ))}
+              {features.map((f) => {
+                const on = marks.includes(f.id);
+                return (
+                  <li key={f.id} className="flex items-start gap-2 text-sm">
+                    <Icon
+                      name={on ? 'Check' : 'X'}
+                      size={15}
+                      className={`mt-0.5 shrink-0 ${
+                        on ? 'text-success' : 'text-primary'
+                      }`}
+                    />
+                    <span
+                      className={
+                        on ? '' : 'text-muted-foreground line-through'
+                      }
+                    >
+                      {f.label}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -187,7 +191,7 @@ const KitWiring = ({
   pickedId,
   onPick,
 }: Props) => {
-  const { contacts } = useCatalog();
+  const { contacts, wireFeatures } = useCatalog();
   const [answers, setAnswers] = useState<WireAnswers>({});
   const [openBudget, setOpenBudget] = useState(false);
   /** Раскрыты ли проводки соседнего периода — для переходного года */
@@ -230,8 +234,17 @@ const KitWiring = ({
   }, [wirings, vehicle, knownBody, modelBodies]);
 
   const res = useMemo(
-    () => pickWires(products, vehicle, answers, modelBodies, wiring, frame),
-    [products, vehicle, answers, modelBodies, wiring, frame],
+    () =>
+      pickWires(
+        products,
+        vehicle,
+        answers,
+        modelBodies,
+        wiring,
+        frame,
+        wireFeatures,
+      ),
+    [products, vehicle, answers, modelBodies, wiring, frame, wireFeatures],
   );
 
   /*
@@ -248,7 +261,15 @@ const KitWiring = ({
     const shownIds = new Set([...res.full, ...res.budget].map((p) => p.id));
     const out: Product[] = [];
     others.forEach((w) => {
-      const alt = pickWires(products, vehicle, answers, modelBodies, w, frame);
+      const alt = pickWires(
+        products,
+        vehicle,
+        answers,
+        modelBodies,
+        w,
+        frame,
+        wireFeatures,
+      );
       [...alt.full, ...alt.budget].forEach((p) => {
         if (shownIds.has(p.id)) return;
         shownIds.add(p.id);

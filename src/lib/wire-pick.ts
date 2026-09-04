@@ -1,16 +1,23 @@
-import { Product, Vehicle, BodyType, isCompatible } from '@/data/catalog';
+import {
+  Product,
+  Vehicle,
+  BodyType,
+  WireFeature,
+  isCompatible,
+} from '@/data/catalog';
 
-/** Что покупатель ответил про своё авто. undefined — ещё не спрашивали */
+/**
+ * Что покупатель ответил про своё авто. Ключи — id признаков из
+ * справочника плюс кузов. undefined значит «ещё не спрашивали».
+ */
 export interface WireAnswers {
-  amp?: boolean | null;
-  camera?: boolean | null;
-  can?: boolean | null;
   body?: BodyType | null;
+  [feature: string]: boolean | BodyType | null | undefined;
 }
 
 /** Вопрос, который стоит задать: без него варианты не различить */
 export interface WireQuestion {
-  id: 'amp' | 'camera' | 'can' | 'body';
+  id: string;
   title: string;
   hint: string;
   /** Для кузова — из чего выбирать (у машины их обычно два) */
@@ -136,8 +143,14 @@ export interface WirePick {
 }
 
 /** Товар размечен, если у него проставлен уровень совместимости */
-export const isMarked = (p: Product): boolean => !!p.wireLevel;
+export const isMarked = (p: Product): boolean =>
+  !!p.wireLevel || !!(p.wireFeatures || []).length;
 
+/*
+ * Подсказки к вопросам. Для привычных признаков текст выверен и живёт
+ * здесь; для новых, добавленных в справочнике, вопрос собирается из
+ * названия — «В машине есть штатный усилитель?».
+ */
 const QUESTIONS: Record<string, { title: string; hint: string }> = {
   camera: {
     title: 'На машине есть штатная камера заднего вида?',
@@ -152,6 +165,13 @@ const QUESTIONS: Record<string, { title: string; hint: string }> = {
     hint: 'Если руль управляет магнитолой, а на панели есть бортовой компьютер — в машине есть CAN-шина.',
   },
 };
+
+/** Текст вопроса: выверенный для знакомых признаков, иначе из названия */
+const questionFor = (f: WireFeature): { title: string; hint: string } =>
+  QUESTIONS[f.id] ?? {
+    title: `В машине есть «${f.label.toLowerCase()}»?`,
+    hint: 'От этого зависит, какая проводка подойдёт.',
+  };
 
 /**
  * Кузов, который выдала выбранная рамка.
@@ -177,24 +197,31 @@ const bodyOk = (p: Product, body?: BodyType | null): boolean => {
 const wheelOk = (p: Product, wheel?: '' | 'left' | 'right' | null): boolean =>
   !p.wireWheel || !wheel || p.wireWheel === wheel;
 
-/** Сверяем ответ покупателя с требованием проводки */
-const techOk = (p: Product, key: string, answer?: boolean | null): boolean => {
-  const need = (p.wireTech || {})[key];
-  if (!need || need === 'any') return true;
-  // Не спросили — не отсеиваем: решать будем после ответа
-  if (answer === undefined || answer === null) return true;
-  return need === (answer ? 'yes' : 'no');
+/**
+ * Сверяем ответ покупателя с тем, что проводка подключает.
+ *
+ * «Да, усилитель есть» — нужна проводка с этой галочкой, иначе звука не
+ * будет. «Нет» — не отсеиваем ничего: проводка, которая умеет больше,
+ * работает и на простой машине, просто стоит дороже. Прятать её нельзя,
+ * это лишает человека выбора.
+ */
+const featureOk = (
+  p: Product,
+  key: string,
+  answer?: boolean | BodyType | null,
+): boolean => {
+  if (answer !== true) return true;
+  return (p.wireFeatures || []).includes(key);
 };
 
 /**
- * Различает ли параметр оставшиеся варианты. Спрашивать про то, что
+ * Различает ли признак оставшиеся варианты. Спрашивать про то, что
  * ничего не меняет, — верный способ потерять покупателя.
  */
 const splits = (items: Product[], key: string): boolean => {
-  const vals = new Set(
-    items.map((p) => (p.wireTech || {})[key] || 'any').filter((v) => v !== 'any'),
-  );
-  return vals.size > 1;
+  const has = items.some((p) => (p.wireFeatures || []).includes(key));
+  const hasNot = items.some((p) => !(p.wireFeatures || []).includes(key));
+  return has && hasNot;
 };
 
 const bodySplits = (items: Product[]): BodyType[] => {
@@ -230,7 +257,11 @@ export const pickWires = (
   modelBodies: BodyType[] = [],
   wiring: VehicleWiring | null = null,
   frame?: Product | null,
+  /** Справочник признаков из настроек — какие вопросы вообще возможны */
+  features: WireFeature[] = [],
 ): WirePick => {
+  // Спрашиваем только о том, что отмечено «спрашивать» в настройках
+  const asked = features.filter((f) => f.ask);
   const empty: WirePick = {
     pickMode: 'select',
     full: [],
@@ -271,23 +302,20 @@ export const pickWires = (
   }
 
   if (fromFrame.length > 1) {
-    let left = fromFrame.filter(
-      (p) =>
-        techOk(p, 'amp', answers.amp) &&
-        techOk(p, 'camera', answers.camera) &&
-        techOk(p, 'can', answers.can),
+    let left = fromFrame.filter((p) =>
+      asked.every((f) => featureOk(p, f.id, answers[f.id])),
     );
     if (!left.length) left = fromFrame;
 
     // Спрашиваем только о том, что реально делит оставшиеся варианты
-    const next = (['camera', 'amp', 'can'] as const).find(
-      (k) => answers[k] === undefined && splits(left, k),
+    const next = asked.find(
+      (f) => answers[f.id] === undefined && splits(left, f.id),
     );
     return {
       pickMode: left.length === 1 ? 'fixed' : 'select',
       full: left.sort((a, b) => a.price - b.price),
       budget: [],
-      question: next ? { id: next, ...QUESTIONS[next] } : null,
+      question: next ? { id: next.id, ...questionFor(next) } : null,
       fallback: false,
     };
   }
@@ -330,9 +358,7 @@ export const pickWires = (
   let left = marked.filter(
     (p) =>
       bodyOk(p, knownBody) &&
-      techOk(p, 'amp', answers.amp) &&
-      techOk(p, 'camera', answers.camera) &&
-      techOk(p, 'can', answers.can),
+      asked.every((f) => featureOk(p, f.id, answers[f.id])),
   );
   if (!left.length) left = marked;
 
@@ -351,18 +377,21 @@ export const pickWires = (
       bodies,
     };
   } else {
-    const next = (['camera', 'amp', 'can'] as const).find(
-      (k) =>
-        answers[k] === undefined &&
-        splits(left, k) &&
+    const next = asked.find(
+      (f) =>
+        answers[f.id] === undefined &&
+        splits(left, f.id) &&
         // Режим «Подбор»: спрашиваем только про то, что отмечено в админке
-        (wiring?.mode !== 'select' || !!wiring.ask?.[k]),
+        (wiring?.mode !== 'select' || !!wiring.ask?.[f.id]),
     );
-    if (next) question = { id: next, ...QUESTIONS[next] };
+    if (next) question = { id: next.id, ...questionFor(next) };
   }
 
-  const full = left.filter((p) => p.wireLevel === 'full');
-  const budget = left.filter((p) => p.wireLevel && p.wireLevel !== 'full');
+  /* Раньше «полные» и «бюджетные» задавались вручную полем-уровнем.
+     Теперь полнота видна из галочек: чем больше проводка подключает, тем
+     она полнее. Показываем всё подходящее одним списком по цене */
+  const full = left;
+  const budget: Product[] = [];
 
   return {
     pickMode: 'select',

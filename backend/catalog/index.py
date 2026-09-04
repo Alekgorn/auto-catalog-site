@@ -35,7 +35,7 @@ def handler(event: dict, context) -> dict:
             # Подбор проводки: для каких машин и что сохраняет
             f"p.wire_tech, p.wire_keeps, p.wire_level, p.wire_note, p.wire_bodies, p.wire_wheel, "
             # Проводки, подходящие к рамке — по ним подбор и работает
-            f"p.frame_wires, p.wire_included, "
+            f"p.frame_wires, p.wire_included, p.wire_features, "
             # Тип подбора: своё значение товара важнее умолчания категории
             f"COALESCE(NULLIF(p.fit_mode, ''), c.fit_mode, 'universal') AS fit_mode "
             f"FROM {schema}.products p LEFT JOIN {schema}.categories c ON c.name = p.category "
@@ -76,6 +76,7 @@ def handler(event: dict, context) -> dict:
                 'wireWheel': r['wire_wheel'] or '',
                 'frameWires': r['frame_wires'] or [],
                 'wireIncluded': bool(r['wire_included']),
+                'wireFeatures': r['wire_features'] or [],
                 'createdAt': r['created_at'].isoformat() if r['created_at'] else None,
                 'popularity': r['popularity'],
                 'stock': r['stock_qty'],

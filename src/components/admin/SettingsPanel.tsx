@@ -4,6 +4,7 @@ import { adminFetch } from '@/lib/api';
 import { CARD_FIELDS } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
 import SearchPagesPanel from '@/components/admin/SearchPagesPanel';
+import WireFeaturesEditor from '@/components/admin/WireFeaturesEditor';
 
 interface Props {
   onImported: () => void;
@@ -214,6 +215,10 @@ const SettingsPanel = ({ onImported }: Props) => {
     <div className="grid grid-cols-1 gap-x-6 gap-y-12 py-8 lg:grid-cols-12">
       <div className="lg:col-span-12">
         <SearchPagesPanel />
+      </div>
+
+      <div className="lg:col-span-12">
+        <WireFeaturesEditor />
       </div>
 
       <div className="lg:col-span-5">
