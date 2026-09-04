@@ -3,9 +3,7 @@ import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { compareNames } from '@/lib/slug';
-import BrandWiringEditor from '@/components/admin/BrandWiringEditor';
 import { BodyType } from '@/data/catalog';
-import { AdminProduct } from '@/components/admin/product-editor/product-types';
 
 export interface AdminBrand {
   name: string;
@@ -16,19 +14,16 @@ export interface AdminBrand {
 
 interface Props {
   brands: AdminBrand[];
-  /** Каталог целиком — из него берём рамки, чтобы показать их фото */
-  products: AdminProduct[];
   onSave: (brands: AdminBrand[]) => void;
   onReload?: () => void;
 }
 
-const BrandsEditor = ({ brands, products, onSave, onReload }: Props) => {
+const BrandsEditor = ({ brands, onSave, onReload }: Props) => {
   const { toast } = useToast();
   const [list, setList] = useState<AdminBrand[]>(brands);
   const [busy, setBusy] = useState(false);
   /** У какой марки раскрыт список кузовов */
   /** У какой марки раскрыт подбор проводки */
-  const [openWiring, setOpenWiring] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -176,28 +171,6 @@ const BrandsEditor = ({ brands, products, onSave, onReload }: Props) => {
               </button>
             </div>
 
-            <div className="md:col-span-12">
-              <button
-                onClick={() => setOpenWiring(openWiring === i ? null : i)}
-                className="mt-2 flex items-center gap-1.5 text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
-              >
-                <Icon
-                  name={openWiring === i ? 'ChevronDown' : 'ChevronRight'}
-                  size={13}
-                />
-                Подбор проводки
-              </button>
-
-              {openWiring === i && (
-                <div className="mt-3 border-l-2 border-border pl-4">
-                  <BrandWiringEditor
-                    brand={b.name}
-                    models={b.models.filter(Boolean)}
-                    products={products}
-                  />
-                </div>
-              )}
-            </div>
           </div>
         ))}
       </div>
