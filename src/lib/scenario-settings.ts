@@ -36,6 +36,18 @@ export const CATALOG_SLUG = 'vse-po-mashine';
 export const CATALOG_PATH = '/catalog';
 
 /**
+ * Адрес сценария. Каталог живёт на двух адресах сразу — коротком и
+ * старом, — поэтому проверять надо оба: иначе на /catalog панель сборки
+ * считала, что сценарий не открыт, и товар уходил мимо комплекта.
+ */
+export const scenarioPath = (slug: string) => `/scenario/${slug}`;
+
+/** Открыт ли сейчас этот сценарий — с учётом короткого адреса каталога */
+export const isScenarioPath = (pathname: string, slug: string) =>
+  pathname === scenarioPath(slug) ||
+  (slug === CATALOG_SLUG && pathname === CATALOG_PATH);
+
+/**
  * Сценарии, где состав разделов трогать нельзя.
  *
  * Подбор магнитолы идёт по шагам со своей сортировкой: рамка ищется под

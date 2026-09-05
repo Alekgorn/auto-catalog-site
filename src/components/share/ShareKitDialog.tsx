@@ -4,6 +4,7 @@ import Icon from '@/components/ui/icon';
 import { Vehicle, formatPrice } from '@/data/catalog';
 import { isVehicle } from '@/lib/vehicle';
 import { shareText } from '@/lib/share-kit';
+import { copyToClipboard } from '@/lib/clipboard';
 import { usePrice } from '@/hooks/use-price';
 import QuoteTab, { QuoteItem } from '@/components/share/QuoteTab';
 
@@ -66,22 +67,16 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
   const text = shareText(count, vehicle);
   const message = `${text} ${url}`;
 
-  /** Кладём строку в буфер; запасной путь — для браузеров, где буфер закрыт */
-  const copyText = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-    } catch {
-      const input = document.createElement('input');
-      input.value = value;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-    }
-  };
+  const copyText = copyToClipboard;
 
   const copy = async () => {
-    await copyText(url);
+    const ok = await copyText(url);
+    /* Не получилось — честно говорим и показываем адрес, чтобы человек
+       скопировал руками. Раньше кнопка молча делала вид, что сработала */
+    if (!ok) {
+      setHint('Скопируйте ссылку из поля выше вручную');
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   };
@@ -109,10 +104,13 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
          * кладём готовое сообщение в буфер и открываем сам мессенджер:
          * человеку остаётся выбрать чат и вставить.
          */
-        run: async () => {
-          await copyText(message);
-          setHint('Сообщение скопировано — вставьте его в чат');
+        run: () => {
+          /* Вкладку открываем сразу, до копирования: после await браузер
+             телефона считает открытие не действием человека и блокирует */
           openWindow('https://max.ru/');
+          void copyText(message).then(() =>
+            setHint('Сообщение скопировано — вставьте его в чат'),
+          );
         },
       },
       {
@@ -145,7 +143,13 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
    */
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
+      /*
+       * pointer-events-auto обязателен: боковая корзина на время своего
+       * показа глушит нажатия по всему, что лежит вне её, — а наше окно
+       * лежит как раз вне. Без этого ни одна кнопка тут не срабатывала:
+       * ни копирование ссылки, ни мессенджеры.
+       */
+      className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
       /* Корзина закрывается по клику мимо себя — нажатия по нашему окну
          до неё доходить не должны, иначе исчезнут оба */
       onPointerDown={(e) => e.stopPropagation()}
@@ -303,13 +307,13 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
               кто пишет сообщение руками */}
           <button
             onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(message);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2200);
-              } catch {
-                copy();
+              const ok = await copyText(message);
+              if (!ok) {
+                setHint('Скопируйте ссылку из поля выше вручную');
+                return;
               }
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2200);
             }}
             className="mt-3 flex items-center gap-2 text-[0.75rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-primary"
           >

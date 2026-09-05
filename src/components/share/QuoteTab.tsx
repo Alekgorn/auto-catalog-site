@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, Vehicle, formatPrice } from '@/data/catalog';
+import { copyToClipboard } from '@/lib/clipboard';
 import {
   QuoteLine,
   downloadFile,
@@ -81,16 +82,7 @@ const QuoteTab = ({ items, vehicle, dealerPriceOf, hasDealer }: Props) => {
   const text = quoteText(lines, opts);
 
   const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const el = document.createElement('textarea');
-      el.value = text;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-    }
+    await copyToClipboard(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2200);
   };
