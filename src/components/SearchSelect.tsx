@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { useIsMobile } from '@/hooks/use-mobile';
 import OptionList, { PickOption } from '@/components/pick/OptionList';
 import { matchRank, searchKeys } from '@/lib/pick-search';
+import { lockScroll } from '@/lib/scroll-lock';
 
 /**
  * Выбор марки, модели и года.
@@ -71,11 +72,7 @@ const SearchSelect = ({
   /* Список на весь экран — фон под ним не должен уезжать */
   useEffect(() => {
     if (!open || !isMobile) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
+    return lockScroll();
   }, [open, isMobile]);
 
   /**

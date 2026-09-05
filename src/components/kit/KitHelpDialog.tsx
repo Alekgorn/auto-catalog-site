@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { Product, Vehicle, formatPrice } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { maxHref, maxPhone, tgHref } from '@/lib/site-settings';
+import { lockScroll } from '@/lib/scroll-lock';
 
 interface Props {
   open: boolean;
@@ -56,10 +57,10 @@ const KitHelpDialog = ({
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      unlock();
     };
   }, [open, onClose]);
 
@@ -72,7 +73,7 @@ const KitHelpDialog = ({
   const carInline = car.replace(/\.$/, '');
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
+    <div className="pointer-events-auto fixed inset-0 z-[70] flex items-start justify-center overflow-y-auto p-4 sm:items-center">
       <button
         aria-label="Закрыть"
         onClick={onClose}

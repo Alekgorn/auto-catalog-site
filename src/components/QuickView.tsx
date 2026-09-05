@@ -21,6 +21,7 @@ import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
 import PhotoViewer from '@/components/PhotoViewer';
+import { lockScroll } from '@/lib/scroll-lock';
 
 interface Props {
   product: Product | null;
@@ -78,10 +79,10 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
       if (e.key === 'Escape' && zoom === null) onClose();
     };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      unlock();
     };
   }, [product, onClose, zoom]);
 

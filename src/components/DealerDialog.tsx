@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { useDealer } from '@/context/DealerContext';
+import { lockScroll } from '@/lib/scroll-lock';
 
 interface Props {
   open: boolean;
@@ -104,10 +105,8 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
   }, [open]);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!open) return;
+    return lockScroll();
   }, [open]);
 
   useEffect(() => {
@@ -134,7 +133,7 @@ const DealerDialog = ({ open, onOpenChange }: Props) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
+    <div className="pointer-events-auto fixed inset-0 z-[70] flex items-end justify-center sm:items-center">
       <button
         aria-label="Закрыть"
         onClick={() => onOpenChange(false)}

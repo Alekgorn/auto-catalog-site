@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Product, productImages } from '@/data/catalog';
 import { allPhotos, loadPhotos } from '@/lib/product-photos';
+import { lockScroll } from '@/lib/scroll-lock';
+import { useCart } from '@/context/CartContext';
 
 interface Props {
   /** Все товары сравнения — между ними листаем стрелками */
@@ -22,10 +24,17 @@ const ComparePhotos = ({ products, startId, onClose }: Props) => {
     products.findIndex((p) => p.id === startId),
   );
   const [pos, setPos] = useState(startIndex);
+  const { open: cartOpen } = useCart();
   const [shot, setShot] = useState(0);
   /* Счётчик перерисовки: между товарами листают стрелками, поэтому
      словарь фото тянем один раз на всё окно, а не на текущий товар */
   const [, setLoaded] = useState(0);
+
+  /* Открылась корзина — убираем просмотр фото: он выше боковой панели
+     и на телефоне превращался в неубираемый чёрный экран */
+  useEffect(() => {
+    if (startId && cartOpen) onClose();
+  }, [startId, cartOpen, onClose]);
 
   useEffect(() => {
     if (!startId) return;
@@ -53,10 +62,10 @@ const ComparePhotos = ({ products, startId, onClose }: Props) => {
         setPos((v) => (v - 1 + products.length) % products.length);
     };
     document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      unlock();
     };
   }, [startId, onClose, products.length]);
 
