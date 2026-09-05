@@ -8,6 +8,7 @@ import { useCatalog } from '@/context/CatalogContext';
 import { useVehicle } from '@/hooks/use-vehicle';
 import { usePrice } from '@/hooks/use-price';
 import { buildShareUrl } from '@/lib/share-kit';
+import { isScenarioPath } from '@/lib/scenario-settings';
 import ShareKitDialog from '@/components/share/ShareKitDialog';
 import Confetti from '@/components/kit/Confetti';
 
@@ -113,7 +114,7 @@ const KitBar = () => {
    * обычный каталог — там «Ваша сборка 1 из 3» только путала.
    */
   const inKitFlow =
-    (!!slug && steps.length > 0 && pathname === `/scenario/${slug}`) ||
+    (!!slug && steps.length > 0 && isScenarioPath(pathname, slug)) ||
     pathname.startsWith('/compare');
 
   if (!chosen.length || !inKitFlow || pathname.startsWith('/checkout')) {
@@ -136,7 +137,7 @@ const KitBar = () => {
   );
   /* У дилера выгода — это разница с розницей, а не старая цена по акции */
   const save = dealer ? retail - total : old - total;
-  const onScenario = pathname === `/scenario/${slug}`;
+  const onScenario = isScenarioPath(pathname, slug);
 
   const addAll = () => {
     chosen.forEach((x) => x.product && add(x.product, x.count));

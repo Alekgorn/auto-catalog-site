@@ -16,6 +16,7 @@ import {
 import { usePhotos } from '@/hooks/use-photos';
 import { useProductText } from '@/hooks/use-product-text';
 import { isVehicle } from '@/lib/vehicle';
+import { isScenarioPath } from '@/lib/scenario-settings';
 import { useCatalog } from '@/context/CatalogContext';
 import { useKit } from '@/context/KitContext';
 import { useCart } from '@/context/CartContext';
@@ -55,7 +56,7 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
   /* Ровно то же правило, что и у панели сборки внизу: иначе товар
      уходил бы в сборку там, где панели нет, и покупатель его терял */
   const kitFlow =
-    (!!slug && steps.length > 0 && pathname === `/scenario/${slug}`) ||
+    (!!slug && steps.length > 0 && isScenarioPath(pathname, slug)) ||
     pathname.startsWith('/compare');
 
   const [active, setActive] = useState(0);
@@ -359,7 +360,21 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
               </Link>
             </div>
             <button
-              onClick={() => (kitFlow ? pick(product) : addToCart(product))}
+              /*
+               * Добавили в корзину — закрываем быстрый просмотр. Корзина
+               * открывается сама, но лежит НИЖЕ этого окна, поэтому на
+               * телефоне человек оставался с затемнением поверх панели:
+               * нажатия уходили в невидимую подложку, прокрутка была
+               * заперта, и выглядело это как намертво зависший сайт.
+               */
+              onClick={() => {
+                if (kitFlow) {
+                  pick(product);
+                  return;
+                }
+                addToCart(product);
+                onClose();
+              }}
               className={`flex flex-1 items-center justify-center gap-2 px-5 py-3 font-head text-[0.85rem] font-bold uppercase tracking-[0.02em] transition-colors ${
                 chosen
                   ? 'bg-primary text-primary-foreground'
