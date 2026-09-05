@@ -7,6 +7,7 @@ import { telHref } from '@/lib/site-settings';
 import { useCart } from '@/context/CartContext';
 import DealerDialog from '@/components/DealerDialog';
 import VehicleBadge from '@/components/VehicleBadge';
+import { lockScroll } from '@/lib/scroll-lock';
 
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог', route: '/catalog' },
@@ -36,10 +37,8 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = open ? 'hidden' : '';
-    return () => {
-      document.body.style.overflow = '';
-    };
+    if (!open) return;
+    return lockScroll();
   }, [open]);
 
   const go = (id: string, route?: string) => {

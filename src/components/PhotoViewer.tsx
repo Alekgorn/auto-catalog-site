@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
+import { lockScroll } from '@/lib/scroll-lock';
+import { useCart } from '@/context/CartContext';
 
 interface Props {
   images: string[];
@@ -21,11 +23,21 @@ const PhotoViewer = ({ images, alt, index, onClose }: Props) => {
   const [touchX, setTouchX] = useState<number | null>(null);
 
   const open = index !== null && images.length > 0;
+  const { open: cartOpen } = useCart();
   const many = images.length > 1;
 
   useEffect(() => {
     if (index !== null) setCurrent(index);
   }, [index]);
+
+  /*
+   * Корзина открылась — закрываем просмотр фото. Он лежит выше боковой
+   * панели, и на телефоне человек оставался с чёрным экраном поверх
+   * корзины: нажатия уходили в затемнение, и это выглядело как зависание.
+   */
+  useEffect(() => {
+    if (open && cartOpen) onClose();
+  }, [open, cartOpen, onClose]);
 
   const go = useCallback(
     (step: number) => {
@@ -44,11 +56,10 @@ const PhotoViewer = ({ images, alt, index, onClose }: Props) => {
     };
     document.addEventListener('keydown', onKey);
     // Фон не должен ездить под открытым фото
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const unlock = lockScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      unlock();
     };
   }, [open, onClose, go]);
 
