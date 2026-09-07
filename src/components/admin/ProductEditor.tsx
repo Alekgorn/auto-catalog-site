@@ -132,14 +132,25 @@ const ProductEditor = ({
       const fits = { ...f.fits };
       const key = findFitKey(fits, brand);
       const stored = key ? fits[key] : [];
+
       /* Снимают одну модель с «всей марки» — разворачиваем метку в
-         перечень: иначе снять галочку было бы нечем */
-      const current = isAllModels(stored)
-        ? (brands.find((b) => sameFit(b.name, brand))?.models ?? [])
-        : stored;
-      const next = hasFitModel(current, model)
-        ? current.filter((m) => !sameFit(m, model))
-        : [...current, model];
+         перечень справочника: иначе снять галочку было бы нечем.
+         Если марки в справочнике не нашлось, метку не трогаем вовсе —
+         развернуть её не во что, и попытка снять одну модель стёрла бы
+         отметку всей марки, оставив вместо неё эту единственную модель */
+      if (isAllModels(stored)) {
+        const ref = brands.find((b) => sameFit(b.name, brand))?.models;
+        if (!ref || !ref.length) return f;
+
+        const rest = ref.filter((m) => !sameFit(m, model));
+        if (key && key !== brand) delete fits[key];
+        fits[brand] = rest;
+        return { ...f, fits };
+      }
+
+      const next = hasFitModel(stored, model)
+        ? stored.filter((m) => !sameFit(m, model))
+        : [...stored, model];
 
       if (key && key !== brand) delete fits[key];
       if (next.length) fits[brand] = next;
