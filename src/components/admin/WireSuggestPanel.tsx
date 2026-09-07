@@ -54,14 +54,21 @@ const WireSuggestPanel = ({ products, onReload, onEdit }: Props) => {
   /** Ставим проводку всей группе рамок разом */
   const attach = async (s: FrameSuggestion, wire: AdminProduct) => {
     setBusy(s.group.key);
-    const slugs = [...new Set([...s.group.wires, wire.slug].filter(Boolean))];
+    /* Каждой рамке добавляем проводку к её собственному списку. Одна
+       рамка стоит в нескольких группах («Aveo, Captiva, Epica» — это три
+       модели), и общий список на всех затирал бы чужие связи */
+    const updates = s.group.frames
+      .filter((f) => f.id)
+      .map((f) => ({
+        id: f.id,
+        frameWires: [
+          ...new Set([...(f.frameWires ?? []), wire.slug].filter(Boolean)),
+        ],
+      }));
+
     const res = await adminFetch('?action=bulk', {
       method: 'POST',
-      body: JSON.stringify({
-        op: 'frame-wires',
-        ids: s.group.frames.map((f) => f.id).filter(Boolean),
-        frameWires: slugs,
-      }),
+      body: JSON.stringify({ op: 'frame-wires-each', updates }),
     });
     setBusy('');
     if (!res.ok) {

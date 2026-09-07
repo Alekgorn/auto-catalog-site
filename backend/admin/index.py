@@ -2511,10 +2511,12 @@ def handler(event: dict, context) -> dict:
 
         if action == 'bulk' and method == 'POST':
             ids = [int(i) for i in (body.get('ids') or []) if str(i).isdigit()]
-            if not ids:
+            op = str(body.get('op', ''))
+            # Поштучная правка приходит списком updates, общего набора id
+            # у неё нет — иначе запрос отклонялся бы как «ничего не выбрано»
+            if not ids and op != 'frame-wires-each':
                 return resp(400, {'error': 'Не выбрано ни одного товара'})
             id_list = ','.join(str(i) for i in ids)
-            op = str(body.get('op', ''))
             cur = conn.cursor()
 
             if op == 'category':
@@ -2542,6 +2544,29 @@ def handler(event: dict, context) -> dict:
                     f"UPDATE {schema()}.products SET frame_wires = {qjson(slugs)}, "
                     f"updated_at = NOW() WHERE id IN ({id_list})"
                 )
+            elif op == 'frame-wires-each':
+                # Каждой рамке свой список. Нужно потому, что одна рамка
+                # стоит сразу в нескольких группах разметки («Aveo,
+                # Captiva, Epica» — это три группы), и общий список на всех
+                # затирал бы проводки, проставленные по другой модели
+                updates = body.get('updates') or []
+                for row in updates[:200]:
+                    try:
+                        pid = int(row.get('id') or 0)
+                    except (TypeError, ValueError):
+                        continue
+                    if not pid:
+                        continue
+                    slugs = [
+                        str(x).strip()
+                        for x in (row.get('frameWires') or [])
+                        if str(x).strip()
+                    ][:20]
+                    cur.execute(
+                        f"UPDATE {schema()}.products "
+                        f"SET frame_wires = {qjson(slugs)}, updated_at = NOW() "
+                        f"WHERE id = {pid}"
+                    )
             elif op == 'wire-features':
                 # Разметка пачкой: у похожих проводок набор совпадает, и
                 # щёлкать каждую отдельно — терять часы на сотнях позиций

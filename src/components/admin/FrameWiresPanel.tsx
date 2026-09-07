@@ -74,16 +74,47 @@ const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
       .sort((a, b) => b.left - a.left);
   }, [groups]);
 
-  /** Ставим проводки всей группе разом — одним запросом на все рамки */
+  /**
+   * Ставим проводки всей группе разом.
+   *
+   * Одна рамка может стоять сразу в нескольких группах: «Aveo, Captiva,
+   * Epica 2006–2011» попадает и в Aveo, и в Captiva, и в Epica. Раньше
+   * сохранение перезаписывало у рамки весь список — и правка по одной
+   * модели стирала то, что проставили по другой. Со стороны это выглядело
+   * так, будто изменения не сохраняются вовсе.
+   *
+   * Поэтому шлём каждой рамке её собственный список: снятое в этой группе
+   * убираем, а проводки, поставленные по другим моделям, сохраняем.
+   */
   const save = async (group: FrameGroup, slugs: string[]) => {
     setBusy(true);
+
+    /* Что человек мог менять в этой группе — только показанные варианты.
+       Всё остальное у рамки трогать нельзя: оно от других моделей */
+    const offered = new Set(
+      wireCandidates(products, group)
+        .map((w) => w.slug)
+        .filter(Boolean) as string[],
+    );
+    group.wires.forEach((s) => offered.add(s));
+
+    const picked = new Set(slugs);
+
+    const updates = group.frames
+      .filter((f) => f.id)
+      .map((f) => {
+        const own = f.frameWires ?? [];
+        // Чужие проводки — те, что этой группе не предлагались
+        const foreign = own.filter((s) => !offered.has(s));
+        return {
+          id: f.id,
+          frameWires: [...new Set([...foreign, ...picked])],
+        };
+      });
+
     const res = await adminFetch('?action=bulk', {
       method: 'POST',
-      body: JSON.stringify({
-        op: 'frame-wires',
-        ids: group.frames.map((f) => f.id).filter(Boolean),
-        frameWires: slugs,
-      }),
+      body: JSON.stringify({ op: 'frame-wires-each', updates }),
     });
     setBusy(false);
     if (!res.ok) {
