@@ -8,6 +8,7 @@ import WiringPanel from '@/components/admin/WiringPanel';
 import FrameWiresPanel from '@/components/admin/FrameWiresPanel';
 import WireTechPanel from '@/components/admin/WireTechPanel';
 import WiringAuditPanel from '@/components/admin/WiringAuditPanel';
+import WireSuggestPanel from '@/components/admin/WireSuggestPanel';
 
 interface Props {
   products: AdminProduct[];
@@ -22,6 +23,7 @@ interface Props {
 
 type Section =
   | 'frames'
+  | 'suggest'
   | 'tech'
   | 'cards'
   | 'fits'
@@ -53,6 +55,11 @@ const DiagnosticsPanel = ({
         id: 'frames',
         label: 'Проводки к рамкам',
         hint: 'Какие проводки подходят к рамке — основа подбора',
+      },
+      {
+        id: 'suggest',
+        label: 'Подсказки связок',
+        hint: 'Рамки без проводки и подходящие кандидаты — привязка в одно нажатие',
       },
       {
         id: 'tech',
@@ -122,6 +129,13 @@ const DiagnosticsPanel = ({
       <div className="mt-2">
         {section === 'frames' && (
           <FrameWiresPanel
+            products={products}
+            onReload={onReload}
+            onEdit={onEdit}
+          />
+        )}
+        {section === 'suggest' && (
+          <WireSuggestPanel
             products={products}
             onReload={onReload}
             onEdit={onEdit}
