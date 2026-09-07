@@ -18,6 +18,7 @@ import {
   STOP_WORDS,
 } from '@/data/search-terms';
 import { idsWithWord } from '@/lib/search-index';
+import { withoutAllMark } from '@/lib/fits-match';
 
 /* ---------- подготовка текста ---------- */
 
@@ -77,7 +78,9 @@ export const buildLatinTerms = (
     add(p.category);
     Object.entries(p.fits ?? {}).forEach(([brand, models]) => {
       add(brand);
-      (models ?? []).forEach(add);
+      /* Метку «вся марка» в словарь не кладём — это служебный знак,
+         а не название машины */
+      withoutAllMark(models).forEach(add);
     });
   });
 
@@ -429,7 +432,7 @@ export const parseQuery = (
     );
     products.forEach((p) =>
       Object.entries(p.fits ?? {}).forEach(([b, list]) =>
-        list.forEach((m) => {
+        withoutAllMark(list).forEach((m) => {
           known.add(m);
           if (!modelBrand.has(m)) modelBrand.set(m, b);
         }),
@@ -585,7 +588,7 @@ const buildIndex = (products: Product[]): Indexed[] => {
 
   const built = products.map((p) => {
     const fits = Object.entries(p.fits ?? {})
-      .map(([b, m]) => `${b} ${m.join(' ')}`)
+      .map(([b, m]) => `${b} ${withoutAllMark(m).join(' ')}`)
       .join(' ');
     const specs = (p.specs ?? []).map(([k, v]) => `${k} ${v}`).join(' ');
     const text = normalize(
@@ -740,7 +743,8 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
 
   /* --- 4. Модель --- */
   if (q.models.length) {
-    const models = Object.values(item.product.fits ?? {}).flat();
+    const models = Object.values(item.product.fits ?? {})
+      .flatMap((list) => withoutAllMark(list));
     if (q.models.some((m) => models.includes(m))) {
       score += 200;
       reasons.push('Подходит по модели');

@@ -1,7 +1,7 @@
 import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from './product-types';
-import { findFitModels, hasFitModel } from '@/lib/fits-match';
+import { findFitModels, hasFitModel, isAllModels } from '@/lib/fits-match';
 import { FitMode } from '@/data/catalog';
 
 interface Props {
@@ -121,6 +121,9 @@ const ProductFitsTab = ({
          («Fiat» против «FIAT») — ищем с поправкой на написание,
          иначе отметки выглядят снятыми, хотя в товаре они есть */
       const selected = findFitModels(form.fits, b.name) ?? [];
+      /* Отмечена вся марка — модели не перечисляем, они подхватываются
+         сами, включая те, что добавят в справочник позже */
+      const whole = isAllModels(selected);
       return (
         <div key={b.name} className="border-t border-border pt-4">
           <div className="flex items-center justify-between">
@@ -131,9 +134,17 @@ const ProductFitsTab = ({
               onClick={() => toggleBrand(b)}
               className="text-[0.72rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:text-primary"
             >
-              {selected.length === b.models.length ? 'Снять все' : 'Выбрать все'}
+              {whole || selected.length === b.models.length
+                ? 'Снять все'
+                : 'Выбрать все'}
             </button>
           </div>
+          {whole && (
+            <p className="mt-2 flex items-center gap-2 text-[0.8rem] text-primary">
+              <Icon name="Check" size={14} />
+              Вся марка целиком — новые модели подхватятся сами
+            </p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             {b.models.map((m) => {
               const on = hasFitModel(selected, m);

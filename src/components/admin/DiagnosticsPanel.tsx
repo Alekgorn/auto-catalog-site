@@ -7,6 +7,7 @@ import KitAuditPanel from '@/components/admin/KitAuditPanel';
 import WiringPanel from '@/components/admin/WiringPanel';
 import FrameWiresPanel from '@/components/admin/FrameWiresPanel';
 import WireTechPanel from '@/components/admin/WireTechPanel';
+import WiringAuditPanel from '@/components/admin/WiringAuditPanel';
 
 interface Props {
   products: AdminProduct[];
@@ -25,6 +26,7 @@ type Section =
   | 'cards'
   | 'fits'
   | 'kit'
+  | 'audit-wires'
   | 'wiring';
 
 /**
@@ -68,6 +70,11 @@ const DiagnosticsPanel = ({
         label: 'Совместимость',
         count: fitsIssues,
         hint: 'Марки и модели, которых нет в справочнике',
+      },
+      {
+        id: 'audit-wires',
+        label: 'Сверка проводок',
+        hint: 'Устаревшие списки моделей, годы против рамки, марка не в названии',
       },
       {
         id: 'kit',
@@ -144,6 +151,13 @@ const DiagnosticsPanel = ({
             brands={brands}
             onEdit={onEdit}
             onReload={onReload}
+          />
+        )}
+        {section === 'audit-wires' && (
+          <WiringAuditPanel
+            products={products}
+            brands={brands}
+            onEdit={onEdit}
           />
         )}
         {section === 'wiring' && <WiringPanel bare />}

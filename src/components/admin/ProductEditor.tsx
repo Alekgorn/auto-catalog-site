@@ -10,7 +10,13 @@ import ProductFitsTab from '@/components/admin/product-editor/ProductFitsTab';
 import ProductWiringTab from './product-editor/ProductWiringTab';
 import BlocksEditor, { cleanBlocks } from '@/components/admin/BlocksEditor';
 import { keepOpenOnZoom } from '@/components/admin/ImageZoom';
-import { findFitKey, hasFitModel, sameFit } from '@/lib/fits-match';
+import {
+  findFitKey,
+  hasFitModel,
+  sameFit,
+  isAllModels,
+  ALL_MODELS,
+} from '@/lib/fits-match';
 import { FitMode } from '@/data/catalog';
 
 export type { AdminProduct };
@@ -125,7 +131,12 @@ const ProductEditor = ({
     setForm((f) => {
       const fits = { ...f.fits };
       const key = findFitKey(fits, brand);
-      const current = key ? fits[key] : [];
+      const stored = key ? fits[key] : [];
+      /* Снимают одну модель с «всей марки» — разворачиваем метку в
+         перечень: иначе снять галочку было бы нечем */
+      const current = isAllModels(stored)
+        ? (brands.find((b) => sameFit(b.name, brand))?.models ?? [])
+        : stored;
       const next = hasFitModel(current, model)
         ? current.filter((m) => !sameFit(m, model))
         : [...current, model];
@@ -138,7 +149,12 @@ const ProductEditor = ({
   };
 
   const totalModels = brands.reduce((n, b) => n + b.models.length, 0);
-  const selectedCount = Object.values(form.fits).reduce((n, m) => n + m.length, 0);
+  /* Метка «вся марка» считается за все модели этой марки, иначе счётчик
+     показывал бы «выбрано 1», когда отмечена вся Toyota */
+  const selectedCount = Object.entries(form.fits).reduce((n, [name, models]) => {
+    if (!isAllModels(models)) return n + models.length;
+    return n + (brands.find((b) => sameFit(b.name, name))?.models.length ?? 0);
+  }, 0);
   const allSelected = totalModels > 0 && selectedCount === totalModels;
 
   /** Отметить сразу все марки со всеми моделями (или снять всё) */
@@ -147,22 +163,28 @@ const ProductEditor = ({
       if (allSelected) return { ...f, fits: {} };
       const fits: Record<string, string[]> = {};
       brands.forEach((b) => {
-        if (b.models.length) fits[b.name] = [...b.models];
+        if (b.models.length) fits[b.name] = [ALL_MODELS];
       });
       return { ...f, fits };
     });
   };
 
+  /**
+   * «Вся марка» — ставим одну метку вместо перечня моделей.
+   *
+   * Перечень устаревал: добавили в справочник новую модель — товар молча
+   * переставал ей подходить, и это всплывало только когда покупатель не
+   * находил проводку. Метка подхватывает и будущие модели.
+   */
   const toggleBrand = (brand: AdminBrand) => {
     setForm((f) => {
       const fits = { ...f.fits };
       const key = findFitKey(fits, brand.name);
       const current = key ? fits[key] : [];
       if (key) delete fits[key];
-      // Отмечены все модели — снимаем марку целиком, иначе отмечаем все
-      if (current.length !== brand.models.length) {
-        fits[brand.name] = [...brand.models];
-      }
+      // Уже отмечена вся марка — снимаем, иначе отмечаем целиком
+      const whole = isAllModels(current) || current.length >= brand.models.length;
+      if (!whole) fits[brand.name] = [ALL_MODELS];
       return { ...f, fits };
     });
   };

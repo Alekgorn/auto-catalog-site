@@ -1,5 +1,6 @@
 import { Product, formatPrice } from '@/data/catalog';
 import { plural } from '@/lib/kit-filter';
+import { withoutAllMark } from '@/lib/fits-match';
 
 /**
  * Заголовок и краткое описание страницы марки для поисковой выдачи.
@@ -30,7 +31,8 @@ export const topModels = (
 ): string[] => {
   const count = new Map<string, number>();
   items.forEach((p) => {
-    (p.fits?.[brand] ?? []).forEach((m) => {
+    /* Метка «вся марка» — не название модели, в подписи ей не место */
+    withoutAllMark(p.fits?.[brand]).forEach((m) => {
       const name = m.trim();
       if (name) count.set(name, (count.get(name) ?? 0) + 1);
     });

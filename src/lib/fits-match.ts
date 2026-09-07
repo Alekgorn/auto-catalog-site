@@ -106,6 +106,38 @@ const withoutNote = (raw: string): string =>
   fitKey((raw ?? '').replace(/\([^)]*\)/g, ' '));
 
 /**
+ * Метка «вся марка целиком».
+ *
+ * Раньше «все модели Hyundai» хранились перечнем из полусотни названий,
+ * и он устаревал в тот момент, когда в справочник добавляли новую модель:
+ * товар молча переставал ей подходить. Теперь вместо перечня можно
+ * поставить одну метку — она подхватывает и будущие модели.
+ */
+export const ALL_MODELS = '*';
+
+/** Отмечена ли у марки «вся марка» вместо перечня моделей */
+export const isAllModels = (models: string[] | null | undefined): boolean =>
+  Array.isArray(models) && models.includes(ALL_MODELS);
+
+/**
+ * Настоящий список моделей: метку «вся марка» разворачиваем в модели
+ * справочника. Нужно везде, где названия показывают или ищут по ним —
+ * иначе наружу утекла бы сама метка вместо машин.
+ */
+export const expandModels = (
+  models: string[] | null | undefined,
+  brandModels: string[] | undefined,
+): string[] => {
+  if (!Array.isArray(models)) return [];
+  if (!isAllModels(models)) return models;
+  return brandModels ?? [];
+};
+
+/** Список без служебной метки — когда справочник под рукой недоступен */
+export const withoutAllMark = (models: string[] | null | undefined): string[] =>
+  Array.isArray(models) ? models.filter((m) => m !== ALL_MODELS) : [];
+
+/**
  * Есть ли модель в списке.
  *
  * Совпадением считаем только одно и то же название — с поправкой на
@@ -114,6 +146,10 @@ const withoutNote = (raw: string): string =>
  * как и «Tiggo» и «Tiggo 8», — разные машины, и путать их нельзя.
  */
 export const hasFitModel = (models: string[], model: string): boolean => {
+  // Отмечена вся марка — подходит любая её модель, включая добавленные
+  // после того, как товар в последний раз правили
+  if (isAllModels(models)) return true;
+
   const key = fitKey(model);
   if (!key) return false;
 
