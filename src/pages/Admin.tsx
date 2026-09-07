@@ -18,6 +18,7 @@ import SettingsPanel from "@/components/admin/SettingsPanel";
 import SupplierPanel from "@/components/admin/SupplierPanel";
 import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 import { auditProducts } from "@/lib/data-audit";
+import { ALL_MODELS } from "@/lib/fits-match";
 import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
 import CategoriesEditor from "@/components/admin/CategoriesEditor";
@@ -354,7 +355,9 @@ const Admin = () => {
         if (!Array.isArray(models)) return false;
         const ref = brands.find((b) => b.name === brand);
         if (!ref) return true;
-        return models.some((m) => !ref.models.includes(m));
+        /* Метку «вся марка» не сверяем со справочником: она значит
+           «все модели» и названием машины не является */
+        return models.some((m) => m !== ALL_MODELS && !ref.models.includes(m));
       });
     }).length;
   }, [products, brands]);

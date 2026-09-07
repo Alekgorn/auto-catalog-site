@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
-import { fitKey } from '@/lib/fits-match';
+import { fitKey, ALL_MODELS } from '@/lib/fits-match';
 
 interface Props {
   products: AdminProduct[];
@@ -85,6 +85,10 @@ const FitsCheckPanel = ({ products, brands, onEdit, bare }: Props) => {
           }
 
           models.forEach((model) => {
+            /* «Вся марка» — служебная метка, а не название машины.
+               Искать её в справочнике бессмысленно: она как раз и значит
+               «все модели, включая те, что добавят позже» */
+            if (model === ALL_MODELS) return;
             if (ref.models.includes(model)) return;
             /* Сверка на сайте прощает мелкие расхождения. Отделяем их
                от настоящих опечаток: то, что подбор всё же находит,
