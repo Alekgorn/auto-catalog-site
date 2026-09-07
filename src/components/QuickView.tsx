@@ -14,6 +14,7 @@ import {
   productSpecs,
 } from '@/data/catalog';
 import { usePhotos } from '@/hooks/use-photos';
+import { useAlivePhotos } from '@/hooks/use-alive-photos';
 import { useProductText } from '@/hooks/use-product-text';
 import { isVehicle } from '@/lib/vehicle';
 import { isScenarioPath } from '@/lib/scenario-settings';
@@ -44,7 +45,9 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
      они не нужны и в общий каталог не попадают */
   const product = useProductText(base);
   /* Обложка уже нарисована в карточке, остальные снимки подъедут следом */
-  const images = usePhotos(product);
+  const rawImages = usePhotos(product);
+  /* Снимки поставщика иногда не открываются — такие убираем из набора */
+  const { photos: images, markBroken } = useAlivePhotos(rawImages);
   /**
    * Идёт сборка комплекта — товар отмечается на своём шаге и попадает
    * в плавающую панель внизу. Вне сборки такой панели нет, поэтому
@@ -60,7 +63,9 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
     (!!slug && steps.length > 0 && isScenarioPath(pathname, slug)) ||
     pathname.startsWith('/compare');
 
-  const [active, setActive] = useState(0);
+  const [rawActive, setActive] = useState(0);
+  /* Битые снимки выпали — открытый мог оказаться за концом списка */
+  const active = Math.min(rawActive, Math.max(images.length - 1, 0));
   const [allSpecs, setAllSpecs] = useState(false);
   /** Какое фото открыто во весь экран; null — просмотр закрыт */
   const [zoom, setZoom] = useState<number | null>(null);
@@ -172,6 +177,7 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
                   <img
                     src={images[active]}
                     alt={product.name}
+                    onError={() => markBroken(images[active])}
                     className="aspect-[16/10] w-full object-contain p-3 sm:aspect-[4/3]"
                   />
                 </button>
@@ -199,6 +205,7 @@ const QuickView = ({ product: base, vehicle: rawVehicle, onClose }: Props) => {
                       <img
                         src={src}
                         alt=""
+                        onError={() => markBroken(src)}
                         className="aspect-square w-full object-contain p-1"
                       />
                     </button>

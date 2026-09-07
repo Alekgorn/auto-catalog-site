@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import PhotoViewer from '@/components/PhotoViewer';
 import VideoPlayer from '@/components/VideoPlayer';
 import { parseVideo } from '@/lib/video';
+import { useAlivePhotos } from '@/hooks/use-alive-photos';
 
 interface Props {
   images: string[];
@@ -12,12 +13,19 @@ interface Props {
 }
 
 /** Обложка ролика в ленте миниатюр — берём первое фото, чтобы не звать плеер лишний раз */
-const ProductGallery = ({ images, alt, videoUrl }: Props) => {
+const ProductGallery = ({ images: raw, alt, videoUrl }: Props) => {
   const video = parseVideo(videoUrl);
+  /* Не открывшиеся снимки убираем: часть фото лежит у поставщика,
+     и он временами отдаёт ошибку вместо картинки */
+  const { photos: images, markBroken } = useAlivePhotos(raw);
   /** Число — открыто фото под этим индексом, 'video' — идёт ролик */
   const [active, setActive] = useState<number | 'video'>(0);
   /** Какое фото открыто во весь экран; null — просмотр закрыт. Видео так не открываем — у него свой fullscreen */
   const [zoom, setZoom] = useState<number | null>(null);
+  /* Битые фото выпали — открытый снимок мог оказаться за концом списка,
+     и галерея показала бы пустоту вместо картинки */
+  const shown =
+    active === 'video' ? active : Math.min(active, Math.max(images.length - 1, 0));
 
   return (
     <div>
@@ -28,13 +36,14 @@ const ProductGallery = ({ images, alt, videoUrl }: Props) => {
       ) : (
         <div className="group relative border border-border bg-surface shadow-card">
           <button
-            onClick={() => setZoom(active as number)}
+            onClick={() => setZoom(shown as number)}
             aria-label="Открыть фото на весь экран"
             className="block w-full cursor-zoom-in"
           >
             <img
-              src={images[active as number]}
-              alt={`${alt} — фото ${(active as number) + 1}`}
+              src={images[shown as number]}
+              alt={`${alt} — фото ${(shown as number) + 1}`}
+              onError={() => markBroken(images[shown as number])}
               /* Главное фото на первом экране — грузим сразу, без ленивой загрузки */
               decoding="async"
               width={800}
@@ -89,12 +98,13 @@ const ProductGallery = ({ images, alt, videoUrl }: Props) => {
               onDoubleClick={() => setZoom(i)}
               aria-label={`Фото ${i + 1}`}
               className={`border bg-surface transition-colors ${
-                i === active ? 'border-primary' : 'border-border hover:border-foreground'
+                i === shown ? 'border-primary' : 'border-border hover:border-foreground'
               }`}
             >
               <img
                 src={src}
                 alt={`${alt} — миниатюра ${i + 1}`}
+                onError={() => markBroken(src)}
                 loading="lazy"
                 decoding="async"
                 width={160}

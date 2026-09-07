@@ -270,6 +270,25 @@ def _is_external_image(url: str) -> bool:
     return not u.startswith(CDN_PREFIX)
 
 
+def _size_variants(url: str) -> list:
+    """Тот же файл в других размерах — запасные адреса на случай отказа.
+
+    Поставщик хранит картинку в нескольких размерах, и путь отличается
+    одной папкой: .../items/max/файл.jpg, .../items/preview/файл.jpg.
+    Когда основной размер не отдаётся, соседний обычно работает.
+    """
+    known = ('max', 'preview2x', 'preview', 'original', 'big', 'medium')
+    parts = url.split('/')
+    for i, chunk in enumerate(parts):
+        if chunk in known:
+            return [
+                '/'.join(parts[:i] + [v] + parts[i + 1:])
+                for v in known
+                if v != chunk
+            ]
+    return []
+
+
 def download_external(url: str, timeout: float) -> tuple:
     """Только скачивает файл, ничего не обрабатывая.
 
@@ -300,28 +319,55 @@ def download_external(url: str, timeout: float) -> tuple:
     except Exception:
         return None, None, 'неверный адрес картинки'
 
-    req = urllib.request.Request(
-        safe,
-        headers={
-            'User-Agent': 'Mozilla/5.0 (compatible; ShtatnoBot/1.0)',
-            'Accept': 'image/*,*/*',
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            ctype = str(r.headers.get('Content-Type', '')).lower()
-            raw = r.read(MAX_IMAGE_BYTES + 1)
-    except urllib.error.HTTPError as e:
-        return None, None, f'сайт ответил отказом ({e.code})'
-    except (urllib.error.URLError, ValueError) as e:
-        # Разделяем «сайт не успел» и «адрес битый»: первое стоит повторить,
-        # второе — нет, иначе одна кривая ссылка блокирует всю очередь
-        text = str(getattr(e, 'reason', e)).lower()
-        if 'timed out' in text or 'timeout' in text:
-            return None, None, 'сайт отвечает слишком долго'
-        return None, None, 'не удалось открыть адрес'
-    except Exception:
-        return None, None, 'сайт отвечает слишком долго'
+    def fetch(target: str) -> tuple:
+        """Один заход за файлом: (байты, тип, причина отказа)."""
+        req = urllib.request.Request(
+            target,
+            headers={
+                # Обычный браузерный заголовок: под именем бота часть
+                # сайтов отвечает отказом, хотя картинку отдаёт всем
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/120.0.0.0 Safari/537.36'
+                ),
+                'Accept': 'image/avif,image/webp,image/*,*/*',
+                'Referer': f'{parts.scheme}://{parts.netloc}/',
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return r.read(MAX_IMAGE_BYTES + 1), str(
+                    r.headers.get('Content-Type', '')
+                ).lower(), None
+        except urllib.error.HTTPError as e:
+            return None, '', f'сайт ответил отказом ({e.code})'
+        except (urllib.error.URLError, ValueError) as e:
+            text = str(getattr(e, 'reason', e)).lower()
+            if 'timed out' in text or 'timeout' in text:
+                return None, '', 'сайт отвечает слишком долго'
+            return None, '', 'не удалось открыть адрес'
+        except Exception:
+            return None, '', 'сайт отвечает слишком долго'
+
+    raw, ctype, reason = fetch(safe)
+
+    # Сайт отказал по этому адресу — пробуем тот же файл в другом размере.
+    # У поставщика уменьшитель картинок отвечает ошибкой на части файлов
+    # («Image too large for processing»), но соседний размер той же
+    # картинки отдаётся нормально. Так спасается примерно каждая четвёртая.
+    # Больше двух запасных не берём: на каждый уходит время функции,
+    # а очередь длинная — лучше пройти много ссылок, чем добить одну
+    if raw is None and 'отказом' in (reason or ''):
+        for alt in _size_variants(safe)[:2]:
+            raw, ctype, alt_reason = fetch(alt)
+            if raw:
+                reason = None
+                break
+            reason = alt_reason or reason
+
+    if raw is None:
+        return None, None, reason or 'не удалось открыть адрес'
 
     if len(raw) > MAX_IMAGE_BYTES:
         return None, None, 'файл слишком большой'

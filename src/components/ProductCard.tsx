@@ -10,6 +10,8 @@ import {
   isUniversal,
   productImages,
   productSpecs,
+  CATEGORY_IMAGE,
+  PLACEHOLDER_IMAGE,
 } from '@/data/catalog';
 import { useCart } from '@/context/CartContext';
 import {
@@ -212,6 +214,13 @@ const ProductCard = ({
         <img
           src={productImages(product)[0]}
           alt={product.name}
+          /* Обложка не открылась — подставляем картинку категории:
+             сломанный значок в каталоге выглядит как заброшенный товар */
+          onError={(e) => {
+            const img = e.currentTarget;
+            const spare = CATEGORY_IMAGE[product.category] ?? PLACEHOLDER_IMAGE;
+            if (img.src !== spare) img.src = spare;
+          }}
           loading="lazy"
           decoding="async"
           /* Размеры заранее — страница не прыгает, пока фото грузится */
