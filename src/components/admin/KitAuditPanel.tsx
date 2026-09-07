@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
+import { isAllModels } from '@/lib/fits-match';
 import {
   KIT_RULE_TITLES,
   KitGapRow,
@@ -332,7 +333,12 @@ const GapsList = ({
     if (!wire) return;
     const fits = { ...(wire.fits ?? {}) };
     const models: string[] = fits[r.brand] ?? [];
-    if (!models.some((m) => m.toLowerCase() === r.model.toLowerCase()))
+    /* Отмечена вся марка — модель и так входит, дописывать нечего:
+       иначе рядом с меткой появился бы лишний дубль */
+    if (
+      !isAllModels(models) &&
+      !models.some((m) => m.toLowerCase() === r.model.toLowerCase())
+    )
       fits[r.brand] = [...models, r.model];
 
     setBusy(true);

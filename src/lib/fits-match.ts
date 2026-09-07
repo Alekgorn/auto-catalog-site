@@ -138,6 +138,28 @@ export const withoutAllMark = (models: string[] | null | undefined): string[] =>
   Array.isArray(models) ? models.filter((m) => m !== ALL_MODELS) : [];
 
 /**
+ * Совместимость товара с развёрнутыми метками — то, что можно показывать.
+ *
+ * Внутри у марки может стоять метка «вся марка» вместо перечня. Наружу —
+ * покупателю, в описания, в выгрузки — она уходить не должна: это
+ * служебный знак, а не название машины. Здесь метка заменяется реальными
+ * моделями справочника, а если марки в справочнике нет, просто убирается.
+ */
+export const expandFits = (
+  fits: Record<string, string[]> | undefined,
+  brands: { name: string; models: string[] }[],
+): [string, string[]][] => {
+  if (!fits) return [];
+
+  const byKey = new Map(brands.map((b) => [fitKey(b.name), b.models]));
+
+  return Object.entries(fits).map(([brand, models]) => {
+    if (!isAllModels(models)) return [brand, models ?? []];
+    return [brand, byKey.get(fitKey(brand)) ?? []];
+  });
+};
+
+/**
  * Есть ли модель в списке.
  *
  * Совпадением считаем только одно и то же название — с поправкой на

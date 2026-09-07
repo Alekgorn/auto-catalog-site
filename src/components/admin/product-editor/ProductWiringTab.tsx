@@ -4,6 +4,7 @@ import { formatPrice, WireFeature } from '@/data/catalog';
 import { adminFetch } from '@/lib/api';
 import { FRAMES_CATEGORY, WIRES_CATEGORY } from '@/lib/kit-filter';
 import { AdminProduct, SetField } from './product-types';
+import { isAllModels } from '@/lib/fits-match';
 
 interface Props {
   form: AdminProduct;
@@ -27,6 +28,10 @@ const related = (a: AdminProduct, b: AdminProduct): boolean => {
       ([x]) => x.toLowerCase() === brand.toLowerCase(),
     )?.[1];
     if (!Array.isArray(other)) return false;
+    /* У одного из товаров отмечена вся марка — общая машина есть заведомо:
+       иначе метка не сошлась бы с перечнем и рамка с проводкой выглядели
+       бы несовместимыми */
+    if (isAllModels(models) || isAllModels(other)) return true;
     return (models ?? []).some((m) =>
       other.some((o) => o.toLowerCase() === m.toLowerCase()),
     );

@@ -1,5 +1,6 @@
 import { Product, productSku, productSpecs } from '@/data/catalog';
 import { screenSize } from '@/lib/kit-filter';
+import { withoutAllMark } from '@/lib/fits-match';
 
 /**
  * Заголовок и краткое описание товара для поисковой выдачи.
@@ -44,9 +45,12 @@ export const yearsText = (p: Product): string => {
  * а хвост из десятка названий выглядит спамом.
  */
 export const vehicleText = (p: Product, maxBrands = 2): string => {
-  const entries = Object.entries(p.fits ?? {}).filter(
-    ([, models]) => Array.isArray(models),
-  );
+  /* Метку «вся марка» в текст выдачи не пускаем: справочника здесь нет,
+     поэтому просто убираем её — останется название марки без моделей,
+     что для описания достаточно и честно */
+  const entries = Object.entries(p.fits ?? {})
+    .filter(([, models]) => Array.isArray(models))
+    .map(([brand, models]) => [brand, withoutAllMark(models)] as [string, string[]]);
   if (!entries.length) return '';
 
   const parts = entries.slice(0, maxBrands).map(([brand, models]) => {

@@ -663,9 +663,22 @@ XLS_COLUMNS = [
 ]
 
 
+# Метка «вся марка целиком» — вместо перечня моделей. В таблице пишем
+# её словами: звёздочку в ячейке никто не поймёт, а «все модели» понятно
+# и человеку, и обратной загрузке
+ALL_MODELS_MARK = '*'
+ALL_MODELS_TEXT = 'все модели'
+
+
 def fits_to_text(fits: dict) -> str:
+    def models_text(models) -> str:
+        if ALL_MODELS_MARK in (models or []):
+            return ALL_MODELS_TEXT
+        return ', '.join(models or [])
+
     return ' | '.join(
-        f"{brand}: {', '.join(models)}" for brand, models in (fits or {}).items()
+        f"{brand}: {models_text(models)}"
+        for brand, models in (fits or {}).items()
     )
 
 
@@ -677,6 +690,10 @@ def text_to_fits(text: str) -> dict:
         brand, _, models = chunk.partition(':')
         brand = brand.strip()
         items = [m.strip() for m in models.split(',') if m.strip()]
+        # «все модели» из таблицы возвращаем обратно в метку, иначе после
+        # выгрузки-загрузки марка превратилась бы в модель с таким именем
+        if len(items) == 1 and items[0].lower() == ALL_MODELS_TEXT:
+            items = [ALL_MODELS_MARK]
         if brand and items:
             out[brand] = items
     return out
@@ -1072,11 +1089,18 @@ def vehicle_rows(products: list, brands: list, scope: str) -> list:
     несколько проводок с большим разбросом цен: человек берёт дешёвую,
     теряет штатную функцию и уходит. Такие машины поднимаем наверх.
     """
+    # Модели справочника по марке — ими разворачиваем метку «вся марка»:
+    # иначе она попала бы в лист как машина с именем «*»
+    brand_models = {b['name']: (b.get('models') or []) for b in brands}
+
     wires, frames = {}, set()
     for p in products:
         cat = p.get('category') or ''
         for brand, models in (p.get('fits') or {}).items():
-            for model in models or []:
+            listed = models or []
+            if ALL_MODELS_MARK in listed:
+                listed = brand_models.get(brand, [])
+            for model in listed:
                 key = (brand, model)
                 if cat == WIRES_CATEGORY:
                     wires.setdefault(key, []).append(p)

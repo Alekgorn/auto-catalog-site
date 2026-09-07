@@ -1,5 +1,10 @@
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { FRAMES_CATEGORY, WIRES_CATEGORY } from '@/lib/kit-filter';
+import {
+  withoutAllMark,
+  findFitModels,
+  hasFitModel,
+} from '@/lib/fits-match';
 
 /**
  * Группа рамок под одну машину и один период.
@@ -27,7 +32,9 @@ export interface FrameGroup {
 const pairsOf = (p: AdminProduct) => {
   const out: { brand: string; model: string }[] = [];
   Object.entries(p.fits ?? {}).forEach(([brand, models]) => {
-    (models ?? []).forEach((model) => out.push({ brand, model }));
+    /* Метка «вся марка» — не машина: группа рамок с моделью «*»
+       выглядела бы в разметке как настоящая машина */
+    withoutAllMark(models).forEach((model) => out.push({ brand, model }));
   });
   return out;
 };
@@ -125,14 +132,10 @@ export const wireCandidates = (
   products
     .filter((p) => {
       if (!p.isActive || p.category !== WIRES_CATEGORY) return false;
-      const models = Object.entries(p.fits ?? {}).find(
-        ([b]) => b.toLowerCase() === group.brand.toLowerCase(),
-      )?.[1];
-      if (
-        !Array.isArray(models) ||
-        !models.some((m) => m.toLowerCase() === group.model.toLowerCase())
-      )
-        return false;
+      const models = findFitModels(p.fits, group.brand);
+      /* Через общую сверку: она знает и про разные написания марок,
+         и про метку «вся марка» */
+      if (!models || !hasFitModel(models, group.model)) return false;
       // Годы должны пересекаться хотя бы частично
       const from = p.yearFrom || 1990;
       const to = p.yearTo || 2100;

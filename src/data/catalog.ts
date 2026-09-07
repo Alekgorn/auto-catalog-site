@@ -1,4 +1,9 @@
-import { findFitModels, hasFitModel } from '@/lib/fits-match';
+import {
+  findFitModels,
+  hasFitModel,
+  withoutAllMark,
+  isAllModels,
+} from '@/lib/fits-match';
 
 export type Category = string;
 
@@ -424,8 +429,10 @@ export const searchProducts = (products: Product[], query: string): Product[] =>
   const words = q.split(/\s+/).filter(Boolean);
 
   const scored = products.map((p) => {
+    /* Метка «вся марка» — не слово для поиска: по звёздочке не ищут,
+       а в строку она попадала и портила совпадения */
     const models = Object.entries(p.fits ?? {})
-      .map(([b, m]) => `${b} ${m.join(' ')}`)
+      .map(([b, m]) => `${b} ${withoutAllMark(m).join(' ')}`)
       .join(' ');
     const haystack = `${p.name} ${p.category} ${productSku(p)} ${models}`.toLowerCase();
 
@@ -469,6 +476,20 @@ export const productKit = (p: Product): string[] =>
  * рамок и переходников марка решает всё. Универсальные позиции (без
  * списка машин) считаем подходящими всем.
  */
+/**
+ * Ключи «машина товара» для сравнения двух карточек.
+ *
+ * Обычно это пары «марка|модель». Но если у марки стоит метка «вся
+ * марка», перечня моделей нет — тогда ключом берём саму марку. Иначе
+ * такой товар остался бы без ключей вовсе и считался универсальным,
+ * попадая в похожие к чему угодно.
+ */
+const fitsKeys = (brand: string, models: string[]): string[] => {
+  const b = brand.toLowerCase();
+  if (isAllModels(models)) return [b];
+  return withoutAllMark(models).map((m) => `${b}|${String(m).toLowerCase()}`);
+};
+
 export const productsByCategory = (
   p: Product,
   all: Product[] = PRODUCTS,
@@ -476,15 +497,18 @@ export const productsByCategory = (
 ): Product[] => {
   const own = Object.entries(p.fits ?? {});
   const ownKeys = new Set(
-    own.flatMap(([b, ms]) => ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`)),
+    own.flatMap(([b, ms]) =>
+      /* Отмечена вся марка — ключом берём саму марку: перечня моделей
+         тут нет, но «та же машина» определяется и по марке. Иначе товар
+         с меткой остался бы вовсе без ключей и считался универсальным */
+      fitsKeys(b, ms),
+    ),
   );
 
   /** Сколько машин у товара общих с исходным */
   const shared = (x: Product): number => {
     if (!ownKeys.size) return 0;
-    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) =>
-      ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`),
-    );
+    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) => fitsKeys(b, ms));
     if (!keys.length) return 0;
     return keys.filter((k) => ownKeys.has(k)).length;
   };
@@ -513,15 +537,11 @@ export const productsWithThis = (
   limit = 8,
 ): Product[] => {
   const own = Object.entries(p.fits ?? {});
-  const ownKeys = new Set(
-    own.flatMap(([b, ms]) => ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`)),
-  );
+  const ownKeys = new Set(own.flatMap(([b, ms]) => fitsKeys(b, ms)));
   if (!ownKeys.size) return [];
 
   const shared = (x: Product): number => {
-    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) =>
-      ms.map((m) => `${b.toLowerCase()}|${String(m).toLowerCase()}`),
-    );
+    const keys = Object.entries(x.fits ?? {}).flatMap(([b, ms]) => fitsKeys(b, ms));
     return keys.filter((k) => ownKeys.has(k)).length;
   };
 

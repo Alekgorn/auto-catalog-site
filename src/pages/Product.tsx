@@ -39,13 +39,21 @@ import PriceBlock from "@/components/PriceBlock";
 import StockLine from "@/components/StockLine";
 import MarketButtons from "@/components/MarketButtons";
 import { useCatalog } from "@/context/CatalogContext";
+import { expandFits } from "@/lib/fits-match";
 import Breadcrumbs, { crumbsJsonLd } from "@/components/Breadcrumbs";
 
 const Product = () => {
   const { id } = useParams();
   // Сам товар ищем в полном каталоге: по прямой ссылке страница должна
   // открыться, даже если дилер включил фильтр наличия
-  const { products, allProducts, guides, contacts, loading } = useCatalog();
+  const {
+    products,
+    allProducts,
+    guides,
+    contacts,
+    loading,
+    brands: catalogBrands,
+  } = useCatalog();
   const found = useMemo(
     () => allProducts.find((p) => p.id === id) ?? null,
     [id, allProducts],
@@ -228,7 +236,9 @@ const Product = () => {
     );
   }
 
-  const brands = Object.entries(product.fits ?? {});
+  /* Метку «вся марка» разворачиваем в реальные модели: покупателю
+     нельзя показывать служебный знак вместо названия машины */
+  const brands = expandFits(product.fits, catalogBrands);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
 
   // Гарантия и артикул показываются только здесь — дублировать их у кнопок не нужно

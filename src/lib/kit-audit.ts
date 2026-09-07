@@ -1,5 +1,6 @@
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
+import { withoutAllMark } from '@/lib/fits-match';
 import {
   FRAMES_CATEGORY,
   HEADUNITS_CATEGORY,
@@ -151,7 +152,9 @@ const pairsOf = (
   const out: { key: string; brand: string; model: string }[] = [];
   Object.entries(p.fits ?? {}).forEach(([brand, models]) => {
     if (!Array.isArray(models)) return;
-    models.forEach((model) =>
+    /* Метка «вся марка» — не машина: в список пар она попала бы строкой
+       «Toyota|*» и потом искалась бы в справочнике как модель */
+    withoutAllMark(models).forEach((model) =>
       out.push({
         key: `${brand.toLowerCase()}|${model.toLowerCase()}`,
         brand,
