@@ -10,6 +10,8 @@ interface Props {
   products: AdminProduct[];
   /** Перечитать каталог после сохранения */
   onReload?: () => void;
+  /** Обновить проводки на месте — дешевле полного перезапроса каталога */
+  onPatch?: (u: { id?: number; frameWires: string[] }[]) => void;
   /** Открыть карточку товара — правки делаются там, где они видны */
   onEdit?: (p: AdminProduct) => void;
 }
@@ -24,7 +26,7 @@ interface Props {
  * Размечаем группами: на Kia Rio 2017–2019 идёт четыре рамки (9", 10",
  * с кнопкой и без), панель у них общая — и проводка одна и та же.
  */
-const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
+const FrameWiresPanel = ({ products, onReload, onPatch, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlyEmpty, setOnlyEmpty] = useState(true);
@@ -121,7 +123,11 @@ const FrameWiresPanel = ({ products, onReload, onEdit }: Props) => {
       toast({ title: 'Не сохранилось', variant: 'destructive' });
       return;
     }
-    onReload?.();
+    /* Сохранение уже прошло на сервере. Обновляем список у себя —
+       полный перезапрос каталога тут только рискует оборваться */
+    if (onPatch) onPatch(updates);
+    else onReload?.();
+
     toast({
       title: 'Сохранено',
       description: `${group.brand} ${group.model} ${group.from}–${group.to}: ${

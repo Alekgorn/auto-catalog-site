@@ -131,6 +131,30 @@ const Admin = () => {
     }
   }, [loadGuides, toast]);
 
+  /**
+   * Точечно обновить проводки у рамок — без перезагрузки каталога.
+   *
+   * Каталог весит несколько мегабайт, и полный перезапрос после каждой
+   * галочки иногда не укладывался в таймаут. Ответ об ошибке обнулял
+   * список, и разметка показывала «всё размечено». Сохранение и так уже
+   * прошло на сервере — значит достаточно поправить те же поля у себя.
+   */
+  const patchFrameWires = useCallback(
+    (updates: { id?: number; frameWires: string[] }[]) => {
+      const map = new Map(
+        updates.filter((u) => u.id).map((u) => [u.id, u.frameWires]),
+      );
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id && map.has(p.id)
+            ? { ...p, frameWires: map.get(p.id) as string[] }
+            : p,
+        ),
+      );
+    },
+    [],
+  );
+
   const saveGuide = async (guide: AdminGuide) => {
     const res = await adminFetch("?action=guides", {
       method: guide.id ? "PUT" : "POST",
@@ -461,6 +485,7 @@ const Admin = () => {
             dataIssues={dataIssues}
             fitsIssues={fitsIssues}
             onReload={load}
+            onPatchFrameWires={patchFrameWires}
           />
         )}
 

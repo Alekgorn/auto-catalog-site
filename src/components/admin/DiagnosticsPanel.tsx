@@ -19,6 +19,8 @@ interface Props {
   fitsIssues: number;
   /** Перечитать каталог после массовых правок */
   onReload?: () => void;
+  /** Обновить проводки у рамок на месте, без перезапроса каталога */
+  onPatchFrameWires?: (u: { id?: number; frameWires: string[] }[]) => void;
 }
 
 type Section =
@@ -46,6 +48,7 @@ const DiagnosticsPanel = ({
   dataIssues,
   fitsIssues,
   onReload,
+  onPatchFrameWires,
 }: Props) => {
   const [section, setSection] = useState<Section>('frames');
 
@@ -131,6 +134,7 @@ const DiagnosticsPanel = ({
           <FrameWiresPanel
             products={products}
             onReload={onReload}
+            onPatch={onPatchFrameWires}
             onEdit={onEdit}
           />
         )}
