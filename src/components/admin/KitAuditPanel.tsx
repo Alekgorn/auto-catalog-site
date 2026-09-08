@@ -20,6 +20,8 @@ interface Props {
   products: AdminProduct[];
   brands: AdminBrand[];
   onEdit: (product: AdminProduct) => void;
+  /** Обновить проводки на месте — дешевле полного перезапроса каталога */
+  onPatch?: (u: { id?: number; frameWires: string[] }[]) => void;
   /** Перечитать каталог: правки уходят прямо в карточку проводки */
   onReload?: () => void;
 }
@@ -41,7 +43,13 @@ interface WireOption {
  * годы в названии против поля, товары без привязки к машине, битые
  * ссылки в разметке и машины, где рамка есть, а проводки нет.
  */
-const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
+const KitAuditPanel = ({
+  products,
+  brands,
+  onEdit,
+  onReload,
+  onPatch,
+}: Props) => {
   const [view, setView] = useState<View>('products');
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
@@ -175,6 +183,7 @@ const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
         <WireMismatchList
           rows={mismatches}
           onEdit={onEdit}
+          onPatch={onPatch}
           onSaved={() => onReload?.()}
         />
       ) : view === 'gaps' ? (

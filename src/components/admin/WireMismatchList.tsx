@@ -8,6 +8,8 @@ import { WireMismatch } from '@/lib/kit-audit';
 interface Props {
   rows: WireMismatch[];
   onSaved?: () => void;
+  /** Обновить проводки на месте — дешевле полного перезапроса каталога */
+  onPatch?: (u: { id?: number; frameWires: string[] }[]) => void;
   onEdit?: (p: AdminProduct) => void;
 }
 
@@ -27,7 +29,7 @@ const carsText = (cars: { brand: string; model: string }[], max = 8) => {
  * один список: видно, каким именно машинам проводка не подходит, и можно
  * сразу снять связь.
  */
-const WireMismatchList = ({ rows, onSaved, onEdit }: Props) => {
+const WireMismatchList = ({ rows, onSaved, onPatch, onEdit }: Props) => {
   const { toast } = useToast();
   const [busy, setBusy] = useState('');
   const [onlyTotal, setOnlyTotal] = useState(false);
@@ -57,7 +59,10 @@ const WireMismatchList = ({ rows, onSaved, onEdit }: Props) => {
       return;
     }
     toast({ title: 'Связь убрана', description: row.wire.name });
-    onSaved?.();
+
+    // Связь уже снята на сервере — каталог ради этого не перекачиваем
+    if (onPatch) onPatch([{ id, frameWires: next }]);
+    else onSaved?.();
   };
 
   if (!rows.length) {

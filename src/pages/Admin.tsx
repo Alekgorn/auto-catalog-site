@@ -139,20 +139,36 @@ const Admin = () => {
    * список, и разметка показывала «всё размечено». Сохранение и так уже
    * прошло на сервере — значит достаточно поправить те же поля у себя.
    */
-  const patchFrameWires = useCallback(
-    (updates: { id?: number; frameWires: string[] }[]) => {
+  const patchProducts = useCallback(
+    (updates: { id?: number; patch: Partial<AdminProduct> }[]) => {
       const map = new Map(
-        updates.filter((u) => u.id).map((u) => [u.id, u.frameWires]),
+        updates.filter((u) => u.id).map((u) => [u.id, u.patch]),
       );
+      if (!map.size) return;
+
       setProducts((prev) =>
         prev.map((p) =>
-          p.id && map.has(p.id)
-            ? { ...p, frameWires: map.get(p.id) as string[] }
-            : p,
+          p.id && map.has(p.id) ? { ...p, ...map.get(p.id) } : p,
         ),
       );
     },
     [],
+  );
+
+  /** Частый случай: сохранили проводки у списка рамок */
+  const patchFrameWires = useCallback(
+    (updates: { id?: number; frameWires: string[] }[]) =>
+      patchProducts(
+        updates.map((u) => ({ id: u.id, patch: { frameWires: u.frameWires } })),
+      ),
+    [patchProducts],
+  );
+
+  /** Одно поле сразу многим товарам — массовые правки техпараметров */
+  const patchMany = useCallback(
+    (ids: (number | undefined)[], patch: Partial<AdminProduct>) =>
+      patchProducts(ids.map((id) => ({ id, patch }))),
+    [patchProducts],
   );
 
   const saveGuide = async (guide: AdminGuide) => {
@@ -486,6 +502,7 @@ const Admin = () => {
             fitsIssues={fitsIssues}
             onReload={load}
             onPatchFrameWires={patchFrameWires}
+            onPatchMany={patchMany}
           />
         )}
 

@@ -9,6 +9,11 @@ import { formatPrice, WireFeature } from '@/data/catalog';
 interface Props {
   products: AdminProduct[];
   onReload?: () => void;
+  /** Записать поле многим товарам на месте, без перезапроса каталога */
+  onPatchMany?: (
+    ids: (number | undefined)[],
+    patch: { wireFeatures: string[] },
+  ) => void;
   /** Открыть карточку товара — правки делаются там, где они видны */
   onEdit?: (p: AdminProduct) => void;
 }
@@ -24,7 +29,7 @@ interface Props {
  * Список признаков берётся из настроек, поэтому новый пункт появляется
  * здесь сам, без правки кода.
  */
-const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
+const WireTechPanel = ({ products, onReload, onPatchMany, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlyEmpty, setOnlyEmpty] = useState(true);
@@ -150,7 +155,17 @@ const WireTechPanel = ({ products, onReload, onEdit }: Props) => {
     }
     setDraft({});
     toast({ title: `Сохранено: ${entries.length}` });
-    onReload?.();
+
+    /* Всё записано на сервере. Разносим те же галочки по своему списку —
+       перекачивать ради этого весь каталог незачем */
+    if (onPatchMany) {
+      byCombo.forEach((ids, key) =>
+        onPatchMany(
+          ids.map((id) => Number(id)),
+          { wireFeatures: key ? key.split('|') : [] },
+        ),
+      );
+    } else onReload?.();
   };
 
   return (

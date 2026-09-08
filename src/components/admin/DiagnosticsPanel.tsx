@@ -21,6 +21,11 @@ interface Props {
   onReload?: () => void;
   /** Обновить проводки у рамок на месте, без перезапроса каталога */
   onPatchFrameWires?: (u: { id?: number; frameWires: string[] }[]) => void;
+  /** Одно поле сразу многим товарам — без перезапроса каталога */
+  onPatchMany?: (
+    ids: (number | undefined)[],
+    patch: Partial<AdminProduct>,
+  ) => void;
 }
 
 type Section =
@@ -49,6 +54,7 @@ const DiagnosticsPanel = ({
   fitsIssues,
   onReload,
   onPatchFrameWires,
+  onPatchMany,
 }: Props) => {
   const [section, setSection] = useState<Section>('frames');
 
@@ -142,6 +148,7 @@ const DiagnosticsPanel = ({
           <WireSuggestPanel
             products={products}
             onReload={onReload}
+            onPatch={onPatchFrameWires}
             onEdit={onEdit}
           />
         )}
@@ -149,6 +156,7 @@ const DiagnosticsPanel = ({
           <WireTechPanel
             products={products}
             onReload={onReload}
+            onPatchMany={onPatchMany}
             onEdit={onEdit}
           />
         )}
@@ -169,6 +177,7 @@ const DiagnosticsPanel = ({
             brands={brands}
             onEdit={onEdit}
             onReload={onReload}
+            onPatch={onPatchFrameWires}
           />
         )}
         {section === 'audit-wires' && (

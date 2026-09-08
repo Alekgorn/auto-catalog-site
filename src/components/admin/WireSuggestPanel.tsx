@@ -10,6 +10,8 @@ import { formatPrice } from '@/data/catalog';
 interface Props {
   products: AdminProduct[];
   onReload?: () => void;
+  /** Обновить проводки на месте — дешевле полного перезапроса каталога */
+  onPatch?: (u: { id?: number; frameWires: string[] }[]) => void;
   onEdit?: (p: AdminProduct) => void;
 }
 
@@ -22,7 +24,7 @@ interface Props {
  * не связывается: у рамки и проводки годы честно могут расходиться, и
  * решать это должен тот, кто знает товар.
  */
-const WireSuggestPanel = ({ products, onReload, onEdit }: Props) => {
+const WireSuggestPanel = ({ products, onReload, onPatch, onEdit }: Props) => {
   const { toast } = useToast();
   const [search, setSearch] = useState('');
   const [onlySure, setOnlySure] = useState(true);
@@ -62,7 +64,9 @@ const WireSuggestPanel = ({ products, onReload, onEdit }: Props) => {
       .map((f) => ({
         id: f.id,
         frameWires: [
-          ...new Set([...(f.frameWires ?? []), wire.slug].filter(Boolean)),
+          ...new Set(
+            [...(f.frameWires ?? []), wire.slug].filter(Boolean) as string[],
+          ),
         ],
       }));
 
@@ -82,7 +86,9 @@ const WireSuggestPanel = ({ products, onReload, onEdit }: Props) => {
         s.group.frames.length === 1 ? 'рамку' : 'рамок'
       }.`,
     });
-    onReload?.();
+    // Сохранение уже прошло — правим список у себя, каталог не трогаем
+    if (onPatch) onPatch(updates);
+    else onReload?.();
   };
 
   return (
