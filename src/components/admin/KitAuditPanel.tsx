@@ -5,12 +5,14 @@ import { useToast } from '@/hooks/use-toast';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
+import WireMismatchList from '@/components/admin/WireMismatchList';
 import { isAllModels } from '@/lib/fits-match';
 import {
   KIT_RULE_TITLES,
   KitGapRow,
   auditKitProducts,
   auditWiring,
+  findWireMismatches,
   findKitGaps,
 } from '@/lib/kit-audit';
 
@@ -22,7 +24,7 @@ interface Props {
   onReload?: () => void;
 }
 
-type View = 'products' | 'gaps';
+type View = 'products' | 'gaps' | 'mismatch';
 
 /** Проводка из каталога — то, из чего выбираем в разметке */
 interface WireOption {
@@ -95,6 +97,13 @@ const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
    */
   const gaps = useMemo(() => findKitGaps(products), [products]);
 
+  /* Проводки, привязанные к рамке мимо её машин: в подборе покупатель
+     получит то, что ему не встанет */
+  const mismatches = useMemo(
+    () => findWireMismatches(products, onlyActive),
+    [products, onlyActive],
+  );
+
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
     const list = view === 'products' ? productIssues : wiringIssues;
@@ -113,6 +122,11 @@ const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
   const VIEWS: { id: View; label: string; count: number }[] = [
     { id: 'products', label: 'Рамки и проводки', count: productIssues.length },
     { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
+    {
+      id: 'mismatch',
+      label: 'Проводка не к той машине',
+      count: mismatches.length,
+    },
   ];
 
   return (
@@ -126,7 +140,7 @@ const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
             только список того, что стоит посмотреть.
           </p>
         </div>
-        {view === 'products' && (
+        {(view === 'products' || view === 'mismatch') && (
           <button
             onClick={() => setOnlyActive((v) => !v)}
             className="flex flex-none items-center gap-2 border border-border px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-foreground"
@@ -157,7 +171,13 @@ const KitAuditPanel = ({ products, brands, onEdit, onReload }: Props) => {
         ))}
       </div>
 
-      {view === 'gaps' ? (
+      {view === 'mismatch' ? (
+        <WireMismatchList
+          rows={mismatches}
+          onEdit={onEdit}
+          onSaved={() => onReload?.()}
+        />
+      ) : view === 'gaps' ? (
         <GapsList
           rows={gaps}
           wires={wires}

@@ -1,6 +1,6 @@
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
 import { VehicleWiring } from '@/lib/wire-pick';
-import { withoutAllMark } from '@/lib/fits-match';
+import { withoutAllMark, findFitModels, hasFitModel } from '@/lib/fits-match';
 import {
   FRAMES_CATEGORY,
   HEADUNITS_CATEGORY,
@@ -466,6 +466,95 @@ export const auditKitProducts = (
     const rank = (x: KitIssue) => (x.level === 'error' ? 0 : 1);
     return rank(a) - rank(b) || a.title.localeCompare(b.title);
   });
+};
+
+/** Одна лишняя связь «рамка → проводка» с разбором, где именно она мимо */
+export interface WireMismatch {
+  frame: AdminProduct;
+  wire: AdminProduct;
+  /** Машины рамки, которым эта проводка не подходит */
+  missing: { brand: string; model: string }[];
+  /** Сколько машин рамки проводка всё же закрывает */
+  covered: number;
+  /** Проводка не подходит вообще ни одной машине рамки */
+  total: boolean;
+  /** Марка совпадает, промах только по годам */
+  yearsOnly: boolean;
+}
+
+/**
+ * Проводки, привязанные к рамке «мимо» её машин.
+ *
+ * Рамка обычно общая на несколько моделей: «Chrysler, Dodge, Jeep». К ней
+ * цепляют проводку, которая на деле подходит только к части из них — а по
+ * остальным машинам покупатель получит в подборе то, что ему не встанет.
+ *
+ * Отдельно различаем два случая. Промах полный — проводка не подходит ни
+ * одной машине рамки, это почти наверняка ошибка привязки. Промах
+ * частичный — закрывает часть моделей: тогда либо в проводку надо
+ * дописать недостающие машины, либо связь снять.
+ */
+export const findWireMismatches = (
+  products: AdminProduct[],
+  onlyActive = true,
+): WireMismatch[] => {
+  const bySlug = new Map(
+    products.filter((p) => p.slug).map((p) => [p.slug as string, p]),
+  );
+
+  const out: WireMismatch[] = [];
+
+  products
+    .filter(
+      (p) =>
+        p.category === FRAMES_CATEGORY &&
+        (onlyActive ? p.isActive : true) &&
+        (p.frameWires ?? []).length,
+    )
+    .forEach((frame) => {
+      const cars = pairsOf(frame);
+      if (!cars.length) return;
+
+      const fFrom = frame.yearFrom || 1990;
+      const fTo = frame.yearTo || 2100;
+
+      (frame.frameWires ?? []).forEach((slug) => {
+        const wire = bySlug.get(slug);
+        // Битые ссылки и скрытые товары ловят отдельные правила
+        if (!wire || (onlyActive && !wire.isActive)) return;
+
+        const wFrom = wire.yearFrom || 1990;
+        const wTo = wire.yearTo || 2100;
+        const yearsOverlap = wFrom <= fTo && wTo >= fFrom;
+
+        const missing = cars.filter(({ brand, model }) => {
+          const models = findFitModels(wire.fits, brand);
+          return !models || !hasFitModel(models, model);
+        });
+
+        if (!missing.length && yearsOverlap) return;
+
+        /* Машины совпали, а годы разошлись — промах по всей рамке:
+           отмечаем все её машины, чтобы список не врал про «часть» */
+        const gaps = yearsOverlap ? missing : cars;
+
+        out.push({
+          frame,
+          wire,
+          missing: gaps,
+          covered: cars.length - gaps.length,
+          total: gaps.length === cars.length,
+          yearsOnly: yearsOverlap ? false : !missing.length,
+        });
+      });
+    });
+
+  return out.sort(
+    (a, b) =>
+      Number(b.total) - Number(a.total) ||
+      b.missing.length - a.missing.length ||
+      a.frame.name.localeCompare(b.frame.name),
+  );
 };
 
 /** Понятные названия правил — для фильтров */
