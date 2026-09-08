@@ -161,12 +161,12 @@ const KitSection = ({
     return { counts, min, max };
   }, [byPriceList, step.leading]);
 
+  /* Показываем все включённые классы, даже пустые: лестница уровней
+     должна начинаться с базового, иначе кажется, что дешёвых магнитол
+     не бывает вовсе. Пустой класс просто не нажимается */
   const levels = useMemo(
-    () =>
-      productLevels.filter(
-        (l) => l.active !== false && (levelStats.counts[l.id] ?? 0) > 0,
-      ),
-    [productLevels, levelStats],
+    () => productLevels.filter((l) => l.active !== false),
+    [productLevels],
   );
 
   /**
@@ -318,33 +318,6 @@ const KitSection = ({
                 />
                 Показаны рамки под {String(size).replace('.', ',')} дюймов
                 {vehicleLabel ? ` для ${vehicleLabel}` : ''}
-              </span>
-            ) : null}
-
-            {/*
-              Магнитолы сузили по размеру рамок: экран, под который нет
-              рамки на эту машину, поставить некуда. Объясняем прямо,
-              иначе пропажа моделей выглядит как сбой каталога.
-            */}
-            {step.leading && vehicle && hiddenBySize > 0 ? (
-              <span className="flex w-full items-center gap-2 border border-success/60 bg-success/5 px-3 py-2 text-[0.82rem] leading-snug text-foreground">
-                <Icon
-                  name="Filter"
-                  size={14}
-                  className="flex-none text-success"
-                />
-                <span>
-                  {vehicleLabel ? `На ${vehicleLabel} ` : 'На эту машину '}
-                  встают экраны{' '}
-                  <b className="font-semibold">
-                    {(availableSizes ?? [])
-                      .map((s) => String(s).replace('.', ','))
-                      .join(' и ')}
-                    {'\u00A0'}дюймов
-                  </b>{' '}
-                  — только под них есть переходные рамки. Остальные
-                  диагонали скрыли.
-                </span>
               </span>
             ) : null}
 
@@ -542,6 +515,34 @@ const KitSection = ({
               />
             </div>
           )}
+
+          {/*
+            Магнитолы сузили по размеру рамок: экран, под который нет
+            рамки на эту машину, поставить некуда. Объясняем прямо,
+            иначе пропажа моделей выглядит как сбой каталога. Стоит
+            перед самим списком — это подпись к нему, а не к шапке шага.
+          */}
+          {step.leading && vehicle && hiddenBySize > 0 ? (
+            <span className="mt-4 flex w-full items-center gap-2 border border-success/60 bg-success/5 px-3 py-2 text-[0.82rem] leading-snug text-foreground">
+              <Icon
+                name="Filter"
+                size={14}
+                className="flex-none text-success"
+              />
+              <span>
+                {vehicleLabel ? `На ${vehicleLabel} ` : 'На эту машину '}
+                встают экраны{' '}
+                <b className="font-semibold">
+                  {(availableSizes ?? [])
+                    .map((s) => String(s).replace('.', ','))
+                    .join(' и ')}
+                  {'\u00A0'}дюймов
+                </b>{' '}
+                — только под них есть переходные рамки. Остальные
+                диагонали скрыли.
+              </span>
+            </span>
+          ) : null}
 
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {(collapsed ? [chosen!] : list.slice(0, shown)).map((p, i) => (

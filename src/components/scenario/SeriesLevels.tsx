@@ -45,12 +45,15 @@ const SeriesLevels = ({ levels, value, onChange, counts, prices }: Props) => {
   );
 
   return (
-    <section className="border border-border bg-surface">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-4">
-        <h2 className="font-head text-[1.05rem] font-bold uppercase tracking-tight">
+    <section className="border border-foreground bg-surface">
+      {/* Шапка залита цветом бренда: раньше блок читался как продолжение
+          фона и подсказку про нажатие просто не замечали */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 bg-foreground px-5 py-3">
+        <h2 className="font-head text-[1.05rem] font-bold uppercase tracking-tight text-background">
           Чем отличаются магнитолы
         </h2>
-        <p className="text-[0.82rem] text-muted-foreground">
+        <p className="flex items-center gap-2 bg-primary px-3 py-1.5 font-head text-[0.76rem] font-bold uppercase tracking-[0.04em] text-primary-foreground">
+          <Icon name="MousePointerClick" size={14} className="flex-none" />
           {value
             ? "Нажмите ещё раз, чтобы показать все"
             : "Нажмите на класс — оставим только его"}
@@ -62,14 +65,21 @@ const SeriesLevels = ({ levels, value, onChange, counts, prices }: Props) => {
       >
         {levels.map((level, i) => {
           const active = value === level.id;
+          /* Класс без товаров всё равно показываем: лестница уровней
+             начинается с базового, и без него кажется, что дешёвых
+             магнитол не бывает. Но нажимать нечего — фильтр даст пустоту */
+          const empty = !counts[level.id];
           return (
             <button
               key={level.id}
-              onClick={() => onChange(active ? "" : level.id)}
+              onClick={() => !empty && onChange(active ? "" : level.id)}
+              aria-disabled={empty}
               className={`flex flex-col p-4 text-left transition-colors ${
-                active
-                  ? "bg-primary/5 ring-1 ring-inset ring-primary"
-                  : "bg-surface hover:bg-background"
+                empty
+                  ? "cursor-default bg-surface opacity-60"
+                  : active
+                    ? "bg-primary/5 ring-1 ring-inset ring-primary"
+                    : "bg-surface hover:bg-background"
               }`}
             >
               <div className="flex items-baseline gap-2">
@@ -88,9 +98,23 @@ const SeriesLevels = ({ levels, value, onChange, counts, prices }: Props) => {
                 )}
               </div>
 
-              <div className="mt-1 text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground">
-                {level.series ? `${level.series} · ` : ""}
-                {counts[level.id]} шт
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {level.series && (
+                  <span className="border border-border bg-background px-1.5 py-0.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.04em] text-foreground">
+                    {level.series}
+                  </span>
+                )}
+                <span
+                  className={`px-1.5 py-0.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.04em] ${
+                    counts[level.id]
+                      ? "bg-foreground text-background"
+                      : "border border-border text-muted-foreground"
+                  }`}
+                >
+                  {counts[level.id]
+                    ? `${counts[level.id]} шт`
+                    : "нет в наличии"}
+                </span>
               </div>
 
               {level.summary && (
@@ -121,8 +145,12 @@ const SeriesLevels = ({ levels, value, onChange, counts, prices }: Props) => {
                 </div>
               )}
 
-              <div className="mt-auto pt-3 font-head text-[0.9rem] font-bold text-primary">
-                {prices[level.id]}
+              <div
+                className={`mt-auto pt-3 font-head text-[0.9rem] font-bold ${
+                  empty ? "text-muted-foreground" : "text-primary"
+                }`}
+              >
+                {prices[level.id] ?? "Сейчас не возим"}
               </div>
             </button>
           );

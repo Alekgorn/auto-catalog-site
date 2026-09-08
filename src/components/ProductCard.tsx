@@ -191,7 +191,12 @@ const ProductCard = ({
    */
   const platePhoto = (() => {
     // У магнитолы совместимость — это наличие рамки нужного размера
-    if (headunitFits) return `Есть рамка: ${vehicle!.brand} ${vehicle!.model}`;
+    /* У магнитолы с классом низ фото занимает класс: «есть рамка» —
+       это про рамку, а выбирают на этом шаге саму магнитолу */
+    if (headunitFits)
+      return levelTitle
+        ? null
+        : `Есть рамка: ${vehicle!.brand} ${vehicle!.model}`;
     if (fitConfirmed) return `Подходит: ${vehicle!.brand} ${vehicle!.model}`;
     if (noFrameForSize) return null;
     if (forAnyCar) return null;
@@ -259,7 +264,7 @@ const ProductCard = ({
             Встаёт под значком «Хит», если тот есть. */}
         {diagonal && (
           <span
-            className={`absolute right-0 bg-foreground px-2 py-1 font-head text-[0.72rem] font-bold leading-none tracking-tight text-background sm:px-2.5 sm:text-[0.82rem] ${
+            className={`absolute right-0 bg-foreground px-2.5 py-1.5 font-head text-[0.92rem] font-bold leading-none tracking-tight text-background sm:px-3 sm:text-[1.05rem] ${
               product.badge ? 'top-9 sm:top-11' : 'top-2 sm:top-3'
             }`}
           >
@@ -273,11 +278,12 @@ const ProductCard = ({
             приглушённый, чтобы не спутать со скидкой. */}
         {levelTitle && (
           <span
-            className={`absolute left-0 bg-foreground/85 px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-background sm:px-2.5 sm:text-[0.64rem] ${
-              plateBottom ? 'bottom-8 sm:bottom-9' : 'bottom-2'
+            className={`absolute left-0 flex items-center gap-1.5 bg-foreground/85 px-2 py-1.5 text-[0.62rem] font-bold uppercase tracking-[0.1em] text-background sm:px-3 sm:text-[0.66rem] ${
+              plateBottom ? 'bottom-8 sm:bottom-9' : 'inset-x-0 bottom-0'
             }`}
           >
-            {levelTitle}
+            <Icon name="Layers" size={12} className="flex-none" />
+            <span className="truncate">{levelTitle}</span>
           </span>
         )}
 
