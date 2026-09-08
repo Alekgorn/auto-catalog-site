@@ -271,10 +271,35 @@ const GroupRow = ({
   onEdit?: (p: AdminProduct) => void;
 }) => {
   const [picked, setPicked] = useState<string[]>(group.wires);
-  const candidates = useMemo(
-    () => (isOpen ? wireCandidates(products, group) : []),
-    [isOpen, products, group],
-  );
+
+  /**
+   * Что показываем в списке: подходящие проводки плюс уже выбранные.
+   *
+   * Выбранная проводка может не проходить в кандидаты — например к рамке
+   * «Chrysler, Dodge, Jeep» прицепили проводку, где в совместимости стоит
+   * только Chrysler. Тогда в группе Dodge она пропадала из списка: сверху
+   * написано «1 проводка», а отметить или снять её нечем. Показываем такие
+   * отдельно — их видно и можно убрать.
+   */
+  const candidates = useMemo(() => {
+    if (!isOpen) return [];
+
+    const fit = wireCandidates(products, group);
+    const have = new Set(fit.map((w) => w.slug));
+
+    const extra = group.wires
+      .filter((s) => s && !have.has(s))
+      .map((s) => products.find((p) => p.slug === s))
+      .filter(Boolean) as AdminProduct[];
+
+    return [...fit, ...extra];
+  }, [isOpen, products, group]);
+
+  /** Проводка выбрана, но этой машине по совместимости не подходит */
+  const isForeign = useMemo(() => {
+    const fit = new Set(wireCandidates(products, group).map((w) => w.slug));
+    return (slug: string) => !fit.has(slug);
+  }, [products, group]);
 
   const toggle = (slug: string) =>
     setPicked((p) =>
@@ -403,6 +428,14 @@ const GroupRow = ({
                         {w.yearFrom || '…'}–{w.yearTo || '…'} ·{' '}
                         {formatPrice(w.price)}
                       </span>
+                      {/* Выбрана, но этой машины в её совместимости нет —
+                          либо снять, либо дописать машину в проводку */}
+                      {isForeign(w.slug ?? '') && (
+                        <span className="mt-0.5 block text-[0.72rem] text-primary">
+                          в совместимости этой проводки нет {group.brand}{' '}
+                          {group.model} или годы не совпадают
+                        </span>
+                      )}
                     </span>
                   </label>
                 ))}
