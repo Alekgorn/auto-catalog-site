@@ -10,7 +10,6 @@ import { isAllModels } from '@/lib/fits-match';
 import {
   KIT_RULE_TITLES,
   KitGapRow,
-  auditKitProducts,
   auditWiring,
   findWireMismatches,
   findKitGaps,
@@ -26,7 +25,7 @@ interface Props {
   onReload?: () => void;
 }
 
-type View = 'products' | 'gaps' | 'mismatch';
+type View = 'gaps' | 'mismatch';
 
 /** Проводка из каталога — то, из чего выбираем в разметке */
 interface WireOption {
@@ -50,7 +49,7 @@ const KitAuditPanel = ({
   onReload,
   onPatch,
 }: Props) => {
-  const [view, setView] = useState<View>('products');
+  const [view, setView] = useState<View>('gaps');
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
   const [wiringRows, setWiringRows] = useState<VehicleWiring[]>([]);
@@ -88,11 +87,6 @@ const KitAuditPanel = ({
     loadWiring();
   }, []);
 
-  const productIssues = useMemo(
-    () => auditKitProducts(products, onlyActive),
-    [products, onlyActive],
-  );
-
   const wiringIssues = useMemo(
     () => auditWiring(wiringRows, products, brands),
     [wiringRows, products, brands],
@@ -114,21 +108,20 @@ const KitAuditPanel = ({
 
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
-    const list = view === 'products' ? productIssues : wiringIssues;
+    const list = wiringIssues;
     const map: Record<string, number> = {};
     list.forEach((i) => {
       map[i.rule] = (map[i.rule] ?? 0) + 1;
     });
     return map;
-  }, [view, productIssues, wiringIssues]);
+  }, [wiringIssues]);
 
   const shown = useMemo(() => {
-    const list = view === 'products' ? productIssues : wiringIssues;
+    const list = wiringIssues;
     return rule ? list.filter((i) => i.rule === rule) : list;
-  }, [view, rule, productIssues, wiringIssues]);
+  }, [rule, wiringIssues]);
 
   const VIEWS: { id: View; label: string; count: number }[] = [
-    { id: 'products', label: 'Рамки и проводки', count: productIssues.length },
     { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
     {
       id: 'mismatch',
@@ -142,13 +135,13 @@ const KitAuditPanel = ({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="max-w-[46em]">
           <p className="text-[0.87rem] leading-relaxed text-muted-foreground">
-            Смотрим связи между записями: годы в названии против поля,
-            товары без привязки к машине, битые ссылки в разметке подбора
-            и машины, где рамка есть, а проводки нет. Ничего не меняется —
-            только список того, что стоит посмотреть.
+            Дыры в связках: машины, где рамка есть, а проводки нет, и
+            проводки, привязанные не к той машине. Расхождения в самих
+            карточках переехали в «Найденные проблемы» — здесь только
+            то, что можно починить прямо отсюда.
           </p>
         </div>
-        {(view === 'products' || view === 'mismatch') && (
+        {view === 'mismatch' && (
           <button
             onClick={() => setOnlyActive((v) => !v)}
             className="flex flex-none items-center gap-2 border border-border px-4 py-2.5 text-[0.75rem] uppercase tracking-[0.1em] transition-colors hover:border-foreground"
@@ -210,7 +203,7 @@ const KitAuditPanel = ({
                   : 'border-border text-muted-foreground hover:border-foreground'
               }`}
             >
-              Все ({view === 'products' ? productIssues.length : wiringIssues.length})
+              Все ({wiringIssues.length})
             </button>
             {Object.entries(counts)
               .sort((a, b) => b[1] - a[1])

@@ -1,23 +1,19 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
-import DataAuditPanel from '@/components/admin/DataAuditPanel';
-import FitsCheckPanel from '@/components/admin/FitsCheckPanel';
 import KitAuditPanel from '@/components/admin/KitAuditPanel';
 import WiringPanel from '@/components/admin/WiringPanel';
 import FrameWiresPanel from '@/components/admin/FrameWiresPanel';
 import WireTechPanel from '@/components/admin/WireTechPanel';
-import WiringAuditPanel from '@/components/admin/WiringAuditPanel';
 import WireSuggestPanel from '@/components/admin/WireSuggestPanel';
 import VehicleCheckPanel from '@/components/admin/VehicleCheckPanel';
+import IssuesPanel from '@/components/admin/IssuesPanel';
+import { collectIssues } from '@/lib/catalog-issues';
 
 interface Props {
   products: AdminProduct[];
   brands: AdminBrand[];
   onEdit: (product: AdminProduct) => void;
-  /** Счётчики для подписей — считаются на уровне админки */
-  dataIssues: number;
-  fitsIssues: number;
   /** Перечитать каталог после массовых правок */
   onReload?: () => void;
   /** Обновить проводки у рамок на месте, без перезапроса каталога */
@@ -29,16 +25,7 @@ interface Props {
   ) => void;
 }
 
-type Section =
-  | 'vehicle'
-  | 'frames'
-  | 'suggest'
-  | 'tech'
-  | 'cards'
-  | 'fits'
-  | 'kit'
-  | 'audit-wires'
-  | 'wiring';
+type Section = 'vehicle' | 'issues' | 'frames' | 'tech' | 'kit' | 'wiring';
 
 /**
  * Проверка данных — одно место для всей диагностики каталога.
@@ -52,13 +39,18 @@ const DiagnosticsPanel = ({
   products,
   brands,
   onEdit,
-  dataIssues,
-  fitsIssues,
   onReload,
   onPatchFrameWires,
   onPatchMany,
 }: Props) => {
   const [section, setSection] = useState<Section>('vehicle');
+
+  /* Цифра на кнопке считается той же проверкой, что и сам список:
+     иначе на вкладке одно число, а внутри другое */
+  const issuesCount = useMemo(
+    () => collectIssues(products, brands, true).length,
+    [products, brands],
+  );
 
   const SECTIONS: { id: Section; label: string; count?: number; hint: string }[] =
     [
@@ -68,14 +60,15 @@ const DiagnosticsPanel = ({
         hint: 'Что выйдет в подборе на конкретном авто и что там подозрительно',
       },
       {
-        id: 'frames',
-        label: 'Проводки к рамкам',
-        hint: 'Какие проводки подходят к рамке — основа подбора',
+        id: 'issues',
+        label: 'Найденные проблемы',
+        count: issuesCount,
+        hint: 'Всё, что каталог считает странным: пустые поля, годы вразнобой, марки не из справочника, дыры в связках',
       },
       {
-        id: 'suggest',
-        label: 'Подсказки связок',
-        hint: 'Рамки без проводки и подходящие кандидаты — привязка в одно нажатие',
+        id: 'frames',
+        label: 'Проводки к рамкам',
+        hint: 'Какие проводки подходят к рамке — основа подбора. Внизу подсказки для рамок без пары',
       },
       {
         id: 'tech',
@@ -83,26 +76,9 @@ const DiagnosticsPanel = ({
         hint: 'Усилитель, камера, CAN — чем проводки отличаются друг от друга',
       },
       {
-        id: 'cards',
-        label: 'Расхождения в карточках',
-        count: dataIssues,
-        hint: 'Год в названии против поля, пустые описания, ошибки в цене',
-      },
-      {
-        id: 'fits',
-        label: 'Совместимость',
-        count: fitsIssues,
-        hint: 'Марки и модели, которых нет в справочнике',
-      },
-      {
-        id: 'audit-wires',
-        label: 'Сверка проводок',
-        hint: 'Устаревшие списки моделей, годы против рамки, марка не в названии',
-      },
-      {
         id: 'kit',
-        label: 'Комплект',
-        hint: 'Связки рамка-проводка, разметка подбора, годы',
+        label: 'Дыры в связках',
+        hint: 'Машины без проводки и проводки, привязанные не к той машине',
       },
       {
         id: 'wiring',
@@ -151,20 +127,24 @@ const DiagnosticsPanel = ({
           />
         )}
         {section === 'frames' && (
-          <FrameWiresPanel
-            products={products}
-            onReload={onReload}
-            onPatch={onPatchFrameWires}
-            onEdit={onEdit}
-          />
-        )}
-        {section === 'suggest' && (
-          <WireSuggestPanel
-            products={products}
-            onReload={onReload}
-            onPatch={onPatchFrameWires}
-            onEdit={onEdit}
-          />
+          <>
+            <FrameWiresPanel
+              products={products}
+              onReload={onReload}
+              onPatch={onPatchFrameWires}
+              onEdit={onEdit}
+            />
+            {/* Подсказки были отдельным разделом, хотя чинят ту же
+                связку — теперь они продолжение списка рамок */}
+            <div className="mt-10 border-t border-foreground pt-7">
+              <WireSuggestPanel
+                products={products}
+                onReload={onReload}
+                onPatch={onPatchFrameWires}
+                onEdit={onEdit}
+              />
+            </div>
+          </>
         )}
         {section === 'tech' && (
           <WireTechPanel
@@ -174,16 +154,8 @@ const DiagnosticsPanel = ({
             onEdit={onEdit}
           />
         )}
-        {section === 'cards' && (
-          <DataAuditPanel products={products} onEdit={onEdit} bare />
-        )}
-        {section === 'fits' && (
-          <FitsCheckPanel
-            products={products}
-            brands={brands}
-            onEdit={onEdit}
-            bare
-          />
+        {section === 'issues' && (
+          <IssuesPanel products={products} brands={brands} onEdit={onEdit} />
         )}
         {section === 'kit' && (
           <KitAuditPanel
@@ -192,13 +164,6 @@ const DiagnosticsPanel = ({
             onEdit={onEdit}
             onReload={onReload}
             onPatch={onPatchFrameWires}
-          />
-        )}
-        {section === 'audit-wires' && (
-          <WiringAuditPanel
-            products={products}
-            brands={brands}
-            onEdit={onEdit}
           />
         )}
         {section === 'wiring' && <WiringPanel bare />}

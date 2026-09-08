@@ -498,8 +498,6 @@ const Admin = () => {
             products={products}
             brands={brands}
             onEdit={setEditing}
-            dataIssues={dataIssues}
-            fitsIssues={fitsIssues}
             onReload={load}
             onPatchFrameWires={patchFrameWires}
             onPatchMany={patchMany}
