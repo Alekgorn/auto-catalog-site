@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductGallery from "@/components/ProductGallery";
 import ProductTrust from "@/components/ProductTrust";
+import ProductLevelCard from "@/components/product/ProductLevelCard";
 import FitsList from "@/components/FitsList";
 import FitsCheck from "@/components/FitsCheck";
 import ProductRelated from "@/components/ProductRelated";
@@ -53,6 +54,7 @@ const Product = () => {
     contacts,
     loading,
     brands: catalogBrands,
+    productLevels,
   } = useCatalog();
   const found = useMemo(
     () => allProducts.find((p) => p.id === id) ?? null,
@@ -241,6 +243,12 @@ const Product = () => {
   const brands = expandFits(product.fits, catalogBrands);
   const modelCount = brands.reduce((acc, [, m]) => acc + m.length, 0);
 
+  /* Класс магнитолы из справочника админки. Скрытый класс не показываем */
+  const level =
+    productLevels.find(
+      (l) => l.id === product?.levelKey && l.active !== false,
+    ) ?? null;
+
   // Гарантия и артикул показываются только здесь — дублировать их у кнопок не нужно
   const specs = (() => {
     const base = productSpecs(product);
@@ -271,7 +279,9 @@ const Product = () => {
                 alt={product.name}
                 videoUrl={product.videoUrl}
               />
-              <ProductTrust product={product} />
+              {/* Класс объясняет разницу в цене прямо под фото —
+                  гарантии переехали ниже, к описанию */}
+              {level && <ProductLevelCard level={level} />}
             </div>
 
             <div className="lg:col-span-6 lg:col-start-7">
@@ -293,9 +303,14 @@ const Product = () => {
                 {product.name}
               </h1>
 
-              <div className="mt-3 text-[0.8rem] uppercase tracking-[0.12em] text-muted-foreground">
-                {modelCount} совместимых моделей
-              </div>
+              {/* Ноль моделей — это не «ни к чему не подходит», а просто
+                  товар без разметки марок (у магнитол совместимость идёт
+                  через рамку). Строку с нулём убираем: она пугает зря */}
+              {modelCount > 0 && (
+                <div className="mt-3 text-[0.8rem] uppercase tracking-[0.12em] text-muted-foreground">
+                  {modelCount} совместимых моделей
+                </div>
+              )}
 
               <div className="mt-8">
                 <PriceBlock product={product} large />
@@ -459,6 +474,10 @@ const Product = () => {
                   </p>
                 </div>
               )}
+
+              {/* Гарантии закрывают колонку: их читают, когда решение
+                  почти принято, а под галереей теперь класс товара */}
+              <ProductTrust product={product} />
             </div>
           </div>
         </section>
