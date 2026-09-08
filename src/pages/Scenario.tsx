@@ -611,6 +611,12 @@ const ScenarioPage = () => {
     );
   }
 
+  /* Справка об уровнях нужна только там, где магнитолы реально есть:
+     на подборке камер или шумоизоляции она была бы не к месту */
+  const hasHeadunits = hits.some(
+    (h) => h.product.category === "Android магнитолы",
+  );
+
   const others = visibleScenarios(scenarioSettings)
     .filter((s) => s.slug !== scenario.slug)
     .slice(0, 4);
@@ -675,6 +681,12 @@ const ScenarioPage = () => {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {!loading && hasHeadunits && (
+          <div className="pb-7">
+            <SeriesLevels />
           </div>
         )}
 
@@ -755,8 +767,6 @@ const ScenarioPage = () => {
             }
           />
         )}
-
-        <SeriesLevels />
 
         <ScenarioFooterInfo scenario={scenario} others={others} />
       </main>
