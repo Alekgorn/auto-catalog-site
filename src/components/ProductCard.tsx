@@ -26,6 +26,7 @@ import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
 import { useCatalog } from '@/context/CatalogContext';
 import { useCompare } from '@/context/CompareContext';
+import { SERIES_LEVELS, levelOf } from '@/data/series-levels';
 
 interface Props {
   product: Product;
@@ -121,6 +122,15 @@ const ProductCard = ({
   const diagonal =
     product.category === HEADUNITS_CATEGORY ? screenLabel(product) : null;
 
+  /* Уровень магнитолы: связывает карточку со справкой «чем отличаются».
+     Без него блок уровней объясняет в пустоту — прочитал про класс,
+     а в списке не понять, где он */
+  const levelTitle =
+    product.category === HEADUNITS_CATEGORY
+      ? (SERIES_LEVELS.find((l) => l.key === levelOf(product.name))?.title ??
+        null)
+      : null;
+
   /**
    * Характеристики под названием — то, ради чего покупатель раньше заходил
    * в карточку. Сначала важные поля категории (диагональ, память), затем
@@ -193,6 +203,10 @@ const ProductCard = ({
    * пометки «для всех авто»: формально товар и правда встаёт в любую
    * машину, но конкретно в эту — некуда.
    */
+  /* Низ фото занят полосой о совместимости — тогда уровень встаёт над ней */
+  const plateBottom =
+    Boolean(platePhoto) || Boolean(vehicle && !fits && !forAnyCar);
+
   const fitLine = noFrameForSize
     ? `Нет рамки ${screenLabel(product) ?? ''} под ${vehicle!.brand} ${vehicle!.model}`
     : forAnyCar
@@ -247,6 +261,20 @@ const ProductCard = ({
             }`}
           >
             {diagonal}
+          </span>
+        )}
+
+        {/* Уровень магнитолы — спокойной плашкой в нижнем углу фото.
+            Верхние углы заняты акцией и диагональю, а спорить с ними
+            уровню и не нужно: «Хит» кричит, уровень объясняет. Цвет
+            приглушённый, чтобы не спутать со скидкой. */}
+        {levelTitle && (
+          <span
+            className={`absolute left-0 bg-foreground/85 px-2 py-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-background sm:px-2.5 sm:text-[0.64rem] ${
+              plateBottom ? 'bottom-8 sm:bottom-9' : 'bottom-2'
+            }`}
+          >
+            {levelTitle}
           </span>
         )}
 
