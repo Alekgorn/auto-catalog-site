@@ -9,6 +9,7 @@ import FrameWiresPanel from '@/components/admin/FrameWiresPanel';
 import WireTechPanel from '@/components/admin/WireTechPanel';
 import WiringAuditPanel from '@/components/admin/WiringAuditPanel';
 import WireSuggestPanel from '@/components/admin/WireSuggestPanel';
+import VehicleCheckPanel from '@/components/admin/VehicleCheckPanel';
 
 interface Props {
   products: AdminProduct[];
@@ -29,6 +30,7 @@ interface Props {
 }
 
 type Section =
+  | 'vehicle'
   | 'frames'
   | 'suggest'
   | 'tech'
@@ -56,10 +58,15 @@ const DiagnosticsPanel = ({
   onPatchFrameWires,
   onPatchMany,
 }: Props) => {
-  const [section, setSection] = useState<Section>('frames');
+  const [section, setSection] = useState<Section>('vehicle');
 
   const SECTIONS: { id: Section; label: string; count?: number; hint: string }[] =
     [
+      {
+        id: 'vehicle',
+        label: 'Проверка по машине',
+        hint: 'Что выйдет в подборе на конкретном авто и что там подозрительно',
+      },
       {
         id: 'frames',
         label: 'Проводки к рамкам',
@@ -136,6 +143,13 @@ const DiagnosticsPanel = ({
       </div>
 
       <div className="mt-2">
+        {section === 'vehicle' && (
+          <VehicleCheckPanel
+            products={products}
+            brands={brands}
+            onEdit={onEdit}
+          />
+        )}
         {section === 'frames' && (
           <FrameWiresPanel
             products={products}
