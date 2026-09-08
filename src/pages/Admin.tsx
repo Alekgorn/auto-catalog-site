@@ -76,8 +76,22 @@ const Admin = () => {
         setAdminToken(null);
         return;
       }
-      const data = await res.json();
-      setProducts(data.products ?? []);
+      /* Каталог большой, и запрос иногда не укладывается в таймаут.
+         Раньше ответ об ошибке всё равно шёл в setProducts — список
+         обнулялся, и разметка показывала «здесь пусто, всё размечено».
+         Правки при этом были на месте, их возвращало обновление
+         страницы. Теперь неудачную загрузку не пускаем в состояние */
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !Array.isArray(data?.products)) {
+        toast({
+          title: "Каталог не загрузился",
+          description: "Список мог остаться неполным — обновите страницу",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setProducts(data.products);
       setBrands(data.brands ?? []);
       setNewOrders(data.newOrders ?? 0);
       setMissingFits(data.missingFits ?? 0);
@@ -105,10 +119,17 @@ const Admin = () => {
           );
         })
         .catch(() => undefined);
+    } catch {
+      // Сеть отвалилась — прежний список честнее пустого
+      toast({
+        title: "Каталог не загрузился",
+        description: "Проверьте связь и обновите страницу",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
-  }, [loadGuides]);
+  }, [loadGuides, toast]);
 
   const saveGuide = async (guide: AdminGuide) => {
     const res = await adminFetch("?action=guides", {
