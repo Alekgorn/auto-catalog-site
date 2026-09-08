@@ -24,6 +24,16 @@ const SeriesLevels = ({ value, onChange, counts }: Props) => {
   const levels = SERIES_LEVELS.filter((l) => (counts[l.key] ?? 0) > 0);
   if (levels.length < 2) return null;
 
+  /* Колонок ровно столько, сколько уровней: иначе справа зияет пустая
+     клетка. Классы перечислены целиком — Tailwind не понимает имена,
+     собранные из кусков на лету */
+  const cols =
+    levels.length === 2
+      ? "sm:grid-cols-2"
+      : levels.length === 3
+        ? "sm:grid-cols-3"
+        : "sm:grid-cols-2 lg:grid-cols-4";
+
   return (
     <section className="border border-border bg-surface">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 pt-4">
@@ -37,7 +47,9 @@ const SeriesLevels = ({ value, onChange, counts }: Props) => {
         </p>
       </div>
 
-      <div className="mt-3.5 grid grid-cols-1 gap-px border-t border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+      <div
+        className={`mt-3.5 grid grid-cols-1 gap-px border-t border-border bg-border ${cols}`}
+      >
         {levels.map((level) => {
           const active = value === level.key;
           return (
