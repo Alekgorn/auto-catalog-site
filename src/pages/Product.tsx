@@ -279,9 +279,7 @@ const Product = () => {
                 alt={product.name}
                 videoUrl={product.videoUrl}
               />
-              {/* Класс объясняет разницу в цене прямо под фото —
-                  гарантии переехали ниже, к описанию */}
-              {level && <ProductLevelCard level={level} />}
+
             </div>
 
             <div className="lg:col-span-6 lg:col-start-7">
@@ -302,6 +300,10 @@ const Product = () => {
               <h1 className="mt-4 font-head text-3xl font-bold uppercase leading-[1.05] tracking-[-0.03em] sm:text-4xl">
                 {product.name}
               </h1>
+
+              {/* Класс объясняет разницу в цене там, где она возникает:
+                  сразу под названием, до того как взгляд уйдёт к цене */}
+              {level && <ProductLevelCard level={level} />}
 
               {/* Ноль моделей — это не «ни к чему не подходит», а просто
                   товар без разметки марок (у магнитол совместимость идёт
