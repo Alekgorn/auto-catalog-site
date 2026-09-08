@@ -7,7 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
 import KitHelpDialog from '@/components/kit/KitHelpDialog';
 import SeriesLevels from '@/components/scenario/SeriesLevels';
-import { levelOf } from '@/data/series-levels';
+import { useCatalog } from '@/context/CatalogContext';
 
 interface Props {
   step: KitStep;
@@ -86,6 +86,7 @@ const KitSection = ({
   const [help, setHelp] = useState(false);
   /** Выбранный уровень магнитолы: пусто — показываем все */
   const [level, setLevel] = useState('');
+  const { productLevels } = useCatalog();
 
   /** Все товары раздела, подходящие машине и экрану магнитолы */
   const full = useMemo(
@@ -142,24 +143,53 @@ const KitSection = ({
   const byPriceList = priceRelaxed ? full : byPrice;
 
   /**
-   * Сколько магнитол в каждом уровне — цифра под названием уровня и
-   * заодно признак, что уровень вообще показывать.
+   * Классы, у которых есть товары на этом шаге. Пустой класс показывать
+   * незачем: покупатель нажмёт и увидит пустоту.
    */
-  const levelCounts = useMemo(() => {
-    const out: Record<string, number> = {};
-    if (!step.leading) return out;
+  const levelStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const min: Record<string, number> = {};
+    const max: Record<string, number> = {};
+    if (!step.leading) return { counts, min, max };
     byPriceList.forEach((p) => {
-      const k = levelOf(p.name);
-      if (k) out[k] = (out[k] ?? 0) + 1;
+      const k = p.levelKey;
+      if (!k) return;
+      counts[k] = (counts[k] ?? 0) + 1;
+      min[k] = Math.min(min[k] ?? p.price, p.price);
+      max[k] = Math.max(max[k] ?? p.price, p.price);
+    });
+    return { counts, min, max };
+  }, [byPriceList, step.leading]);
+
+  const levels = useMemo(
+    () =>
+      productLevels.filter(
+        (l) => l.active !== false && (levelStats.counts[l.id] ?? 0) > 0,
+      ),
+    [productLevels, levelStats],
+  );
+
+  /**
+   * Вилка цен по классу — считаем от товаров, а не пишем руками:
+   * иначе обещание в справке разойдётся с ценами в списке.
+   */
+  const levelPrices = useMemo(() => {
+    const out: Record<string, string> = {};
+    levels.forEach((l) => {
+      const lo = levelStats.min[l.id];
+      const hi = levelStats.max[l.id];
+      if (lo === undefined) return;
+      out[l.id] =
+        lo === hi ? formatPrice(lo) : `${formatPrice(lo)} – ${formatPrice(hi)}`;
     });
     return out;
-  }, [byPriceList, step.leading]);
+  }, [levels, levelStats]);
 
   /** Список после фильтра по уровню — не выбран, значит показываем всё */
   const list = useMemo(
     () =>
       level
-        ? byPriceList.filter((p) => levelOf(p.name) === level)
+        ? byPriceList.filter((p) => p.levelKey === level)
         : byPriceList,
     [byPriceList, level],
   );
@@ -501,12 +531,14 @@ const KitSection = ({
           {step.leading && !collapsed && (
             <div className="mt-5">
               <SeriesLevels
+                levels={levels}
+                prices={levelPrices}
                 value={level}
                 onChange={(k) => {
                   setLevel(k);
                   setShown(STEP_SIZE);
                 }}
-                counts={levelCounts}
+                counts={levelStats.counts}
               />
             </div>
           )}

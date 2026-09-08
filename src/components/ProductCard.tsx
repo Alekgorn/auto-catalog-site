@@ -26,7 +26,6 @@ import PriceBlock from '@/components/PriceBlock';
 import StockLine from '@/components/StockLine';
 import { useCatalog } from '@/context/CatalogContext';
 import { useCompare } from '@/context/CompareContext';
-import { SERIES_LEVELS, levelOf } from '@/data/series-levels';
 
 interface Props {
   product: Product;
@@ -63,8 +62,14 @@ const ProductCard = ({
   // Неполные данные машины = машина не выбрана
   const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
-  const { cardFields, categorySpecs, brands, products, wireFeatures } =
-    useCatalog();
+  const {
+    cardFields,
+    categorySpecs,
+    brands,
+    products,
+    wireFeatures,
+    productLevels,
+  } = useCatalog();
 
   /**
    * Магнитолу к машине привязывает не марка, а размер: она встаёт через
@@ -122,14 +127,12 @@ const ProductCard = ({
   const diagonal =
     product.category === HEADUNITS_CATEGORY ? screenLabel(product) : null;
 
-  /* Уровень магнитолы: связывает карточку со справкой «чем отличаются».
-     Без него блок уровней объясняет в пустоту — прочитал про класс,
+  /* Класс магнитолы: связывает карточку со справкой «чем отличаются».
+     Без него блок классов объясняет в пустоту — прочитал про уровень,
      а в списке не понять, где он */
   const levelTitle =
-    product.category === HEADUNITS_CATEGORY
-      ? (SERIES_LEVELS.find((l) => l.key === levelOf(product.name))?.title ??
-        null)
-      : null;
+    productLevels.find((l) => l.id === product.levelKey && l.active !== false)
+      ?.title ?? null;
 
   /**
    * Характеристики под названием — то, ради чего покупатель раньше заходил

@@ -1,14 +1,18 @@
 import { AdminProduct, SetField, label, field } from './product-types';
 import { DEFAULT_STOCK_NOTE } from '@/components/StockLine';
+import { HEADUNITS_CATEGORY } from '@/lib/kit-filter';
+import { ProductLevel } from '@/data/catalog';
 
 interface Props {
   form: AdminProduct;
   set: SetField;
   categories: string[];
+  /** Справочник классов магнитол — из настроек админки */
+  levels: ProductLevel[];
 }
 
 /** Вкладка «Основное»: название, цены, ссылки на маркетплейсы, годы. */
-const ProductMainTab = ({ form, set, categories }: Props) => (
+const ProductMainTab = ({ form, set, categories, levels }: Props) => (
   <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
     <div className="sm:col-span-2">
       <span className={label}>Название</span>
@@ -53,6 +57,25 @@ const ProductMainTab = ({ form, set, categories }: Props) => (
         className={field}
       />
     </div>
+    {/* Класс магнитолы — только там, где он имеет смысл: у рамок и
+        проводки уровней нет, поле бы только путало */}
+    {levels.length > 0 && form.category === HEADUNITS_CATEGORY && (
+      <div>
+        <span className={label}>Класс магнитолы</span>
+        <select
+          value={form.levelKey ?? ''}
+          onChange={(e) => set('levelKey', e.target.value)}
+          className={`${field} cursor-pointer`}
+        >
+          <option value="">— без класса —</option>
+          {levels.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.title}
+            </option>
+          ))}
+        </select>
+      </div>
+    )}
     <div>
       <span className={label}>Популярность (0—100)</span>
       <input

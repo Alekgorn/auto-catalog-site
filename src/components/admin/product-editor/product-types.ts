@@ -26,6 +26,8 @@ export interface AdminProduct {
   yearFrom: number;
   yearTo: number;
   badge: string | null;
+  /** Класс магнитолы — ключ из справочника уровней */
+  levelKey?: string;
   images: string[];
   /** Видео товара: файл на своём CDN или ссылка на YouTube/Rutube */
   videoUrl: string;
@@ -80,6 +82,7 @@ export const emptyProduct = (): AdminProduct => ({
   yearFrom: 2015,
   yearTo: new Date().getFullYear(),
   badge: null,
+  levelKey: '',
   stock: 0,
   stockNote: DEFAULT_STOCK_NOTE,
   images: [],

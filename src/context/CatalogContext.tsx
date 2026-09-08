@@ -6,6 +6,7 @@ import {
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
   WireFeature,
+  ProductLevel,
 } from '@/data/catalog';
 import { VehicleWiring } from '@/lib/wire-pick';
 import { CATALOG_URL } from '@/lib/api';
@@ -41,6 +42,7 @@ export interface PrerenderData {
   settings?: {
     card_fields?: string[];
     wire_features?: WireFeature[];
+    product_levels?: ProductLevel[];
     showcase?: ShowcaseKit[];
     scenarios?: ScenarioOverride[];
     contacts?: Partial<SiteContacts>;
@@ -74,6 +76,8 @@ interface CatalogValue {
   cardFields: string[];
   /** Справочник признаков подключения — по нему подбор задаёт вопросы */
   wireFeatures: WireFeature[];
+  /** Классы магнитол — справочник из админки */
+  productLevels: ProductLevel[];
   showcase: ShowcaseKit[];
   scenarioSettings: ScenarioOverride[];
   contacts: SiteContacts;
@@ -224,6 +228,9 @@ export const CatalogProvider = ({
       ? seed.settings.card_fields
       : DEFAULT_CARD_FIELDS,
   );
+  const [productLevels, setProductLevels] = useState<ProductLevel[]>(
+    seed?.settings?.product_levels ?? [],
+  );
   const [wireFeatures, setWireFeatures] = useState<WireFeature[]>(
     seed?.settings?.wire_features ?? [],
   );
@@ -333,6 +340,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.settings?.scenarios) && data.settings.scenarios.length) {
           setScenarioSettings(data.settings.scenarios);
         }
+        if (Array.isArray(data.settings?.product_levels)) {
+          setProductLevels(data.settings.product_levels);
+        }
         if (Array.isArray(data.settings?.wire_features)) {
           setWireFeatures(data.settings.wire_features);
         }
@@ -399,6 +409,7 @@ export const CatalogProvider = ({
     categorySpecs,
     cardFields,
     wireFeatures,
+    productLevels,
     showcase,
     scenarioSettings,
     contacts,

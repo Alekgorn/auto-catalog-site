@@ -535,6 +535,8 @@ def row_to_product(r: dict) -> dict:
         'wireFeatures': r.get('wire_features') or [],
         # Подсказка покупателю: на что смотреть при выборе проводки
         'wireHint': r.get('wire_hint') or '',
+        # Класс магнитолы — ключ из справочника уровней
+        'levelKey': r.get('level_key') or '',
         # Ниже — поля старой схемы. В карточке товара и на сайте их нет,
         # читает только Excel-разметка проводок: файл на два листа
         # выгружается и загружается как раньше
@@ -3471,6 +3473,7 @@ def handler(event: dict, context) -> dict:
                     [str(x) for x in (body.get('wireFeatures') or []) if x][:30]
                 ),
                 'wire_hint': q(str(body.get('wireHint') or '')[:2000]),
+                'level_key': q(str(body.get('levelKey') or '')[:32]),
                 'sort_order': qint(body.get('sortOrder'), 100),
                 'popularity': qint(body.get('popularity'), 0),
         'stock_qty': qint(body.get('stock'), 0),

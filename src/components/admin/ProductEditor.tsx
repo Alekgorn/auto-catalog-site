@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { adminFetch } from '@/lib/api';
@@ -17,7 +17,7 @@ import {
   isAllModels,
   ALL_MODELS,
 } from '@/lib/fits-match';
-import { FitMode } from '@/data/catalog';
+import { FitMode, ProductLevel } from '@/data/catalog';
 
 export type { AdminProduct };
 export { emptyProduct };
@@ -48,6 +48,21 @@ const ProductEditor = ({
   onSave,
   onOpen,
 }: Props) => {
+  /* Классы магнитол — справочник из настроек. Грузим здесь, а не
+     тянем через полдюжины компонентов: список короткий и нужен
+     только этой форме */
+  const [levels, setLevels] = useState<ProductLevel[]>([]);
+
+  useEffect(() => {
+    adminFetch('?action=settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (Array.isArray(d.settings?.product_levels))
+          setLevels(d.settings.product_levels);
+      })
+      .catch(() => undefined);
+  }, []);
+
   const [form, setForm] = useState<AdminProduct>({
     ...product,
     description: product.description?.length ? product.description : [''],
@@ -272,7 +287,12 @@ const ProductEditor = ({
 
         <div className="px-6 py-6">
           {section === 'main' && (
-            <ProductMainTab form={form} set={set} categories={categories} />
+            <ProductMainTab
+              form={form}
+              set={set}
+              categories={categories}
+              levels={levels}
+            />
           )}
 
           {section === 'content' && (

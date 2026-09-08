@@ -5,6 +5,7 @@ import { CARD_FIELDS } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
 import SearchPagesPanel from '@/components/admin/SearchPagesPanel';
 import WireFeaturesEditor from '@/components/admin/WireFeaturesEditor';
+import ProductLevelsEditor from '@/components/admin/ProductLevelsEditor';
 
 interface Props {
   onImported: () => void;
@@ -219,6 +220,10 @@ const SettingsPanel = ({ onImported }: Props) => {
 
       <div className="lg:col-span-12">
         <WireFeaturesEditor />
+      </div>
+
+      <div className="lg:col-span-12">
+        <ProductLevelsEditor />
       </div>
 
       <div className="lg:col-span-5">
