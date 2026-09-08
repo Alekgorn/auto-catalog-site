@@ -6,8 +6,12 @@
  */
 
 export interface SeriesLevel {
+  /** Ключ уровня — по нему фильтруется список */
+  key: string;
   /** Порядковый номер уровня — рисуется крупной цифрой */
   step: number;
+  /** Названия платформ для распознавания товара по имени */
+  match: string[];
   /** Короткое имя уровня: то, что человек запомнит */
   title: string;
   /** Серии платформ, попадающие в уровень */
@@ -22,7 +26,9 @@ export interface SeriesLevel {
 
 export const SERIES_LEVELS: SeriesLevel[] = [
   {
+    key: "base",
     step: 1,
+    match: ["T100", "T133", "TS7"],
     title: "Базовый уровень",
     series: "T100, T133, TS7",
     summary:
@@ -37,7 +43,9 @@ export const SERIES_LEVELS: SeriesLevel[] = [
     price: "16 700 – 17 100 ₽",
   },
   {
+    key: "mid",
     step: 2,
+    match: ["TS18"],
     title: "Средний класс",
     series: "TS18",
     summary:
@@ -52,7 +60,9 @@ export const SERIES_LEVELS: SeriesLevel[] = [
     price: "17 400 – 18 600 ₽",
   },
   {
+    key: "pro",
     step: 3,
+    match: ["TS105", "G85", "7862"],
     title: "Продвинутый",
     series: "TS105, G85",
     summary:
@@ -67,7 +77,9 @@ export const SERIES_LEVELS: SeriesLevel[] = [
     price: "23 900 – 24 900 ₽",
   },
   {
+    key: "top",
     step: 4,
+    match: ["TS20", "TS10S", "7870"],
     title: "Флагман",
     series: "TS20, TS10S",
     summary:
@@ -82,3 +94,19 @@ export const SERIES_LEVELS: SeriesLevel[] = [
     price: "26 400 – 26 800 ₽",
   },
 ];
+
+/**
+ * Определяет уровень магнитолы по названию: ищем имя платформы
+ * (TS105, TS20 и т.п.) внутри строки. Временное решение, пока
+ * уровень не стал полем товара — тогда читать будем прямо из базы.
+ *
+ * Более длинные имена проверяем первыми: иначе «TS10S» распознался бы
+ * как «TS105» и флагман уехал бы в продвинутый уровень.
+ */
+export const levelOf = (name: string): string => {
+  const up = name.toUpperCase().replace(/\s+/g, "");
+  const pairs = SERIES_LEVELS.flatMap((l) =>
+    l.match.map((m) => ({ key: l.key, m: m.toUpperCase() })),
+  ).sort((a, b) => b.m.length - a.m.length);
+  return pairs.find((p) => up.includes(p.m))?.key ?? "";
+};

@@ -6,6 +6,8 @@ import { KitStep } from '@/data/scenarios';
 import ProductCard from '@/components/ProductCard';
 import UniversalDivider from '@/components/UniversalDivider';
 import KitHelpDialog from '@/components/kit/KitHelpDialog';
+import SeriesLevels from '@/components/scenario/SeriesLevels';
+import { levelOf } from '@/data/series-levels';
 
 interface Props {
   step: KitStep;
@@ -82,6 +84,8 @@ const KitSection = ({
   /** Показать список снова, когда позиция уже выбрана */
   const [replacing, setReplacing] = useState(false);
   const [help, setHelp] = useState(false);
+  /** Выбранный уровень магнитолы: пусто — показываем все */
+  const [level, setLevel] = useState('');
 
   /** Все товары раздела, подходящие машине и экрану магнитолы */
   const full = useMemo(
@@ -135,7 +139,30 @@ const KitSection = ({
    */
   const priceRelaxed = byPrice.length === 0 && full.length > 0;
 
-  const list = priceRelaxed ? full : byPrice;
+  const byPriceList = priceRelaxed ? full : byPrice;
+
+  /**
+   * Сколько магнитол в каждом уровне — цифра под названием уровня и
+   * заодно признак, что уровень вообще показывать.
+   */
+  const levelCounts = useMemo(() => {
+    const out: Record<string, number> = {};
+    if (!step.leading) return out;
+    byPriceList.forEach((p) => {
+      const k = levelOf(p.name);
+      if (k) out[k] = (out[k] ?? 0) + 1;
+    });
+    return out;
+  }, [byPriceList, step.leading]);
+
+  /** Список после фильтра по уровню — не выбран, значит показываем всё */
+  const list = useMemo(
+    () =>
+      level
+        ? byPriceList.filter((p) => levelOf(p.name) === level)
+        : byPriceList,
+    [byPriceList, level],
+  );
 
   /**
    * Кнопка «Показать дороже/дешевле» пропала не по ошибке: под эту машину
@@ -469,6 +496,21 @@ const KitSection = ({
         </div>
       ) : (
         <>
+          {/* Справка-фильтр по уровням — только на шаге магнитолы
+              и только когда список показан целиком */}
+          {step.leading && !collapsed && (
+            <div className="mt-5">
+              <SeriesLevels
+                value={level}
+                onChange={(k) => {
+                  setLevel(k);
+                  setShown(STEP_SIZE);
+                }}
+                counts={levelCounts}
+              />
+            </div>
+          )}
+
           <div className="mt-5 grid grid-cols-2 gap-3 md:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {(collapsed ? [chosen!] : list.slice(0, shown)).map((p, i) => (
               <Fragment key={p.id}>
