@@ -83,7 +83,8 @@ const ArticlePage = () => {
         />
         <div className="rule" />
 
-        <header className="max-w-[46em] py-10">
+        <div className="mx-auto max-w-[48em]">
+        <header className="py-10">
           {article.publishedAt && (
             <div className="text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground">
               {dateText(article.publishedAt)}
@@ -99,18 +100,22 @@ const ArticlePage = () => {
           )}
         </header>
 
+        {/* Обложка — иллюстрация к тексту, а не баннер во весь экран:
+            держим её в ширине колонки и невысокой */}
         {article.cover && (
           <img
             src={article.cover}
             alt={article.title}
-            className="mb-10 aspect-[16/7] w-full bg-card object-cover"
+            className="mb-10 aspect-[16/9] w-full bg-card object-cover"
           />
         )}
 
         <ArticleContent article={article} />
 
+        </div>
+
         {more.length > 0 && (
-          <section className="mt-20 border-t border-foreground pt-8">
+          <section className="mx-auto mt-20 max-w-[48em] border-t border-foreground pt-8">
             <div className="eyebrow">Читайте также</div>
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
               {more.map((a) => (
@@ -134,7 +139,7 @@ const ArticlePage = () => {
           </section>
         )}
 
-        <div className="py-14">
+        <div className="mx-auto max-w-[48em] py-14">
           <Link
             to="/articles"
             className="inline-flex items-center gap-2 border border-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import VideoField from '@/components/admin/VideoField';
 import ImageZoom from '@/components/admin/ImageZoom';
@@ -143,6 +143,79 @@ const ProductPicker = ({
   );
 };
 
+/**
+ * Поле текста с выделением жирным.
+ *
+ * Выделяете слово мышкой, жмёте «Ж» — оно оборачивается звёздочками и
+ * на сайте выйдет жирным. Горячие клавиши тоже работают.
+ */
+const RichArea = ({
+  value,
+  onChange,
+  rows = 4,
+  placeholder,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  rows?: number;
+  placeholder?: string;
+}) => {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  const wrap = () => {
+    const el = ref.current;
+    if (!el) return;
+    const { selectionStart: from, selectionEnd: to } = el;
+    if (from === to) return;
+
+    const picked = value.slice(from, to);
+    /* Повторное нажатие на уже выделенном — снимаем разметку */
+    const inside = /^\*\*([\s\S]+)\*\*$/.exec(picked);
+    const next = inside
+      ? value.slice(0, from) + inside[1] + value.slice(to)
+      : `${value.slice(0, from)}**${picked}**${value.slice(to)}`;
+
+    onChange(next);
+    /* Возвращаем выделение на то же слово: иначе после нажатия курсор
+       улетает в конец и следующее слово приходится искать заново */
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(from, to + (inside ? -4 : 4));
+    });
+  };
+
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-3">
+        <button
+          onClick={wrap}
+          title="Выделить жирным (Ctrl+B)"
+          className="flex h-7 w-7 items-center justify-center border border-border font-head text-[0.8rem] font-bold transition-colors hover:border-primary hover:text-primary"
+        >
+          Ж
+        </button>
+        <span className="text-[0.72rem] text-muted-foreground">
+          выделите слово и нажмите
+        </span>
+      </div>
+      <textarea
+        ref={ref}
+        value={value}
+        rows={rows}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+            e.preventDefault();
+            wrap();
+          }
+        }}
+        className={area}
+      />
+    </div>
+  );
+};
+
 interface Props {
   blocks: ArticleBlock[];
   onChange: (next: ArticleBlock[]) => void;
@@ -237,12 +310,10 @@ const ArticleBlocksEditor = ({ blocks, onChange, products }: Props) => {
             </div>
 
             {b.type === 'text' && (
-              <textarea
+              <RichArea
                 value={b.text}
-                rows={4}
-                onChange={(e) => set(i, { ...b, text: e.target.value })}
+                onChange={(text) => set(i, { ...b, text })}
                 placeholder="Текст абзаца"
-                className={area}
               />
             )}
 
@@ -424,12 +495,11 @@ const ArticleBlocksEditor = ({ blocks, onChange, products }: Props) => {
             )}
 
             {b.type === 'note' && (
-              <textarea
+              <RichArea
                 value={b.text}
                 rows={3}
-                onChange={(e) => set(i, { ...b, text: e.target.value })}
+                onChange={(text) => set(i, { ...b, text })}
                 placeholder="Важное замечание"
-                className={area}
               />
             )}
 

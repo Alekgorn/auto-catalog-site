@@ -1,12 +1,14 @@
 import { Article, ArticleBlock } from '@/data/catalog';
 import { SITE_URL, SeoData } from '@/lib/seo';
 import { crumbsJsonLd } from '@/components/Breadcrumbs';
+import { stripRich } from '@/lib/rich-text';
 
 const BRAND = 'ШТАТНО';
 
 /** Обрезаем по границе слова, чтобы описание не обрывалось на полуслове */
 const cut = (text: string, limit: number) => {
-  const clean = text.replace(/\s+/g, ' ').trim();
+  /* Звёздочки жирного — разметка редактора, в выдаче им не место */
+  const clean = stripRich(text).replace(/\s+/g, ' ').trim();
   if (clean.length <= limit) return clean;
   const part = clean.slice(0, limit);
   const space = part.lastIndexOf(' ');
@@ -66,8 +68,8 @@ export const articleJsonLd = (a: Article) => {
       '@type': 'FAQPage',
       mainEntity: faq.map((x) => ({
         '@type': 'Question',
-        name: x.q,
-        acceptedAnswer: { '@type': 'Answer', text: x.a },
+        name: stripRich(x.q),
+        acceptedAnswer: { '@type': 'Answer', text: stripRich(x.a) },
       })),
     });
   }

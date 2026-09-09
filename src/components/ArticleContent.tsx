@@ -7,6 +7,7 @@ import ProductCard from '@/components/ProductCard';
 import { useCatalog } from '@/context/CatalogContext';
 import { useVehicle } from '@/hooks/use-vehicle';
 import { Article, ArticleBlock } from '@/data/catalog';
+import { renderRich } from '@/lib/rich-text';
 
 interface Props {
   article: Article;
@@ -48,8 +49,8 @@ const ArticleContent = ({ article }: Props) => {
             key={i}
             className={
               (b.level ?? 2) === 3
-                ? 'max-w-[46em] pt-2 font-head text-xl font-medium leading-snug tracking-tight'
-                : 'max-w-[46em] border-t border-foreground pt-5 font-head text-2xl font-medium leading-snug tracking-tight sm:text-[1.7rem]'
+                ? 'pt-2 font-head text-xl font-medium leading-snug tracking-tight'
+                : 'border-t border-foreground pt-5 font-head text-2xl font-medium leading-snug tracking-tight sm:text-[1.7rem]'
             }
           >
             {b.text}
@@ -59,15 +60,15 @@ const ArticleContent = ({ article }: Props) => {
 
       case 'text':
         return (
-          <p key={i} className="max-w-[46em] leading-relaxed text-muted-foreground">
-            {b.text}
+          <p key={i} className="leading-relaxed text-muted-foreground">
+            {renderRich(b.text)}
           </p>
         );
 
       case 'list': {
         const Tag = b.ordered ? 'ol' : 'ul';
         return (
-          <Tag key={i} className="max-w-[46em] space-y-2.5">
+          <Tag key={i} className="space-y-2.5">
             {b.items
               .filter((x) => x.trim())
               .map((item, k) => (
@@ -75,7 +76,7 @@ const ArticleContent = ({ article }: Props) => {
                   <span className="flex-none font-head text-[0.8rem] font-bold text-primary">
                     {b.ordered ? `${k + 1}.` : '—'}
                   </span>
-                  <span>{item}</span>
+                  <span>{renderRich(item)}</span>
                 </li>
               ))}
           </Tag>
@@ -84,7 +85,7 @@ const ArticleContent = ({ article }: Props) => {
 
       case 'table':
         return (
-          <figure key={i} className="max-w-[52em] overflow-x-auto">
+          <figure key={i} className="overflow-x-auto">
             <table className="w-full min-w-[32em] border-collapse text-[0.87rem]">
               <thead>
                 <tr>
@@ -106,7 +107,7 @@ const ArticleContent = ({ article }: Props) => {
                         key={c}
                         className="border border-border p-3 leading-snug text-muted-foreground"
                       >
-                        {cell}
+                        {renderRich(cell)}
                       </td>
                     ))}
                   </tr>
@@ -125,17 +126,17 @@ const ArticleContent = ({ article }: Props) => {
         return (
           <div
             key={i}
-            className="flex max-w-[46em] items-start gap-3 border-l-2 border-primary bg-card px-5 py-4"
+            className="flex items-start gap-3 border-l-2 border-primary bg-card px-5 py-4"
           >
             <Icon name="Info" size={17} className="mt-0.5 flex-none text-primary" />
-            <span className="text-[0.92rem] leading-relaxed">{b.text}</span>
+            <span className="text-[0.92rem] leading-relaxed">{renderRich(b.text)}</span>
           </div>
         );
 
       case 'quote':
         return (
-          <blockquote key={i} className="max-w-[46em] border-l-2 border-foreground pl-5">
-            <p className="font-head text-lg leading-relaxed">{b.text}</p>
+          <blockquote key={i} className="border-l-2 border-foreground pl-5">
+            <p className="font-head text-lg leading-relaxed">{renderRich(b.text)}</p>
             {b.author && (
               <footer className="mt-2 text-[0.82rem] uppercase tracking-[0.08em] text-muted-foreground">
                 {b.author}
@@ -146,7 +147,7 @@ const ArticleContent = ({ article }: Props) => {
 
       case 'faq':
         return (
-          <div key={i} className="max-w-[46em] space-y-4">
+          <div key={i} className="space-y-4">
             {b.items
               .filter((x) => x.q.trim())
               .map((qa, k) => (
@@ -154,7 +155,9 @@ const ArticleContent = ({ article }: Props) => {
                   <h3 className="font-head text-[1.05rem] font-medium leading-snug">
                     {qa.q}
                   </h3>
-                  <p className="mt-2 leading-relaxed text-muted-foreground">{qa.a}</p>
+                  <p className="mt-2 leading-relaxed text-muted-foreground">
+                    {renderRich(qa.a)}
+                  </p>
                 </div>
               ))}
           </div>
@@ -198,13 +201,15 @@ const ArticleContent = ({ article }: Props) => {
         return (
           <div
             key={i}
-            className="max-w-[46em] border border-foreground bg-card px-6 py-7 sm:px-8"
+            className="border border-foreground bg-card px-6 py-7 sm:px-8"
           >
             <h2 className="font-head text-2xl font-medium leading-tight tracking-tight">
               {b.title}
             </h2>
             {b.text && (
-              <p className="mt-3 leading-relaxed text-muted-foreground">{b.text}</p>
+              <p className="mt-3 leading-relaxed text-muted-foreground">
+                {renderRich(b.text)}
+              </p>
             )}
             <Link
               to={b.buttonHref || '/'}
@@ -219,7 +224,7 @@ const ArticleContent = ({ article }: Props) => {
       case 'image':
         if (!b.image) return null;
         return (
-          <figure key={i} className="max-w-[46em]">
+          <figure key={i}>
             <button
               onClick={() => setZoom(photos.indexOf(b.image))}
               aria-label="Открыть фото на весь экран"
@@ -246,7 +251,7 @@ const ArticleContent = ({ article }: Props) => {
 
       case 'video':
         return (
-          <figure key={i} className="max-w-[46em]">
+          <figure key={i}>
             <VideoPlayer url={b.video} title={article.title} />
             {b.caption && (
               <figcaption className="mt-2 text-[0.85rem] leading-snug text-muted-foreground">
@@ -258,9 +263,11 @@ const ArticleContent = ({ article }: Props) => {
 
       case 'step':
         return (
-          <div key={i} className="max-w-[46em]">
+          <div key={i}>
             <h3 className="font-head text-lg font-medium leading-snug">{b.title}</h3>
-            <p className="mt-2 leading-relaxed text-muted-foreground">{b.text}</p>
+            <p className="mt-2 leading-relaxed text-muted-foreground">
+              {renderRich(b.text)}
+            </p>
           </div>
         );
 
