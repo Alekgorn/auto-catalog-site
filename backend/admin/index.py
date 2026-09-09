@@ -585,6 +585,24 @@ def row_to_guide(r: dict) -> dict:
     }
 
 
+def row_to_article(r: dict) -> dict:
+    return {
+        'id': r['id'],
+        'slug': r['slug'],
+        'title': r['title'],
+        'h1': r['h1'],
+        'metaTitle': r['meta_title'],
+        'metaDescription': r['meta_description'],
+        'excerpt': r['excerpt'],
+        'cover': r['cover'],
+        'blocks': r['blocks'],
+        'tags': r['tags'],
+        'publishedAt': r['published_at'].isoformat() if r.get('published_at') else '',
+        'sortOrder': r['sort_order'],
+        'isActive': r['is_active'],
+    }
+
+
 SLUG_LIMIT = 60
 
 TRANSLIT = {
@@ -3291,6 +3309,71 @@ def handler(event: dict, context) -> dict:
                 conn.commit()
                 cur.close()
                 return resp(200, {'ok': True})
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
+
+        if action == 'articles':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT * FROM {schema()}.articles "
+                    f"ORDER BY sort_order, published_at DESC, id DESC"
+                )
+                items = [row_to_article(r) for r in cur.fetchall()]
+                cur.close()
+                return resp(200, {'articles': items})
+
+            if method == 'DELETE':
+                aid = qint(params.get('id'))
+                cur.execute(f"DELETE FROM {schema()}.articles WHERE id = {aid}")
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            if method in ('POST', 'PUT'):
+                title = str(body.get('title', '')).strip()
+                if not title:
+                    return resp(400, {'error': 'Укажите заголовок'})
+                slug = str(body.get('slug', '')).strip() or slugify(title)
+                published = str(body.get('publishedAt', '')).strip()
+                fields = {
+                    'slug': q(slug),
+                    'title': q(title),
+                    'h1': q(str(body.get('h1', ''))),
+                    'meta_title': q(str(body.get('metaTitle', ''))),
+                    'meta_description': q(str(body.get('metaDescription', ''))),
+                    'excerpt': q(str(body.get('excerpt', ''))),
+                    'cover': q(str(body.get('cover', ''))),
+                    'blocks': qjson(body.get('blocks') or []),
+                    'tags': qjson(body.get('tags') or []),
+                    'sort_order': qint(body.get('sortOrder'), 100),
+                    'is_active': 'TRUE' if body.get('isActive', True) else 'FALSE',
+                }
+                if published:
+                    fields['published_at'] = q(published)
+                if method == 'POST':
+                    cur.execute(
+                        f"INSERT INTO {schema()}.articles ({', '.join(fields.keys())}) "
+                        f"VALUES ({', '.join(fields.values())}) RETURNING *"
+                    )
+                else:
+                    aid = qint(body.get('id'))
+                    if aid == 'NULL':
+                        return resp(400, {'error': 'Не указана статья'})
+                    sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+                    cur.execute(
+                        f"UPDATE {schema()}.articles SET {sets}, updated_at = NOW() "
+                        f"WHERE id = {aid} RETURNING *"
+                    )
+                row = cur.fetchone()
+                if not row:
+                    conn.rollback()
+                    cur.close()
+                    return resp(404, {'error': 'Статья не найдена'})
+                conn.commit()
+                out = row_to_article(row)
+                cur.close()
+                return resp(200, {'article': out})
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
 

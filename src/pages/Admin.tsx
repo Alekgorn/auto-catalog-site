@@ -26,6 +26,11 @@ import AdminLogin from "@/components/admin/AdminLogin";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AdminTabs, { AdminTab } from "@/components/admin/AdminTabs";
 import AdminGuidesTab from "@/components/admin/AdminGuidesTab";
+import AdminArticlesTab from "@/components/admin/AdminArticlesTab";
+import ArticleEditor, {
+  AdminArticle,
+  emptyArticle,
+} from "@/components/admin/ArticleEditor";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
 import MissingFitPanel from "@/components/admin/MissingFitPanel";
 
@@ -59,12 +64,21 @@ const Admin = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
   const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
+  const [articles, setArticles] = useState<AdminArticle[]>([]);
+  const [editingArticle, setEditingArticle] = useState<AdminArticle | null>(null);
 
   const loadGuides = useCallback(async () => {
     const res = await adminFetch("?action=guides");
     if (!res.ok) return;
     const data = await res.json();
     setGuides(data.guides ?? []);
+  }, []);
+
+  const loadArticles = useCallback(async () => {
+    const res = await adminFetch("?action=articles");
+    if (!res.ok) return;
+    const data = await res.json();
+    setArticles(data.articles ?? []);
   }, []);
 
   const load = useCallback(async () => {
@@ -96,6 +110,7 @@ const Admin = () => {
       setNewOrders(data.newOrders ?? 0);
       setMissingFits(data.missingFits ?? 0);
       await loadGuides();
+      await loadArticles();
       await adminFetch("?action=categories")
         .then((r) => r.json())
         .then((d) => {
@@ -129,7 +144,7 @@ const Admin = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadGuides, toast]);
+  }, [loadGuides, loadArticles, toast]);
 
   /**
    * Точечно обновить проводки у рамок — без перезагрузки каталога.
@@ -187,6 +202,31 @@ const Admin = () => {
     toast({ title: "Инструкция сохранена", description: guide.title });
     setEditingGuide(null);
     loadGuides();
+  };
+
+  const saveArticle = async (article: AdminArticle) => {
+    const res = await adminFetch("?action=articles", {
+      method: article.id ? "PUT" : "POST",
+      body: JSON.stringify(article),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast({
+        title: "Ошибка",
+        description: data.error ?? "Не удалось сохранить",
+      });
+      return;
+    }
+    toast({ title: "Статья сохранена", description: article.title });
+    setEditingArticle(null);
+    loadArticles();
+  };
+
+  const removeArticle = async (article: AdminArticle) => {
+    if (!window.confirm(`Удалить «${article.title}»?`)) return;
+    await adminFetch(`?action=articles&id=${article.id}`, { method: "DELETE" });
+    toast({ title: "Удалено" });
+    loadArticles();
   };
 
   const removeGuide = async (guide: AdminGuide) => {
@@ -462,6 +502,7 @@ const Admin = () => {
           newOrders={newOrders}
           productsCount={products.length}
           guidesCount={guides.length}
+          articlesCount={articles.length}
           brandsCount={brands.length}
           categoriesCount={categories.length}
           fitsIssues={fitsIssues}
@@ -473,6 +514,15 @@ const Admin = () => {
 
 
         {tab === "dealers" && <DealersPanel />}
+
+        {tab === "articles" && (
+          <AdminArticlesTab
+            articles={articles}
+            onCreate={() => setEditingArticle(emptyArticle())}
+            onEdit={setEditingArticle}
+            onRemove={removeArticle}
+          />
+        )}
 
         {tab === "guides" && (
           <AdminGuidesTab
@@ -580,6 +630,15 @@ const Admin = () => {
           products={products}
           onClose={() => setEditingGuide(null)}
           onSave={saveGuide}
+        />
+      )}
+
+      {editingArticle && (
+        <ArticleEditor
+          article={editingArticle}
+          products={products}
+          onClose={() => setEditingArticle(null)}
+          onSave={saveArticle}
         />
       )}
     </div>

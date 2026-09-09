@@ -120,6 +120,45 @@ export type GuideBlock =
      определяет parseVideo по самой ссылке (src/lib/video.ts) */
   | { type: 'video'; video: string; caption?: string };
 
+/**
+ * Блоки статьи. Первые пять совпадают с инструкциями — редактор у них
+ * общий. Дальше идёт то, что нужно именно SEO-тексту: подзаголовки для
+ * структуры, списки, таблицы сравнения, вопрос-ответ (его поисковик
+ * показывает отдельным блоком в выдаче), товар из каталога и призыв
+ * к действию.
+ */
+export type ArticleBlock =
+  | GuideBlock
+  | { type: 'heading'; text: string; level?: 2 | 3 }
+  | { type: 'list'; items: string[]; ordered?: boolean }
+  | { type: 'table'; head: string[]; rows: string[][]; caption?: string }
+  | { type: 'quote'; text: string; author?: string }
+  | { type: 'faq'; items: { q: string; a: string }[] }
+  | { type: 'product'; slug: string; note?: string }
+  | { type: 'products'; slugs: string[]; title?: string }
+  | {
+      type: 'cta';
+      title: string;
+      text?: string;
+      buttonText: string;
+      buttonHref: string;
+    };
+
+export interface Article {
+  slug: string;
+  title: string;
+  /** Заголовок на самой странице. Пусто — берём title */
+  h1: string;
+  /** Тег title в браузере и выдаче. Пусто — собираем автоматически */
+  metaTitle: string;
+  metaDescription: string;
+  excerpt: string;
+  cover: string;
+  blocks: ArticleBlock[];
+  tags: string[];
+  publishedAt: string;
+}
+
 export interface Guide {
   slug: string;
   title: string;

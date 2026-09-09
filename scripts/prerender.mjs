@@ -384,7 +384,7 @@ const applySeoToHtml = (html, seo, url) => {
 
 /** Убираем ранее сгенерированные страницы, чтобы не копить мусор. */
 const cleanOld = async () => {
-  for (const dir of ['product', 'guides', 'catalog', 'brand', 'oferta', 'privacy']) {
+  for (const dir of ['product', 'guides', 'articles', 'catalog', 'brand', 'oferta', 'privacy']) {
     await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
   }
   // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
@@ -439,7 +439,7 @@ const main = async () => {
   const catalogUrl = (await readJson(path.join(ROOT, 'backend', 'func2url.json')))
     .catalog;
 
-  let data = { products: [], brands: [], guides: [], settings: {} };
+  let data = { products: [], brands: [], guides: [], articles: [], settings: {} };
   try {
     const res = await fetch(catalogUrl);
     if (res.ok) data = await res.json();
@@ -464,6 +464,8 @@ const main = async () => {
     // Каталог: короткий адрес, на него ведут шапка и хлебные крошки
     '/catalog',
     '/guides',
+    // Раздел статей: SEO-тексты, ради которых он и заведён
+    '/articles',
     // Оферта и политика данных: на них ссылается подвал каждой страницы
     // и галочка согласия в формах — без предрендера поисковик и
     // модерация Директа увидят пустую страницу
@@ -476,6 +478,7 @@ const main = async () => {
     ...brandNames.map((b) => `/brand/${slugify(b)}`),
     ...(data.products ?? []).map((p) => `/product/${p.id}`),
     ...(data.guides ?? []).map((g) => `/guides/${g.slug}`),
+    ...(data.articles ?? []).map((a) => `/articles/${a.slug}`),
   ];
 
   await cleanOld();
@@ -643,12 +646,15 @@ const main = async () => {
     if (u === '/') return '1.0';
     if (u.startsWith('/catalog/') || u.startsWith('/brand/')) return '0.9';
     if (u.startsWith('/product/')) return '0.8';
+    // Статьи ведут трафик из поиска — им вес выше служебных страниц
+    if (u.startsWith('/articles')) return '0.7';
     return '0.6';
   };
   const freq = (u) => {
     if (u === '/') return 'daily';
     if (u.startsWith('/catalog/') || u.startsWith('/brand/')) return 'weekly';
     if (u.startsWith('/product/')) return 'weekly';
+    if (u.startsWith('/articles')) return 'monthly';
     return 'monthly';
   };
 
@@ -668,12 +674,14 @@ const main = async () => {
         pages: routes.length,
         products: (data.products ?? []).length,
         guides: (data.guides ?? []).length,
+        articles: (data.articles ?? []).length,
         signature: {
           products: fingerprint(
             data.products,
             (p) => `${p.id}:${p.name}:${p.price}:${p.oldPrice ?? ''}`,
           ),
           guides: fingerprint(data.guides, (g) => `${g.slug}:${g.title}`),
+          articles: fingerprint(data.articles, (a) => `${a.slug}:${a.title}`),
         },
       },
       null,

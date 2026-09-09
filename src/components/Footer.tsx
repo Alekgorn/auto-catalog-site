@@ -24,6 +24,7 @@ const COLS: {
       { label: "Доставка и оплата", target: "delivery" },
       { label: "Возврат и гарантия", target: "faq" },
       { label: "Инструкции по установке", route: "/guides" },
+      { label: "Статьи об автоэлектронике", route: "/articles" },
     ],
     target: "select",
   },

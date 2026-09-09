@@ -3,6 +3,7 @@ import {
   BRANDS as FALLBACK_BRANDS,
   Brand,
   Guide,
+  Article,
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
   WireFeature,
@@ -39,6 +40,7 @@ export interface PrerenderData {
   categories?: string[];
   categorySpecs?: Record<string, string[]>;
   guides?: Guide[];
+  articles?: Article[];
   settings?: {
     card_fields?: string[];
     wire_features?: WireFeature[];
@@ -71,6 +73,8 @@ interface CatalogValue {
   /** Настройки подбора проводки по машинам — из вкладки «Марки» */
   vehicleWiring: VehicleWiring[];
   guides: Guide[];
+  /** Статьи раздела «Полезное» — SEO-тексты из админки */
+  articles: Article[];
   categories: string[];
   categorySpecs: Record<string, string[]>;
   cardFields: string[];
@@ -223,6 +227,7 @@ export const CatalogProvider = ({
     seed?.vehicleWiring ?? [],
   );
   const [guides, setGuides] = useState<Guide[]>(seed?.guides ?? []);
+  const [articles, setArticles] = useState<Article[]>(seed?.articles ?? []);
   const [cardFields, setCardFields] = useState<string[]>(
     seed?.settings?.card_fields?.length
       ? seed.settings.card_fields
@@ -325,6 +330,9 @@ export const CatalogProvider = ({
         if (Array.isArray(data.guides)) {
           setGuides(data.guides);
         }
+        if (Array.isArray(data.articles)) {
+          setArticles(data.articles);
+        }
         if (Array.isArray(data.categories)) {
           setCatalogCategories(data.categories);
         }
@@ -405,6 +413,7 @@ export const CatalogProvider = ({
     brands,
     vehicleWiring,
     guides,
+    articles,
     categories,
     categorySpecs,
     cardFields,

@@ -134,6 +134,13 @@ def handler(event: dict, context) -> dict:
         links = cur.fetchall()
 
         cur.execute(
+            f"SELECT slug, title, h1, meta_title, meta_description, excerpt, cover, "
+            f"blocks, tags, published_at FROM {schema}.articles "
+            f"WHERE is_active = TRUE ORDER BY sort_order, published_at DESC, id DESC"
+        )
+        article_rows = cur.fetchall()
+
+        cur.execute(
             f"SELECT name, spec_fields FROM {schema}.categories WHERE is_active "
             f"ORDER BY sort_order, name"
         )
@@ -170,6 +177,22 @@ def handler(event: dict, context) -> dict:
         for g in guide_rows
     ]
 
+    articles = [
+        {
+            'slug': a['slug'],
+            'title': a['title'],
+            'h1': a['h1'],
+            'metaTitle': a['meta_title'],
+            'metaDescription': a['meta_description'],
+            'excerpt': a['excerpt'],
+            'cover': a['cover'],
+            'blocks': a['blocks'],
+            'tags': a['tags'],
+            'publishedAt': a['published_at'].isoformat() if a['published_at'] else '',
+        }
+        for a in article_rows
+    ]
+
     for p in products:
         p['guides'] = product_guides.get(p['id'], [])
 
@@ -181,6 +204,7 @@ def handler(event: dict, context) -> dict:
             'categories': category_rows,
             'categorySpecs': category_specs,
             'guides': guides,
+            'articles': articles,
             'settings': settings,
         },
         ensure_ascii=False,

@@ -8,7 +8,8 @@ interface Manifest {
   pages: number;
   products: number;
   guides: number;
-  signature: { products: string; guides: string };
+  articles: number;
+  signature: { products: string; guides: string; articles: string };
 }
 
 const REQUEST_TEXT =
@@ -30,7 +31,7 @@ const formatDate = (iso: string) => {
 
 const SearchPagesPanel = () => {
   const { toast } = useToast();
-  const { products, guides } = useCatalog();
+  const { products, guides, articles } = useCatalog();
   const [manifest, setManifest] = useState<Manifest | null>(null);
   const [checking, setChecking] = useState(true);
 
@@ -51,12 +52,14 @@ const SearchPagesPanel = () => {
       (p) => `${p.id}:${p.name}:${p.price}:${p.oldPrice ?? ''}`,
     ),
     guides: fingerprint(guides, (g) => `${g.slug}:${g.title}`),
+    articles: fingerprint(articles, (a) => `${a.slug}:${a.title}`),
   };
 
   const stale =
     !!manifest &&
     (manifest.signature?.products !== current.products ||
-      manifest.signature?.guides !== current.guides);
+      manifest.signature?.guides !== current.guides ||
+      manifest.signature?.articles !== current.articles);
 
   const copyRequest = async () => {
     try {

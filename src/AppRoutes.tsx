@@ -4,6 +4,8 @@ import Index from './pages/Index';
 import Product from './pages/Product';
 import NotFound from './pages/NotFound';
 import Guides from './pages/Guides';
+import Articles from './pages/Articles';
+import ArticlePage from './pages/ArticlePage';
 import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import GuidePage from './pages/GuidePage';
@@ -69,6 +71,8 @@ const AppRoutes = () => (
     <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />
     <Route path="/guides/:slug" element={<GuidePage />} />
+    <Route path="/articles" element={<Articles />} />
+    <Route path="/articles/:slug" element={<ArticlePage />} />
     {/* Оферта и политика данных — обе страницы рисует один компонент */}
     <Route path="/oferta" element={<LegalPage />} />
     <Route path="/privacy" element={<LegalPage />} />

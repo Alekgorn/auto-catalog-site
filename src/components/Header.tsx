@@ -13,6 +13,7 @@ const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог', route: '/catalog' },
   { id: 'select', label: 'Подбор' },
   { id: 'guides', label: 'Инструкции', route: '/guides' },
+  { id: 'articles', label: 'Статьи', route: '/articles' },
   { id: 'faq', label: 'FAQ' },
   { id: 'contacts', label: 'Контакты' },
 ];
