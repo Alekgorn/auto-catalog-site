@@ -99,6 +99,35 @@ const priceText = (p: Product): string =>
  * а добавляем то, чего в нём нет: годы и артикул. Держимся 60–65
  * знаков — длиннее поисковик обрезает многоточием.
  */
+/**
+ * Чем товар отличается от одноимённого соседа.
+ *
+ * У проводок названия совпадают дословно — «Переходник для Nissan
+ * 2004+», — а различаются они начинкой: одна с камерой, другая с
+ * усилителем. В выдаче две одинаковые строки поисковик считает
+ * дублем и показывает лишь одну. Берём короткую примету из
+ * характеристик, чтобы заголовки разошлись.
+ */
+const distinctTag = (p: Product): string => {
+  const rows = (p.specs ?? []) as unknown as [string, string][];
+  const find = (re: RegExp) =>
+    rows.find(([k]) => re.test(String(k)))?.[1] ?? '';
+
+  const feats = String(find(/особенност/i));
+  const conn = String(find(/подключен/i));
+
+  // Порядок — от самого заметного покупателю к общему
+  if (/360/.test(conn) || /360/.test(feats)) return 'для кругового обзора';
+  if (/камер/i.test(conn) || /камер/i.test(feats)) return 'со штатной камерой';
+  if (/усилител/i.test(conn) || /усилител/i.test(feats)) return 'с усилителем';
+  if (/парктрон/i.test(conn)) return 'с парктрониками';
+  if (/руле/i.test(conn)) return 'с кнопками на руле';
+  /* CAN-адаптер — последняя примета: часто это единственное, чем
+     различаются две одинаково названные проводки */
+  if (/can\s*адаптер/i.test(feats)) return 'с CAN-адаптером';
+  return '';
+};
+
 export const seoTitle = (p: Product): string => {
   const base = p.name.trim();
   const years = yearsText(p);
@@ -107,9 +136,17 @@ export const seoTitle = (p: Product): string => {
   const hasYears = /(19|20)\d{2}/.test(base);
   const head = years && !hasYears ? `${base}, ${years}` : base;
 
+  /* Примету добавляем, только если её ещё нет в названии — иначе
+     получилось бы «...с камерой, со штатной камерой» */
+  const tag = distinctTag(p);
+  const withTag =
+    tag && !new RegExp(tag.split(' ').pop() ?? '', 'i').test(head)
+      ? `${head}, ${tag}`
+      : head;
+
   const tail = ' — купить в ШТАТНО';
-  if (head.length + tail.length <= 65) return head + tail;
-  return `${head} — ШТАТНО`;
+  if (withTag.length + tail.length <= 65) return withTag + tail;
+  return `${withTag} — ШТАТНО`;
 };
 
 /**

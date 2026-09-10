@@ -20,6 +20,29 @@ interface Props {
  * поисковик. Товары не копируются в текст, а подтягиваются из каталога
  * по ссылке — цена и наличие в статье всегда те же, что в магазине.
  */
+/**
+ * Приводим адрес кнопки к внутреннему пути.
+ *
+ * В редактор адрес нередко вставляют прямо из адресной строки, целиком
+ * со своим доменом. Тогда получалось «/https://штатно.рф/scenario/...»
+ * — ссылка вела в никуда, а сборщик страниц ругался на двойной слэш.
+ * Отрезаем свой домен и лишний слэш; чужие ссылки не трогаем — они
+ * отдаются как есть.
+ */
+const innerHref = (raw?: string): string => {
+  const href = (raw ?? '').trim();
+  if (!href) return '/';
+  // Свой домен в любом написании — и кириллицей, и в служебном виде
+  const own = href.replace(
+    /^\/?https?:\/\/(?:www\.)?(?:штатно\.рф|xn--80a0adnb7a\.xn--p1ai)/i,
+    '',
+  );
+  if (own !== href) return own || '/';
+  // Чужая ссылка — оставляем как есть
+  if (/^https?:\/\//i.test(href)) return href;
+  return href.startsWith('/') ? href : `/${href}`;
+};
+
 const ArticleContent = ({ article }: Props) => {
   const { allProducts } = useCatalog();
   const { vehicle } = useVehicle();
@@ -212,7 +235,7 @@ const ArticleContent = ({ article }: Props) => {
               </p>
             )}
             <Link
-              to={b.buttonHref || '/'}
+              to={innerHref(b.buttonHref)}
               className="mt-5 inline-flex items-center gap-2 bg-primary px-6 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.08em] text-primary-foreground transition-opacity hover:opacity-90"
             >
               {b.buttonText}

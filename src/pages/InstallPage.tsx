@@ -59,11 +59,23 @@ const InstallPage = () => {
     if (!install) return null;
     const what = kit.map((p) => p!.name).join(', ');
     return {
-      title: `${heading}: установка магнитолы — фото до и после | ШТАТНО`,
-      description:
-        install.excerpt ||
-        `Как встало оборудование в ${heading}. Фото до и после установки.` +
-          (what ? ` Комплект: ${what}.` : ''),
+      /* Заголовок владельца часто уже начинается со слова «установка»
+         («Установка в Opel Corsa 2013») — второй раз его добавлять
+         незачем, в выдаче это читается как оговорка */
+      title: /установк/i.test(heading)
+        ? `${heading} — фото до и после | ШТАТНО`
+        : `${heading}: установка оборудования — фото до и после | ШТАТНО`,
+      /* Короткое описание дополняем своими словами: в выдаче строка
+         в сорок знаков выглядит обрывком, и поисковик всё равно
+         дописывает её случайным куском страницы */
+      description: (() => {
+        const own = (install.excerpt || '').trim();
+        const tail =
+          `Фото панели до и после установки в ${heading}.` +
+          (what ? ` Оборудование: ${what}.` : '');
+        if (own.length >= 80) return own;
+        return own ? `${own} ${tail}` : tail;
+      })(),
       image: install.afterImage,
       canonical: `${SITE_URL}/installs/${install.slug}`,
       type: 'article' as const,
