@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
@@ -8,6 +8,12 @@ import {
   IssueGroup,
   collectIssues,
 } from '@/lib/catalog-issues';
+import {
+  IssueMute,
+  loadMutes,
+  muteId,
+  saveMutes,
+} from '@/lib/issue-mutes';
 
 interface Props {
   products: AdminProduct[];
@@ -33,13 +39,53 @@ const PAGE = 60;
  */
 const IssuesPanel = ({ products, brands, onEdit }: Props) => {
   const [onlyActive, setOnlyActive] = useState(true);
+  /* Пропущенные лежат в общих настройках — читаем один раз при заходе */
+  const [mutes, setMutes] = useState<IssueMute[]>([]);
+  /* Показывать пропущенные вместо обычного списка */
+  const [showMuted, setShowMuted] = useState(false);
+
+  useEffect(() => {
+    loadMutes().then(setMutes);
+  }, []);
+
+  const mutedIds = useMemo(
+    () => new Set(mutes.map((m) => m.id)),
+    [mutes],
+  );
+
+  /* Сохраняем сразу и на сервер, и в состояние: ждать ответа, чтобы
+     строка исчезла, — это заметная задержка на каждой находке */
+  const toggleMute = (issue: CatalogIssue) => {
+    const id = muteId(issue.rule, issue.subject);
+    const next = mutedIds.has(id)
+      ? mutes.filter((m) => m.id !== id)
+      : [...mutes, { id, at: Date.now() }];
+    setMutes(next);
+    saveMutes(next);
+  };
   const [group, setGroup] = useState<IssueGroup | ''>('');
   const [rule, setRule] = useState('');
   const [shown, setShown] = useState(PAGE);
 
-  const all = useMemo(
+  const found = useMemo(
     () => collectIssues(products, brands, onlyActive),
     [products, brands, onlyActive],
+  );
+
+  /* Основной список — без пропущенных. Отдельный фильтр показывает
+     только их: там видно, что когда-то признали нормой */
+  const all = useMemo(
+    () =>
+      found.filter(
+        (i) => mutedIds.has(muteId(i.rule, i.subject)) === showMuted,
+      ),
+    [found, mutedIds, showMuted],
+  );
+
+  /* Сколько находок скрыто — цифра на кнопке фильтра */
+  const mutedCount = useMemo(
+    () => found.filter((i) => mutedIds.has(muteId(i.rule, i.subject))).length,
+    [found, mutedIds],
   );
 
   const byGroup = useMemo(
@@ -98,6 +144,20 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
         )}
       </div>
 
+      <div className="flex flex-none items-center gap-2">
+        <button
+          onClick={() => toggleMute(issue)}
+          title={
+            showMuted
+              ? 'Вернуть находку в общий список'
+              : 'Это не ошибка — убрать из списка'
+          }
+          className="flex items-center gap-1.5 border border-border px-3 py-1.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+        >
+          <Icon name={showMuted ? 'Undo2' : 'BellOff'} size={13} />
+          {showMuted ? 'Вернуть' : 'Пропустить'}
+        </button>
+
       {issue.product && (
         <button
           onClick={() => onEdit(issue.product!)}
@@ -107,6 +167,7 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
           Открыть
         </button>
       )}
+      </div>
     </div>
   );
 
@@ -119,6 +180,23 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
           находок — особенность товара, а не ошибка, поэтому ничего не
           чинится само: список только показывает, куда смотреть.
         </p>
+        <div className="flex flex-none flex-wrap items-center gap-4">
+          {/* Пропущенные не удалены — их всегда можно пересмотреть */}
+          <button
+            onClick={() => {
+              setShowMuted((v) => !v);
+              setRule('');
+              setShown(PAGE);
+            }}
+            className={`flex items-center gap-1.5 border px-3 py-1.5 text-[0.75rem] transition-colors ${
+              showMuted
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Icon name="BellOff" size={13} />
+            Пропущенные ({mutedCount})
+          </button>
         <label className="flex flex-none cursor-pointer items-center gap-2">
           <input
             type="checkbox"
@@ -130,6 +208,7 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
             Только видимые на сайте
           </span>
         </label>
+        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-baseline gap-x-5 gap-y-1">
@@ -137,7 +216,9 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
           {all.length}
         </span>
         <span className="text-[0.85rem] text-muted-foreground">
-          находок, из них ошибок {errors}
+          {showMuted
+            ? 'пропущено — эти находки признали нормой'
+            : `находок, из них ошибок ${errors}`}
         </span>
       </div>
 
@@ -200,7 +281,9 @@ const IssuesPanel = ({ products, brands, onEdit }: Props) => {
       <div className="mt-5 border-t border-foreground">
         {list.length === 0 ? (
           <p className="py-6 text-sm text-muted-foreground">
-            Здесь чисто — каталог не нашёл, к чему придраться.
+            {showMuted
+              ? 'Пропущенных нет. Кнопка «Пропустить» у находки убирает её сюда.'
+              : 'Здесь чисто — каталог не нашёл, к чему придраться.'}
           </p>
         ) : (
           list.slice(0, shown).map(row)

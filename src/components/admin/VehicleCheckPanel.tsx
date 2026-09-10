@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
@@ -9,6 +9,7 @@ import {
   CheckRow,
   checkVehicle,
 } from '@/lib/vehicle-check';
+import { IssueMute, loadMutes, muteId, saveMutes } from '@/lib/issue-mutes';
 
 interface Props {
   products: AdminProduct[];
@@ -35,6 +36,31 @@ const VehicleCheckPanel = ({ products, brands, onEdit }: Props) => {
   const [model, setModel] = useState('');
   const [year, setYear] = useState(new Date().getFullYear() - 5);
   const [onlyIssues, setOnlyIssues] = useState(true);
+  /* Пропущенные общие для всей проверки данных — тот же список, что и
+     в «Найденных проблемах»: товар, признанный нормой, незачем
+     разбирать заново в каждой панели */
+  const [mutes, setMutes] = useState<IssueMute[]>([]);
+  const [showMuted, setShowMuted] = useState(false);
+
+  useEffect(() => {
+    loadMutes().then(setMutes);
+  }, []);
+
+  const mutedIds = useMemo(() => new Set(mutes.map((m) => m.id)), [mutes]);
+
+  /* Отпечаток берём по товару целиком, а не по каждому флагу: у одной
+     карточки их бывает несколько, и снимать замечания поштучно —
+     занятие на весь вечер */
+  const rowId = (r: CheckRow) => muteId('vehicle-check', r.product.name);
+
+  const toggleMute = (r: CheckRow) => {
+    const id = rowId(r);
+    const next = mutedIds.has(id)
+      ? mutes.filter((m) => m.id !== id)
+      : [...mutes, { id, at: Date.now() }];
+    setMutes(next);
+    saveMutes(next);
+  };
 
   const models = useMemo(
     () => brands.find((b) => b.name === brand)?.models ?? [],
@@ -49,8 +75,10 @@ const VehicleCheckPanel = ({ products, brands, onEdit }: Props) => {
     [products, brand, model, year],
   );
 
-  const list = (rows: CheckRow[]) =>
-    onlyIssues ? rows.filter((r) => r.flags.length) : rows;
+  const list = (rows: CheckRow[]) => {
+    const base = onlyIssues ? rows.filter((r) => r.flags.length) : rows;
+    return base.filter((r) => mutedIds.has(rowId(r)) === showMuted);
+  };
 
   /** Какие флаги встретились — под списком объясняем каждый */
   const seen = useMemo(() => {
@@ -108,13 +136,27 @@ const VehicleCheckPanel = ({ products, brands, onEdit }: Props) => {
                     )}
                   </div>
                 </div>
-                <button
-                  onClick={() => onEdit(r.product)}
-                  className="flex flex-none items-center gap-1.5 border border-foreground px-3 py-1.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
-                >
-                  <Icon name="Pencil" size={13} />
-                  Открыть
-                </button>
+                <div className="flex flex-none items-center gap-2">
+                  <button
+                    onClick={() => toggleMute(r)}
+                    title={
+                      showMuted
+                        ? 'Вернуть в общий список'
+                        : 'Здесь всё верно — убрать из списка'
+                    }
+                    className="flex items-center gap-1.5 border border-border px-3 py-1.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  >
+                    <Icon name={showMuted ? 'Undo2' : 'BellOff'} size={13} />
+                    {showMuted ? 'Вернуть' : 'Пропустить'}
+                  </button>
+                  <button
+                    onClick={() => onEdit(r.product)}
+                    className="flex items-center gap-1.5 border border-foreground px-3 py-1.5 font-head text-[0.7rem] font-bold uppercase tracking-[0.06em] transition-colors hover:border-primary hover:text-primary"
+                  >
+                    <Icon name="Pencil" size={13} />
+                    Открыть
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -188,17 +230,31 @@ const VehicleCheckPanel = ({ products, brands, onEdit }: Props) => {
 
       {result && (
         <>
-          <label className="mt-5 flex cursor-pointer items-center gap-2">
-            <input
-              type="checkbox"
-              checked={onlyIssues}
-              onChange={(e) => setOnlyIssues(e.target.checked)}
-              className="h-4 w-4 accent-primary"
-            />
-            <span className="text-[0.82rem] text-muted-foreground">
-              Только с замечаниями ({result.issues})
-            </span>
-          </label>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+            <label className="flex cursor-pointer items-center gap-2">
+              <input
+                type="checkbox"
+                checked={onlyIssues}
+                onChange={(e) => setOnlyIssues(e.target.checked)}
+                className="h-4 w-4 accent-primary"
+              />
+              <span className="text-[0.82rem] text-muted-foreground">
+                Только с замечаниями ({result.issues})
+              </span>
+            </label>
+
+            <button
+              onClick={() => setShowMuted((v) => !v)}
+              className={`flex items-center gap-1.5 border px-3 py-1.5 text-[0.75rem] transition-colors ${
+                showMuted
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon name="BellOff" size={13} />
+              Пропущенные
+            </button>
+          </div>
 
           {block('Проводка', result.wires)}
           {block('Переходные рамки', result.frames)}

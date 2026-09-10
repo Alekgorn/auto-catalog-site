@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
+import { IssueMute, loadMutes, muteId, saveMutes } from '@/lib/issue-mutes';
 import { useToast } from '@/hooks/use-toast';
 import { AdminBrand } from '@/components/admin/BrandsEditor';
 import { AdminProduct } from '@/components/admin/product-editor/product-types';
@@ -52,6 +53,9 @@ const KitAuditPanel = ({
   const [view, setView] = useState<View>('gaps');
   const [onlyActive, setOnlyActive] = useState(true);
   const [rule, setRule] = useState('');
+  /* Тот же список пропущенных, что и в остальной проверке данных */
+  const [mutes, setMutes] = useState<IssueMute[]>([]);
+  const [showMuted, setShowMuted] = useState(false);
   const [wiringRows, setWiringRows] = useState<VehicleWiring[]>([]);
   const [wires, setWires] = useState<WireOption[]>([]);
 
@@ -106,6 +110,21 @@ const KitAuditPanel = ({
     [products, onlyActive],
   );
 
+  useEffect(() => {
+    loadMutes().then(setMutes);
+  }, []);
+
+  const mutedIds = useMemo(() => new Set(mutes.map((m) => m.id)), [mutes]);
+
+  const toggleMute = (r: string, title: string) => {
+    const id = muteId(r, title);
+    const next = mutedIds.has(id)
+      ? mutes.filter((m) => m.id !== id)
+      : [...mutes, { id, at: Date.now() }];
+    setMutes(next);
+    saveMutes(next);
+  };
+
   /** Сколько записей на каждое правило — для кнопок-фильтров */
   const counts = useMemo(() => {
     const list = wiringIssues;
@@ -117,9 +136,18 @@ const KitAuditPanel = ({
   }, [wiringIssues]);
 
   const shown = useMemo(() => {
-    const list = wiringIssues;
+    const list = wiringIssues.filter(
+      (i) => mutedIds.has(muteId(i.rule, i.title)) === showMuted,
+    );
     return rule ? list.filter((i) => i.rule === rule) : list;
-  }, [rule, wiringIssues]);
+  }, [rule, wiringIssues, mutedIds, showMuted]);
+
+  /** Сколько находок скрыто — цифра на кнопке фильтра */
+  const mutedCount = useMemo(
+    () =>
+      wiringIssues.filter((i) => mutedIds.has(muteId(i.rule, i.title))).length,
+    [wiringIssues, mutedIds],
+  );
 
   const VIEWS: { id: View; label: string; count: number }[] = [
     { id: 'gaps', label: 'Нет пары к рамке', count: gaps.length },
@@ -193,8 +221,25 @@ const KitAuditPanel = ({
         <Empty />
       ) : (
         <>
+          <div className="mt-5 border-t border-border pt-4">
+            <button
+              onClick={() => {
+                setShowMuted((v) => !v);
+                setRule('');
+              }}
+              className={`flex items-center gap-1.5 border px-3 py-1.5 text-[0.75rem] transition-colors ${
+                showMuted
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Icon name="BellOff" size={13} />
+              Пропущенные ({mutedCount})
+            </button>
+          </div>
+
           {/* Фильтр по виду замечания */}
-          <div className="mt-5 flex flex-wrap gap-2 border-t border-border pt-4">
+          <div className="mt-4 flex flex-wrap gap-2">
             <button
               onClick={() => setRule('')}
               className={`border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em] transition-colors ${
@@ -252,15 +297,29 @@ const KitAuditPanel = ({
                         </div>
                       )}
                     </div>
+                    <div className="flex flex-none items-center gap-2">
+                      <button
+                        onClick={() => toggleMute(issue.rule, issue.title)}
+                        title={
+                          showMuted
+                            ? 'Вернуть в общий список'
+                            : 'Это не ошибка — убрать из списка'
+                        }
+                        className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                      >
+                        <Icon name={showMuted ? 'Undo2' : 'BellOff'} size={13} />
+                        {showMuted ? 'Вернуть' : 'Пропустить'}
+                      </button>
                     {product && (
                       <button
                         onClick={() => onEdit(product)}
-                        className="flex flex-none items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground"
+                        className="flex items-center gap-1.5 border border-border px-3 py-1.5 text-[0.72rem] uppercase tracking-[0.08em] transition-colors hover:border-foreground"
                       >
                         <Icon name="Pencil" size={13} />
                         Открыть
                       </button>
                     )}
+                    </div>
                   </div>
 
                   <div className="mt-2 flex items-start gap-2 text-[0.82rem]">
