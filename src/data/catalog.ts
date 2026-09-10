@@ -457,13 +457,6 @@ export const productSpecs = (p: Product): [string, string][] =>
         ['Наличие', 'на складе'],
       ];
 
-export const CARD_FIELDS: { key: string; label: string; get: (p: Product) => string }[] = [
-  { key: 'sku', label: 'Артикул', get: (p) => productSku(p) },
-  { key: 'warranty', label: 'Гарантия', get: (p) => p.warranty },
-  { key: 'category', label: 'Категория', get: (p) => p.category },
-  { key: 'years', label: 'Годы авто', get: (p) => `${p.years[0]}—${p.years[1]}` },
-];
-
 export const searchProducts = (products: Product[], query: string): Product[] => {
   const q = query.trim().toLowerCase();
   if (!q) return [];

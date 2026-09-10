@@ -42,7 +42,6 @@ export interface PrerenderData {
   guides?: Guide[];
   articles?: Article[];
   settings?: {
-    card_fields?: string[];
     wire_features?: WireFeature[];
     product_levels?: ProductLevel[];
     showcase?: ShowcaseKit[];
@@ -77,7 +76,6 @@ interface CatalogValue {
   articles: Article[];
   categories: string[];
   categorySpecs: Record<string, string[]>;
-  cardFields: string[];
   /** Справочник признаков подключения — по нему подбор задаёт вопросы */
   wireFeatures: WireFeature[];
   /** Классы магнитол — справочник из админки */
@@ -97,7 +95,6 @@ interface CatalogValue {
 
 const CatalogContext = createContext<CatalogValue | null>(null);
 
-const DEFAULT_CARD_FIELDS = ['warranty'];
 
 /** Данные, вшитые в HTML на этапе сборки, чтобы первый экран не ждал сеть. */
 /**
@@ -228,11 +225,6 @@ export const CatalogProvider = ({
   );
   const [guides, setGuides] = useState<Guide[]>(seed?.guides ?? []);
   const [articles, setArticles] = useState<Article[]>(seed?.articles ?? []);
-  const [cardFields, setCardFields] = useState<string[]>(
-    seed?.settings?.card_fields?.length
-      ? seed.settings.card_fields
-      : DEFAULT_CARD_FIELDS,
-  );
   const [productLevels, setProductLevels] = useState<ProductLevel[]>(
     seed?.settings?.product_levels ?? [],
   );
@@ -339,9 +331,6 @@ export const CatalogProvider = ({
         if (data.categorySpecs && typeof data.categorySpecs === 'object') {
           setCategorySpecs(data.categorySpecs);
         }
-        if (Array.isArray(data.settings?.card_fields)) {
-          setCardFields(data.settings.card_fields);
-        }
         if (Array.isArray(data.settings?.showcase)) {
           setShowcase(data.settings.showcase);
         }
@@ -416,7 +405,6 @@ export const CatalogProvider = ({
     articles,
     categories,
     categorySpecs,
-    cardFields,
     wireFeatures,
     productLevels,
     showcase,

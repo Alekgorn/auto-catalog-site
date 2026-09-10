@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import {
-  CARD_FIELDS,
   Product,
   Vehicle,
   fitsAll,
@@ -63,7 +62,6 @@ const ProductCard = ({
   const vehicle = isVehicle(raw) ? raw : null;
   const fits = isCompatible(product, vehicle);
   const {
-    cardFields,
     categorySpecs,
     brands,
     products,
@@ -156,11 +154,6 @@ const ProductCard = ({
       );
       if (hit) add(field, hit[1]);
     });
-
-    // Своих характеристик мало — дополняем тем, что настроено для карточек
-    CARD_FIELDS.filter((f) => cardFields.includes(f.key)).forEach((f) =>
-      add(f.label, f.get(product)),
-    );
 
     return rows.slice(0, SPEC_LIMIT);
   })();

@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
-import { CARD_FIELDS } from '@/data/catalog';
 import { useToast } from '@/hooks/use-toast';
 import SearchPagesPanel from '@/components/admin/SearchPagesPanel';
 import WireFeaturesEditor from '@/components/admin/WireFeaturesEditor';
@@ -13,7 +12,6 @@ interface Props {
 
 const SettingsPanel = ({ onImported }: Props) => {
   const { toast } = useToast();
-  const [fields, setFields] = useState<string[]>([]);
   const [mode, setMode] = useState<'merge' | 'skip'>('merge');
   const [busy, setBusy] = useState(false);
   /** Ход загрузки каталога: файл уходит частями, показываем сколько сделано */
@@ -23,30 +21,6 @@ const SettingsPanel = ({ onImported }: Props) => {
   } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const xlsRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    adminFetch('?action=settings')
-      .then((r) => r.json())
-      .then((d) => {
-        if (Array.isArray(d.settings?.card_fields)) setFields(d.settings.card_fields);
-      })
-      .catch(() => undefined);
-  }, []);
-
-  const toggle = (key: string) =>
-    setFields((f) => (f.includes(key) ? f.filter((x) => x !== key) : [...f, key]));
-
-  const saveFields = async () => {
-    const res = await adminFetch('?action=settings', {
-      method: 'PUT',
-      body: JSON.stringify({ settings: { card_fields: fields } }),
-    });
-    toast(
-      res.ok
-        ? { title: 'Настройки сохранены' }
-        : { title: 'Ошибка', description: 'Не удалось сохранить' },
-    );
-  };
 
   const download = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -224,42 +198,6 @@ const SettingsPanel = ({ onImported }: Props) => {
 
       <div className="lg:col-span-12">
         <ProductLevelsEditor />
-      </div>
-
-      <div className="lg:col-span-5">
-        <div className="eyebrow">Карточка в каталоге</div>
-        <h2 className="mt-3 font-head text-2xl font-bold uppercase tracking-[-0.02em]">
-          Что показывать в списке
-        </h2>
-        <p className="mt-4 max-w-[34em] text-muted-foreground">
-          Отметьте характеристики, которые видит покупатель прямо в карточке товара в
-          каталоге. Остальные останутся на странице товара.
-        </p>
-
-        <div className="mt-6 border-t border-foreground">
-          {CARD_FIELDS.map((f) => (
-            <label
-              key={f.key}
-              className="flex cursor-pointer items-center gap-3 border-b border-border py-3"
-            >
-              <input
-                type="checkbox"
-                checked={fields.includes(f.key)}
-                onChange={() => toggle(f.key)}
-                className="h-4 w-4 accent-primary"
-              />
-              <span className="text-[0.95rem]">{f.label}</span>
-            </label>
-          ))}
-        </div>
-
-        <button
-          onClick={saveFields}
-          className="mt-6 flex items-center gap-2 bg-foreground px-5 py-3 font-head text-[0.8rem] font-bold uppercase tracking-[0.06em] text-background transition-colors hover:bg-primary hover:text-primary-foreground"
-        >
-          <Icon name="Check" size={16} />
-          Сохранить
-        </button>
       </div>
 
       <div className="lg:col-span-6 lg:col-start-7">
