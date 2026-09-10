@@ -2075,21 +2075,37 @@ def handler(event: dict, context) -> dict:
                 f"NOT EXISTS (SELECT 1 FROM {schema()}.failed_images f "
                 f"WHERE f.url = u)"
             )
+            # Чужая картинка живёт в двух местах: в галерее товара
+            # (images) и в примечаниях под описанием (notes). Раньше
+            # перенос смотрел только галерею, и снимки из примечаний
+            # навсегда оставались на чужом сервере.
             has_external = (
-                f"EXISTS (SELECT 1 FROM jsonb_array_elements_text(images) AS u "
+                f"(EXISTS (SELECT 1 FROM jsonb_array_elements_text(images) AS u "
                 f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
-                f"AND {not_failed})"
+                f"AND {not_failed}) OR EXISTS ("
+                f"SELECT 1 FROM jsonb_array_elements(COALESCE(notes,'[]'::jsonb)) AS n, "
+                f"LATERAL (SELECT n->>'image' AS u) AS x "
+                f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
+                f"AND {not_failed}))"
             )
             tail = '' if method == 'GET' else ' LIMIT 40'
             cur.execute(
-                f"SELECT id, slug, images FROM {schema()}.products "
+                f"SELECT id, slug, images, notes FROM {schema()}.products "
                 f"WHERE {has_external} ORDER BY id{tail}"
             )
             rows = cur.fetchall()
 
+            def note_images(r):
+                """Ссылки на картинки из примечаний товара."""
+                out = []
+                for n in (r.get('notes') or []):
+                    if isinstance(n, dict) and n.get('image'):
+                        out.append(n['image'])
+                return out
+
             def pending_of(r):
                 return [
-                    u for u in (r['images'] or [])
+                    u for u in list(r['images'] or []) + note_images(r)
                     if _is_external_image(u) and u not in skip
                 ]
 
@@ -2103,6 +2119,12 @@ def handler(event: dict, context) -> dict:
                 cur.execute(
                     f"SELECT COALESCE(SUM(("
                     f"SELECT COUNT(*) FROM jsonb_array_elements_text(images) AS u "
+                    f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
+                    f"AND {not_failed}"
+                    f") + ("
+                    f"SELECT COUNT(*) FROM jsonb_array_elements("
+                    f"COALESCE(notes,'[]'::jsonb)) AS n, "
+                    f"LATERAL (SELECT n->>'image' AS u) AS x "
                     f"WHERE u LIKE 'http%' AND u NOT LIKE {q(CDN_PREFIX + '%')} "
                     f"AND {not_failed}"
                     f")), 0) AS n FROM {schema()}.products "
@@ -2133,11 +2155,18 @@ def handler(event: dict, context) -> dict:
             # Собираем очередь ссылок: качать будем пачкой, а не по одной.
             # Сеть — самая долгая часть, и раньше за вызов успевала пройти
             # одна картинка. Параллельно за то же время проходит десяток.
+            # В очереди помечаем, откуда картинка: 'img' — галерея,
+            # 'note' — примечание. Иначе при сохранении не понять,
+            # какое поле товара править.
             queue = []
             for r in rows:
                 for idx, u in enumerate(r['images'] or []):
                     if _is_external_image(u) and u not in skip:
-                        queue.append((r, idx, u))
+                        queue.append((r, 'img', idx, u))
+                for idx, n in enumerate(r.get('notes') or []):
+                    u = n.get('image') if isinstance(n, dict) else None
+                    if u and _is_external_image(u) and u not in skip:
+                        queue.append((r, 'note', idx, u))
 
             spare = FUNCTION_BUDGET - RESERVE - (time.time() - started)
             batch = queue[:BATCH_IMAGES]
@@ -2150,12 +2179,13 @@ def handler(event: dict, context) -> dict:
                 wait = max(min(spare * 0.5, 1.0), 0.4)
                 with ThreadPoolExecutor(max_workers=len(batch)) as ex:
                     got = list(
-                        ex.map(lambda it: download_external(it[2], wait), batch)
+                        ex.map(lambda it: download_external(it[3], wait), batch)
                     )
 
                 # Скачанное складываем к нам и правим ссылки в товарах
                 changed_rows = {}
-                for (r, idx, u), (raw, ext, reason) in zip(batch, got):
+                changed_notes = {}
+                for (r, kind, idx, u), (raw, ext, reason) in zip(batch, got):
                     # Время вышло — необработанное не помечаем разобранным,
                     # чтобы вернуться к нему на следующем заходе
                     if FUNCTION_BUDGET - RESERVE - (time.time() - started) < 0.2:
@@ -2166,8 +2196,16 @@ def handler(event: dict, context) -> dict:
                         own, reason = store_image(raw, ext)
 
                     if own:
-                        urls = changed_rows.setdefault(r['id'], list(r['images']))
-                        urls[idx] = own
+                        if kind == 'img':
+                            urls = changed_rows.setdefault(
+                                r['id'], list(r['images'] or []))
+                            urls[idx] = own
+                        else:
+                            notes = changed_notes.setdefault(
+                                r['id'], [dict(x) if isinstance(x, dict) else x
+                                          for x in (r.get('notes') or [])])
+                            if idx < len(notes) and isinstance(notes[idx], dict):
+                                notes[idx]['image'] = own
                         saved += 1
                     elif reason == 'сайт отвечает слишком долго':
                         # Не вина ссылки — сайт не успел ответить.
@@ -2192,6 +2230,12 @@ def handler(event: dict, context) -> dict:
                 for pid, urls in changed_rows.items():
                     cur.execute(
                         f"UPDATE {schema()}.products SET images = {qjson(urls)}, "
+                        f"updated_at = NOW() WHERE id = {pid}"
+                    )
+                # Картинки из примечаний — отдельным полем
+                for pid, notes in changed_notes.items():
+                    cur.execute(
+                        f"UPDATE {schema()}.products SET notes = {qjson(notes)}, "
                         f"updated_at = NOW() WHERE id = {pid}"
                     )
                 conn.commit()
