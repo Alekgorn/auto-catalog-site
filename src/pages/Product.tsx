@@ -51,6 +51,7 @@ const Product = () => {
     products,
     allProducts,
     guides,
+    installs,
     contacts,
     loading,
     brands: catalogBrands,
@@ -263,6 +264,19 @@ const Product = () => {
   const withThis = productsWithThis(product, products, 24);
   const productGuides = guides.filter((g) => g.products?.includes(product.id));
 
+  /* Работы, где этот товар стоял. Свежие сверху — по ним видно, что
+     оборудование ставят и сейчас, а не «когда-то давно» */
+  const productInstalls = useMemo(
+    () => (installs ?? []).filter((i) => i.products?.includes(product.id)),
+    [installs, product.id],
+  );
+
+  /** Названия товаров по адресу — для состава комплекта в карточке */
+  const nameOf = useMemo(() => {
+    const map = new Map(allProducts.map((p) => [p.id, p.name]));
+    return (slug: string) => map.get(slug) ?? null;
+  }, [allProducts]);
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -424,6 +438,8 @@ const Product = () => {
                 <ProductTabs
                   product={product}
                   guides={productGuides}
+                  installs={productInstalls}
+                  nameOf={nameOf}
                   active={tab}
                   onChange={setTab}
                 />

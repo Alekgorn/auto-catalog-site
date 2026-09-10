@@ -2,13 +2,18 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from '@/components/ui/icon';
 import GuideContent from '@/components/GuideContent';
-import { Guide, Product, productDescription, productKit } from '@/data/catalog';
+import InstallCard from '@/components/InstallCard';
+import { Guide, Install, Product, productDescription, productKit } from '@/data/catalog';
 
-export type ProductTab = 'about' | 'notes' | 'extra' | 'guides';
+export type ProductTab = 'about' | 'notes' | 'extra' | 'installs' | 'guides';
 
 interface Props {
   product: Product;
   guides: Guide[];
+  /** Работы, где этот товар стоял */
+  installs: Install[];
+  /** Названия товаров по адресу — для состава комплекта */
+  nameOf: (slug: string) => string | null;
   /** Вкладка, которую нужно открыть снаружи — например по кнопке «Инструкция» */
   active: ProductTab;
   onChange: (tab: ProductTab) => void;
@@ -18,7 +23,14 @@ interface Props {
  * Описание товара тремя вкладками: как устроено, нюансы монтажа и инструкции.
  * Нюансы подсвечены, только если продавец их заполнил.
  */
-const ProductTabs = ({ product, guides, active, onChange }: Props) => {
+const ProductTabs = ({
+  product,
+  guides,
+  installs,
+  nameOf,
+  active,
+  onChange,
+}: Props) => {
   const notes = product.notes ?? [];
   const hasNotes = notes.length > 0;
   /* Свой раздел магазина. Показываем только когда задан заголовок
@@ -27,6 +39,7 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
   const extraTitle = (product.extraTitle ?? '').trim();
   const hasExtra = extra.length > 0 && !!extraTitle;
   const hasGuides = guides.length > 0;
+  const hasInstalls = installs.length > 0;
   const [openGuides, setOpenGuides] = useState<string[]>([]);
 
   useEffect(() => {
@@ -57,6 +70,18 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
             key: 'extra' as ProductTab,
             label: extraTitle,
             icon: 'Images',
+          },
+        ]
+      : []),
+    ...(hasInstalls
+      ? [
+          {
+            key: 'installs' as ProductTab,
+            label:
+              installs.length > 1
+                ? `Установки · ${installs.length}`
+                : 'Установка',
+            icon: 'Camera',
           },
         ]
       : []),
@@ -171,6 +196,28 @@ const ProductTabs = ({ product, guides, active, onChange }: Props) => {
             }
             compact
           />
+        </div>
+      )}
+
+      {active === 'installs' && hasInstalls && (
+        <div className="pt-7">
+          <p className="max-w-[46em] text-[0.87rem] leading-relaxed text-muted-foreground">
+            Машины, где это оборудование уже стоит. Видно, как выглядит
+            результат и что ставили вместе с ним.
+          </p>
+
+          {/* Две колонки: карточка с фото шире смотрится честнее, чем
+              растянутая на всю ширину — снимок салона не обои */}
+          <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {installs.map((it) => (
+              <InstallCard
+                key={it.slug}
+                install={it}
+                nameOf={nameOf}
+                currentSlug={product.id}
+              />
+            ))}
+          </div>
         </div>
       )}
 
