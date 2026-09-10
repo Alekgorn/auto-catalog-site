@@ -59,11 +59,13 @@ const GuideContent = ({ guide, compact = false }: Props) => {
 
   return (
     <div>
+      {/* Обложка — иллюстрация к тексту, а не баннер: те же пропорции,
+          что у статьи, иначе в узкой колонке она смотрелась полосой */}
       {!compact && guide.cover && (
         <img
           src={guide.cover}
           alt={guide.title}
-          className="mb-8 aspect-[16/7] w-full bg-card object-cover"
+          className="mb-10 aspect-[16/9] w-full bg-card object-cover"
         />
       )}
 
@@ -82,7 +84,9 @@ const GuideContent = ({ guide, compact = false }: Props) => {
             return (
               <div
                 key={`g${ri}`}
-                className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4"
+                /* Три в ряд, а не четыре: колонка сузилась до 60em, и
+                   четвёртое фото делало плитки совсем мелкими */
+                className="grid grid-cols-2 gap-3 sm:grid-cols-3"
               >
                 {row.items.map((item, k) => (
                   <figure key={item.src + k}>
@@ -162,7 +166,11 @@ const GuideContent = ({ guide, compact = false }: Props) => {
               key={row.index}
               className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-12"
             >
-              <div className="md:col-span-6">
+              {/* Текст занимает семь колонок из двенадцати, фото — пять
+                  вплотную к нему. Было шесть и четыре с разрывом: в узкой
+                  колонке текст сжимался в столбик, а фото висело у края
+                  отдельно от шага, к которому относится */}
+              <div className={b.image ? 'md:col-span-7' : 'md:col-span-12'}>
                 <div className="flex items-baseline gap-4 border-t border-foreground pt-4">
                   <span className="font-head text-[0.72rem] font-medium tracking-[0.16em] text-primary">
                     {String(stepNo).padStart(2, '0')}
@@ -176,7 +184,7 @@ const GuideContent = ({ guide, compact = false }: Props) => {
                 </div>
               </div>
               {b.image && (
-                <div className="md:col-span-4 md:col-start-8">
+                <div className="md:col-span-5">
                   <button
                     onClick={() => setZoom(photoIndex(b.image as string))}
                     aria-label="Открыть фото на весь экран"

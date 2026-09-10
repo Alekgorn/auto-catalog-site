@@ -107,22 +107,26 @@ const GuidePage = () => {
 
           <div className="rule" />
 
-          <div className="grid grid-cols-1 gap-x-6 gap-y-6 py-10 md:grid-cols-12">
-            <div className="md:col-span-7">
+          {/* Читается так же, как статья: одна колонка в 60em по центру.
+              Раньше заголовок с описанием стояли в две колонки во всю
+              ширину, а текст под ними — во всю страницу: инструкция
+              выглядела разделом каталога, а не материалом для чтения */}
+          <div className="mx-auto max-w-[60em]">
+            <header className="py-10">
               <div className="eyebrow">Техническое описание</div>
-              <h1 className="mt-3 font-head text-3xl font-bold uppercase leading-[1.05] tracking-[-0.03em] sm:text-4xl lg:text-5xl">
+              <h1 className="mt-3 font-head text-3xl font-medium leading-tight tracking-tight sm:text-[2.6rem]">
                 {guide.title}
               </h1>
-            </div>
-            {guide.excerpt && (
-              <p className="max-w-[34em] text-muted-foreground md:col-span-5 md:pt-10">
-                {guide.excerpt}
-              </p>
-            )}
-          </div>
+              {guide.excerpt && (
+                <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
+                  {guide.excerpt}
+                </p>
+              )}
+            </header>
 
-          <div className="pb-14">
-            <GuideContent guide={guide} />
+            <div className="pb-14">
+              <GuideContent guide={guide} />
+            </div>
           </div>
         </section>
 
