@@ -563,11 +563,7 @@ const Admin = () => {
         )}
 
         {tab === "brands" && (
-          <BrandsEditor
-            brands={brands}
-            onSave={saveBrands}
-            onReload={load}
-          />
+          <BrandsEditor brands={brands} onSave={saveBrands} />
         )}
 
         {tab === "categories" && <CategoriesEditor onSaved={load} />}
