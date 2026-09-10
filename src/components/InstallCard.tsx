@@ -83,9 +83,14 @@ const InstallCard = ({
       <InstallPhoto install={it} />
 
       <div className="p-4">
-        <div className="font-head text-[1rem] font-bold uppercase tracking-tight">
+        {/* Ссылка на страницу работы: её отправляют клиенту, который
+            спрашивает «как это будет выглядеть у меня» */}
+        <Link
+          to={`/installs/${it.slug}`}
+          className="block font-head text-[1rem] font-bold uppercase tracking-tight transition-colors hover:text-primary"
+        >
           {heading}
-        </div>
+        </Link>
 
         {others.length > 0 && (
           <div className="mt-1 text-[0.78rem] leading-snug text-muted-foreground">

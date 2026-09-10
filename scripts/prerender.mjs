@@ -384,7 +384,7 @@ const applySeoToHtml = (html, seo, url) => {
 
 /** Убираем ранее сгенерированные страницы, чтобы не копить мусор. */
 const cleanOld = async () => {
-  for (const dir of ['product', 'guides', 'articles', 'catalog', 'brand', 'oferta', 'privacy']) {
+  for (const dir of ['product', 'guides', 'installs', 'articles', 'catalog', 'brand', 'oferta', 'privacy']) {
     await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
   }
   /* Файлы каталога со старым именем — с номером сборки внутри. Новые
@@ -479,7 +479,7 @@ const main = async () => {
   const catalogUrl = (await readJson(path.join(ROOT, 'backend', 'func2url.json')))
     .catalog;
 
-  let data = { products: [], brands: [], guides: [], articles: [], settings: {} };
+  let data = { products: [], brands: [], guides: [], installs: [], articles: [], settings: {} };
   try {
     const res = await fetch(catalogUrl);
     if (res.ok) data = await res.json();
@@ -518,6 +518,8 @@ const main = async () => {
     ...brandNames.map((b) => `/brand/${slugify(b)}`),
     ...(data.products ?? []).map((p) => `/product/${p.id}`),
     ...(data.guides ?? []).map((g) => `/guides/${g.slug}`),
+    // Страница каждой выполненной работы — своя ссылка для клиента
+    ...(data.installs ?? []).map((i) => `/installs/${i.slug}`),
     ...(data.articles ?? []).map((a) => `/articles/${a.slug}`),
   ];
 
