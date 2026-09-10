@@ -55,7 +55,7 @@ export const loadTexts = (): Promise<TextMap> => {
     if (!at) return resolve({});
 
     const el = document.createElement('script');
-    el.src = `/catalog-texts-${at}.js`;
+    el.src = `/catalog-texts.js?v=${at}`;
     el.async = true;
     el.onload = () => resolve(w.__TEXTS__ ?? {});
     el.onerror = () => {

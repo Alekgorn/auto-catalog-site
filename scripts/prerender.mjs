@@ -387,7 +387,9 @@ const cleanOld = async () => {
   for (const dir of ['product', 'guides', 'articles', 'catalog', 'brand', 'oferta', 'privacy']) {
     await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
   }
-  // Файлы каталога от прошлых сборок — иначе копятся по мегабайту за раз
+  /* Файлы каталога со старым именем — с номером сборки внутри. Новые
+     имена постоянные и перезаписываются на месте, но копии от прежних
+     публикаций надо вымести, иначе так и лежат мёртвым грузом. */
   for (const name of await fs.readdir(PUBLIC)) {
     if (/^catalog-(data|photos|texts|index)-\d+\.js$/.test(name)) {
       await fs.rm(path.join(PUBLIC, name), { force: true });
@@ -410,8 +412,13 @@ const resetShell = (html) =>
       '<!--prerender--><!--/prerender-->',
     )
     .replace(/\s*<script>window\.__CATALOG__=[\s\S]*?<\/script>/g, '')
-    // Ссылка на файл каталога от прошлой сборки — имя меняется каждый раз
-    .replace(/\s*<script src="\/catalog-data-\d+\.js"><\/script>/g, '')
+    // Ссылка на каталог от прошлой сборки. Ловим и старое имя с номером
+    // внутри (catalog-data-123.js), и нынешнее с номером в адресе —
+    // иначе в файле остаются обе и каталог грузится дважды.
+    .replace(
+      /\s*<script src="\/catalog-data(-\d+)?\.js(\?v=\d+)?"><\/script>/g,
+      '',
+    )
     /* Страховочный скрипт от прошлой сборки. Шаблон должен ловить любую
        его версию: правило искало точное «var d=document;», а в самом
        скрипте появилось «var d=document,done=false;» — совпадения не
@@ -497,9 +504,17 @@ const main = async () => {
    * до сотен мегабайт и сборка переставала проходить. Теперь файл один,
    * браузер берёт его из кеша, а страницы весят десятки килобайт.
    */
-  const catalogFile = `/catalog-data-${builtAt}.js`;
+  /*
+   * Имя файла постоянное, а номер сборки уехал в адрес ссылки
+   * (?v=<номер>). Раньше он стоял в самом имени, и каждая сборка
+   * создавала новый файл: для системы контроля версий это не правка,
+   * а ещё одна копия на шесть мегабайт. За полсотни публикаций история
+   * распухла до сотен мегабайт. Браузер по-прежнему видит новый адрес
+   * и старое из кеша не берёт.
+   */
+  const catalogFile = `/catalog-data.js?v=${builtAt}`;
   await fs.writeFile(
-    path.join(PUBLIC, catalogFile.slice(1)),
+    path.join(PUBLIC, 'catalog-data.js'),
     `window.__CATALOG__=${safeJson(slimCatalog(data))};` +
       `window.__CATALOG_AT__=${builtAt};` +
       `window.__PHOTOS_AT__=${builtAt};` +
@@ -510,12 +525,12 @@ const main = async () => {
   );
 
   /*
-   * Остальные фото — отдельным файлом с тем же номером сборки, чтобы
-   * страница не подтянула их от прошлой версии каталога.
+   * Остальные фото — отдельным файлом. Номер сборки страница передаёт
+   * в адресе, чтобы не подтянуть их от прошлой версии каталога.
    */
   const rest = photoRest(data);
   await fs.writeFile(
-    path.join(PUBLIC, `catalog-photos-${builtAt}.js`),
+    path.join(PUBLIC, 'catalog-photos.js'),
     `window.__PHOTOS__=${safeJson(rest)};` +
       `window.dispatchEvent(new Event('photos-ready'))`,
     'utf-8',
@@ -526,11 +541,11 @@ const main = async () => {
 
   /*
    * Описания и полные характеристики — тем же приёмом, что и фото:
-   * отдельный файл с номером сборки, чтобы не смешать с прошлой версией.
+   * отдельный файл, свежесть задаётся номером сборки в адресе.
    */
   const texts = textRest(data);
   await fs.writeFile(
-    path.join(PUBLIC, `catalog-texts-${builtAt}.js`),
+    path.join(PUBLIC, 'catalog-texts.js'),
     `window.__TEXTS__=${safeJson(texts)};` +
       `window.dispatchEvent(new Event('texts-ready'))`,
     'utf-8',
@@ -545,7 +560,7 @@ const main = async () => {
    */
   const index = searchIndex(data);
   await fs.writeFile(
-    path.join(PUBLIC, `catalog-index-${builtAt}.js`),
+    path.join(PUBLIC, 'catalog-index.js'),
     `window.__SEARCH_INDEX__=${safeJson(index)};` +
       `window.dispatchEvent(new Event('index-ready'))`,
     'utf-8',

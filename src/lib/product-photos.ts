@@ -46,12 +46,13 @@ export const loadPhotos = (): Promise<PhotoMap> => {
   pending = new Promise<PhotoMap>((resolve) => {
     if (typeof document === 'undefined') return resolve({});
 
-    /* Номер сборки тот же, что у каталога — иначе подтянем фото от старой */
+    /* Номер сборки в адресе — тот же, что у каталога. Имя файла
+       постоянное, свежесть задаёт ?v=: иначе подтянем фото от старой */
     const at = w.__PHOTOS_AT__;
     if (!at) return resolve({});
 
     const el = document.createElement('script');
-    el.src = `/catalog-photos-${at}.js`;
+    el.src = `/catalog-photos.js?v=${at}`;
     el.async = true;
     el.onload = () => resolve(w.__PHOTOS__ ?? {});
     el.onerror = () => {

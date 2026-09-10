@@ -75,7 +75,7 @@ export const loadIndex = (): Promise<Index> => {
     if (!at) return resolve(new Map());
 
     const el = document.createElement('script');
-    el.src = `/catalog-index-${at}.js`;
+    el.src = `/catalog-index.js?v=${at}`;
     el.async = true;
     el.onload = () => resolve(indexReady() ?? new Map());
     el.onerror = () => {
