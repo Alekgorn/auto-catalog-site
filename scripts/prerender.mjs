@@ -397,6 +397,39 @@ const cleanOld = async () => {
   }
 };
 
+/**
+ * Ужимаем разметку, которую видит поисковый робот.
+ *
+ * В HTML попадала вся страница целиком, включая то, что для индексации
+ * бесполезно: рисунки иконок (шестьдесят с лишним <svg> на страницу —
+ * сорок мегабайт по каталогу) и подвал с девятью десятками ссылок,
+ * одинаковый везде. Полторы тысячи карточек по семьдесят пять килобайт
+ * складывались в полтораста мегабайт.
+ *
+ * Убирать это безопасно: робот берёт из HTML заголовки, тексты и ссылки
+ * на товары — они остаются нетронутыми. Живой посетитель этой версии не
+ * видит вовсе, у него React перерисовывает страницу с нуля (createRoot,
+ * не гидрация), так что подвал и иконки на экране будут как раньше.
+ *
+ * Подвал заменяем ссылкой на главную, а не вырезаем совсем: страница без
+ * единой внутренней ссылки в конце выглядит для робота тупиком.
+ */
+const slimForBots = (markup) =>
+  markup
+    // Рисунок иконки: сами дуги и линии смысла для поиска не несут
+    .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/g, '')
+    // Подвал целиком одинаков на всех страницах — держим только ссылку домой
+    .replace(
+      /<footer\b[^>]*>[\s\S]*?<\/footer>/g,
+      '<footer><a href="/">ШТАТНО</a></footer>',
+    )
+    /* Оформление: на карточке это два десятка килобайт из сорока —
+       длинные наборы вроде "flex items-center gap-2 rounded-xl...".
+       Робот по ним ничего не ранжирует, а посетителю их принесёт React. */
+    .replace(/\s(?:class|style)="[^"]*"/g, '')
+    // Пустоты, оставшиеся после вырезанного
+    .replace(/\s{2,}/g, ' ');
+
 const EMPTY_ROOT = '<div id="root"><!--prerender--><!--/prerender--></div>';
 
 /**
@@ -619,7 +652,7 @@ const main = async () => {
     let html = applySeoToHtml(template, seo, url);
     html = html.replace(
       EMPTY_ROOT,
-      `<div id="root"><!--prerender-->${appHtml}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
+      `<div id="root"><!--prerender-->${slimForBots(appHtml)}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
     );
 
     const target = path.join(PUBLIC, url.replace(/^\//, ''), 'index.html');
@@ -648,7 +681,7 @@ const main = async () => {
     root = applySeoToHtml(root, homeSeo, '/');
     root = root.replace(
       EMPTY_ROOT,
-      `<div id="root"><!--prerender-->${homeHtml}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
+      `<div id="root"><!--prerender-->${slimForBots(homeHtml)}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
     );
     await fs.writeFile(source, root, 'utf-8');
     generated.push('/');
