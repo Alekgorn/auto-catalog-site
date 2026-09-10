@@ -156,6 +156,12 @@ export interface WirePick {
   questions: WireQuestion[];
   /** Размеченных данных не хватает — показываем старый список */
   fallback: boolean;
+  /**
+   * Ни одна проводка, привязанная к рамке, не подошла машине по годам
+   * или марке. Показываем что есть, но честно предупреждаем: иначе
+   * человек примет непроверенный вариант за подтверждённый.
+   */
+  unverified?: boolean;
 }
 
 /** Товар размечен, если у него проставлен уровень совместимости */
@@ -329,9 +335,30 @@ export const pickWires = (
    * Одна проводка — показываем её и молчим. Несколько — отсеиваем по
    * ответам про усилитель, камеру и CAN-шину, как и раньше.
    */
-  const fromFrame = frame?.frameWires?.length
+  const linkedToFrame = frame?.frameWires?.length
     ? products.filter((p) => frame.frameWires?.includes(p.id))
     : [];
+
+  /*
+   * Из привязанных к рамке оставляем те, что подходят выбранной машине.
+   *
+   * Связка «рамка — проводка» не знает про год: рамка Honda Element
+   * закрывает 2002–2011, и к ней подвязаны проводки на 2005–2010,
+   * на 2008+ и на 2010+ с камерой. Все три к рамке относятся честно,
+   * но к машине 2005 года подходит одна. Без этой проверки подбор
+   * советовал товар, который сам же в карточке помечал как
+   * неподходящий — по каталогу такое выходило в трети случаев.
+   *
+   * Если не осталось ничего — показываем привязанные как есть.
+   * Пустой экран хуже неточного списка: человек решит, что на его
+   * машину у нас нет вообще ничего, хотя товар есть и, возможно,
+   * просто неточно размечен по годам.
+   */
+  const frameFits = linkedToFrame.filter((p) => fits.includes(p));
+  const fromFrame = frameFits.length ? frameFits : linkedToFrame;
+  /* Ни одна из привязанных машине не подошла — предупреждаем честно,
+     а не выдаём их за проверенные */
+  const frameUnverified = !frameFits.length && linkedToFrame.length > 0;
 
   if (fromFrame.length === 1) {
     return {
@@ -341,6 +368,7 @@ export const pickWires = (
       question: null,
       questions: [],
       fallback: false,
+      unverified: frameUnverified,
     };
   }
 
@@ -379,6 +407,7 @@ export const pickWires = (
         question: next,
         questions: list,
         fallback: false,
+        unverified: frameUnverified,
       };
     }
 
@@ -407,6 +436,7 @@ export const pickWires = (
       question: null,
       questions: list,
       fallback: false,
+      unverified: frameUnverified,
     };
   }
 
