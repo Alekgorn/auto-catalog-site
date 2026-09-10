@@ -194,6 +194,17 @@ export interface Install {
   /** Строка от мастера: что сохранилось, на что обратить внимание */
   comment: string;
   createdAt: string | null;
+  /**
+   * Партнёрский сервис, где выполняли работу. Приходит с сервера,
+   * только если партнёр разрешил показывать адрес; иначе null —
+   * на сайт эти данные не попадают вовсе.
+   */
+  place: {
+    name: string;
+    address: string;
+    note: string;
+    coords: string;
+  } | null;
   /** Адреса товаров, которые стояли в этой машине */
   products: string[];
 }

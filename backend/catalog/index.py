@@ -136,7 +136,8 @@ def handler(event: dict, context) -> dict:
         # Установки: выполненные работы с фото «было/стало»
         cur.execute(
             f"SELECT id, slug, brand, model, year, title, excerpt, before_image, "
-            f"after_image, gallery, video, comment, created_at "
+            f"after_image, gallery, video, comment, created_at, "
+            f"place_name, place_address, place_note, place_coords, place_shown "
             f"FROM {schema}.installs WHERE is_active = TRUE "
             f"ORDER BY sort_order, id DESC"
         )
@@ -219,6 +220,20 @@ def handler(event: dict, context) -> dict:
             'gallery': i['gallery'],
             'video': i['video'],
             'comment': i['comment'],
+            # Адрес сервиса публикуется только с его разрешения. Решает
+            # сервер, а не вёрстка: спрячь мы это на стороне сайта, адрес
+            # всё равно уехал бы в выгрузку каталога и был бы виден любому,
+            # кто откроет её напрямую.
+            'place': (
+                {
+                    'name': i['place_name'],
+                    'address': i['place_address'],
+                    'note': i['place_note'],
+                    'coords': i['place_coords'],
+                }
+                if i['place_shown'] and (i['place_name'] or i['place_address'])
+                else None
+            ),
             'createdAt': i['created_at'].isoformat() if i['created_at'] else None,
             'products': install_products.get(i['slug'], []),
         }

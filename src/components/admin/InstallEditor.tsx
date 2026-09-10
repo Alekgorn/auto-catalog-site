@@ -22,6 +22,15 @@ export interface AdminInstall {
   /** Вертикальный ролик: YouTube Shorts, Rutube, VK или свой файл */
   video: string;
   comment: string;
+  /** Партнёрский сервис, где выполняли работу */
+  placeName: string;
+  placeAddress: string;
+  /** Почему ставили именно там */
+  placeNote: string;
+  /** Точка на карте: «55.751244,37.618423» */
+  placeCoords: string;
+  /** Разрешение партнёра. Выключено — адреса на сайте нет вовсе */
+  placeShown: boolean;
   productIds: number[];
   sortOrder: number;
   isActive: boolean;
@@ -38,6 +47,11 @@ export const emptyInstall = (): AdminInstall => ({
   gallery: [],
   video: '',
   comment: '',
+  placeName: '',
+  placeAddress: '',
+  placeNote: '',
+  placeCoords: '',
+  placeShown: false,
   productIds: [],
   sortOrder: 100,
   isActive: true,
@@ -345,6 +359,85 @@ const InstallEditor = ({ install, products, brands, onClose, onSave }: Props) =>
                 Самая ценная строка: из одних фотографий этого не видно, а
                 покупателя волнует именно это.
               </p>
+            </div>
+
+            {/* Где ставили */}
+            <div className="border-t border-foreground pt-5">
+              <h3 className="font-head text-[1rem] font-bold uppercase tracking-tight">
+                Где выполнена установка
+              </h3>
+              <p className="mt-1.5 max-w-[42em] text-[0.82rem] leading-relaxed text-muted-foreground">
+                Работы делают партнёрские сервисы. Адрес показываем только
+                с их разрешения — галочка ниже. Снимете её, и на сайте не
+                останется ни адреса, ни карты, но данные сохранятся: если
+                разрешение вернут, включите обратно.
+              </p>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 border border-border p-4">
+                <input
+                  type="checkbox"
+                  checked={form.placeShown}
+                  onChange={(e) => set('placeShown', e.target.checked)}
+                  className="mt-0.5 h-4 w-4 flex-none accent-primary"
+                />
+                <span>
+                  <span className="font-head text-[0.9rem] font-medium">
+                    Партнёр разрешил показывать адрес
+                  </span>
+                  <span className="mt-0.5 block text-[0.78rem] text-muted-foreground">
+                    {form.placeShown
+                      ? 'Адрес и карта видны посетителям сайта'
+                      : 'Сейчас адрес на сайте не показывается'}
+                  </span>
+                </span>
+              </label>
+
+              <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div>
+                  <span className={label}>Название сервиса</span>
+                  <input
+                    value={form.placeName}
+                    onChange={(e) => set('placeName', e.target.value)}
+                    className={field}
+                    placeholder="Автозвук на Ленина"
+                  />
+                </div>
+                <div>
+                  <span className={label}>Адрес</span>
+                  <input
+                    value={form.placeAddress}
+                    onChange={(e) => set('placeAddress', e.target.value)}
+                    className={field}
+                    placeholder="Санкт-Петербург, Ленина 15"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <span className={label}>Точка на карте</span>
+                <input
+                  value={form.placeCoords}
+                  onChange={(e) => set('placeCoords', e.target.value)}
+                  className={field}
+                  placeholder="59.939095, 30.315868"
+                />
+                <p className="mt-1.5 max-w-[42em] text-[0.72rem] leading-snug text-muted-foreground">
+                  Откройте Яндекс.Карты, нажмите правой кнопкой на нужном
+                  месте и выберите «Что здесь?» — числа скопируйте сюда.
+                  Оставите пустым — покажем адрес строкой, без карты.
+                </p>
+              </div>
+
+              <div className="mt-5">
+                <span className={label}>Почему ставили именно там</span>
+                <textarea
+                  value={form.placeNote}
+                  onChange={(e) => set('placeNote', e.target.value)}
+                  rows={2}
+                  className={area}
+                  placeholder="Работают с этой маркой не первый год, есть подъёмник и стенд для проверки кнопок на руле"
+                />
+              </div>
             </div>
 
             {/* Для поиска */}

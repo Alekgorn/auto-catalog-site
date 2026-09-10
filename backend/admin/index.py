@@ -584,6 +584,11 @@ def row_to_install(r: dict) -> dict:
         'gallery': r['gallery'],
         'video': r['video'],
         'comment': r['comment'],
+        'placeName': r['place_name'],
+        'placeAddress': r['place_address'],
+        'placeNote': r['place_note'],
+        'placeCoords': r['place_coords'],
+        'placeShown': r['place_shown'],
         'sortOrder': r['sort_order'],
         'isActive': r['is_active'],
     }
@@ -3321,6 +3326,11 @@ def handler(event: dict, context) -> dict:
                     'gallery': qjson(body.get('gallery') or []),
                     'video': q(str(body.get('video', ''))),
                     'comment': q(str(body.get('comment', ''))),
+                    'place_name': q(str(body.get('placeName', ''))[:160]),
+                    'place_address': q(str(body.get('placeAddress', ''))[:255]),
+                    'place_note': q(str(body.get('placeNote', ''))),
+                    'place_coords': q(str(body.get('placeCoords', ''))[:64]),
+                    'place_shown': 'TRUE' if body.get('placeShown') else 'FALSE',
                     'sort_order': qint(body.get('sortOrder'), 100),
                     'is_active': 'TRUE' if body.get('isActive', True) else 'FALSE',
                 }
