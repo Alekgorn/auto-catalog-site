@@ -2686,6 +2686,43 @@ def handler(event: dict, context) -> dict:
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
 
+        # Что выбирали в подборе: марка, модель, год и место выбора.
+        # Копится счётчиком, поэтому строк немного даже за годы работы.
+        if action == 'vehicle-picks':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT id, brand, model, year, place, scenario, hits, "
+                    f"first_at, last_at FROM {schema()}.vehicle_picks "
+                    f"ORDER BY hits DESC, last_at DESC LIMIT 1000"
+                )
+                items = [
+                    {
+                        'id': r['id'],
+                        'brand': r['brand'],
+                        'model': r['model'],
+                        'year': r['year'],
+                        'place': r['place'],
+                        'scenario': r['scenario'],
+                        'hits': r['hits'],
+                        'firstAt': r['first_at'].isoformat() if r['first_at'] else None,
+                        'lastAt': r['last_at'].isoformat() if r['last_at'] else None,
+                    }
+                    for r in cur.fetchall()
+                ]
+                cur.close()
+                return resp(200, {'items': items})
+
+            if method == 'DELETE':
+                # Чистка всей истории — когда накопился мусор от тестов
+                cur.execute(f"DELETE FROM {schema()}.vehicle_picks")
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
+
         if action == 'missing-fit':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             if method == 'GET':

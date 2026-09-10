@@ -32,7 +32,7 @@ import ArticleEditor, {
   emptyArticle,
 } from "@/components/admin/ArticleEditor";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
-import MissingFitPanel from "@/components/admin/MissingFitPanel";
+import ClientChoicePanel from "@/components/admin/ClientChoicePanel";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -580,7 +580,7 @@ const Admin = () => {
         )}
 
         {tab === "missing-fit" && (
-          <MissingFitPanel onCount={setMissingFits} />
+          <ClientChoicePanel onCount={setMissingFits} />
         )}
 
         {tab === "site" && <SitePanel onSaved={load} />}

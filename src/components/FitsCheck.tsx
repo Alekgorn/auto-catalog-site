@@ -11,6 +11,7 @@ import {
 } from '@/data/catalog';
 import { useCatalog } from '@/context/CatalogContext';
 import { saveVehicle } from '@/lib/vehicle';
+import { sendVehiclePick } from '@/lib/api';
 
 interface Props {
   product: Product;
@@ -55,6 +56,8 @@ const FitsCheck = ({ product, vehicle, onVehicle, onRequest }: Props) => {
     if (!brand || !model || !year) return;
     const v: Vehicle = { brand, model, year: Number(year) };
     saveVehicle(v);
+    /* Проверка совместимости в карточке — тоже завершённый подбор */
+    sendVehiclePick({ ...v, place: 'catalog' });
     onVehicle(v);
   };
 

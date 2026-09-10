@@ -27,6 +27,7 @@ import {
   CATALOG_PATH,
 } from "@/lib/scenario-settings";
 import { VEHICLE_EVENT, loadVehicle, saveVehicle } from "@/lib/vehicle";
+import { sendVehiclePick } from "@/lib/api";
 import { SITE_URL } from "@/lib/seo";
 import { scenarioTitle, scenarioDescription } from "@/lib/scenario-seo";
 import { useSeo } from "@/hooks/use-seo";
@@ -555,6 +556,9 @@ const ScenarioPage = () => {
     setVehicle(v);
     saveVehicle(v);
     setShown(PAGE_SIZE);
+    /* Какие машины подбирают внутри сценария — вместе с самим
+       сценарием, иначе не видно, за чем именно пришли */
+    sendVehiclePick({ ...v, place: "scenario", scenario: slug });
     // Машина известна — ведём к шагу, который ещё не закрыт
     if (scenario?.kit) {
       const target = nextStop(scenario.kit, picks, v);
@@ -577,6 +581,11 @@ const ScenarioPage = () => {
       const full = { brand: v!.brand, model: v!.model!, year: v!.year! };
       setVehicle(full);
       saveVehicle(full);
+      /* Только когда выбор дошёл до года: незаконченный подбор
+         статистику бы только засорял */
+      if (!wasComplete) {
+        sendVehiclePick({ ...full, place: "catalog", scenario: slug });
+      }
       // Подбор завершён — сразу показываем результат, мотать не нужно
       if (!wasComplete) scrollTo("catalog-list");
     } else if (vehicle) {

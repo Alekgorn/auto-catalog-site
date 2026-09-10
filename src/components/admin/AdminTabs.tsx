@@ -62,7 +62,9 @@ const AdminTabs = ({
         ],
         [
           "missing-fit",
-          missingFits > 0 ? `Нет решения (${missingFits})` : "Нет решения",
+          missingFits > 0
+            ? `Выбор клиента (${missingFits})`
+            : "Выбор клиента",
         ],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],

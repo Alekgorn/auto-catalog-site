@@ -12,6 +12,7 @@ import RequestDialog from "@/components/RequestDialog";
 import { Product, Vehicle } from "@/data/catalog";
 import { loadVehicle, saveVehicle } from "@/lib/vehicle";
 import { SITE_URL } from "@/lib/seo";
+import { sendVehiclePick } from "@/lib/api";
 import { SELLER } from "@/lib/site-settings";
 import { useSeo } from "@/hooks/use-seo";
 import { useCatalog } from "@/context/CatalogContext";
@@ -113,6 +114,8 @@ const Index = () => {
     const next = { brand, model, year: Number(year) };
     setVehicle(next);
     saveVehicle(next);
+    /* Копим статистику спроса: какие машины ищут на главной */
+    sendVehiclePick({ ...next, place: "home" });
     // Ждём кадр: блок сценариев перерисуется под новую машину,
     // и только после этого его позиция на странице окончательная
     requestAnimationFrame(() =>

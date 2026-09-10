@@ -86,6 +86,54 @@ def handler(event: dict, context) -> dict:
             'body': json.dumps({'ok': True, 'id': row_id}, ensure_ascii=False),
         }
 
+    # Завершённый подбор по машине: человек выбрал марку, модель, год и
+    # нажал кнопку. Промежуточные шаги не пишем — иначе на каждое
+    # движение в выпадающем списке уходил бы вызов функции.
+    #
+    # Копим не событиями, а счётчиком: одна строка на машину и место
+    # выбора. Полмиллиона визитов не превратятся в полмиллиона строк, а
+    # ответ на вопрос «какие авто ищут чаще» станет обычной сортировкой.
+    if str(body.get('kind', '')) == 'vehicle-pick':
+        brand = str(body.get('brand', '')).strip()[:64]
+        model = str(body.get('model', '')).strip()[:96]
+        if not brand or not model:
+            return {
+                'statusCode': 400,
+                'headers': CORS,
+                'body': json.dumps({'error': 'Не указана машина'}, ensure_ascii=False),
+            }
+        try:
+            year = int(body.get('year') or 0)
+        except (TypeError, ValueError):
+            year = 0
+        # Откуда выбирали: главная, сценарий, каталог
+        place = str(body.get('place', '')).strip()[:24] or 'home'
+        if place not in ('home', 'scenario', 'catalog', 'search'):
+            place = 'home'
+        scenario = str(body.get('scenario', '')).strip()[:64]
+
+        conn = psycopg2.connect(os.environ['DATABASE_URL'])
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                f"INSERT INTO {schema}.vehicle_picks "
+                f"(brand, model, year, place, scenario) "
+                f"VALUES ({q(brand)}, {q(model)}, {year}, {q(place)}, {q(scenario)}) "
+                f"ON CONFLICT (brand, model, year, place, scenario) DO UPDATE SET "
+                f"hits = {schema}.vehicle_picks.hits + 1, last_at = NOW()"
+            )
+            conn.commit()
+            cur.close()
+        finally:
+            conn.close()
+
+        return {
+            'statusCode': 200,
+            'headers': CORS,
+            'isBase64Encoded': False,
+            'body': json.dumps({'ok': True}, ensure_ascii=False),
+        }
+
     name = str(body.get('name', '')).strip()
     phone = str(body.get('phone', '')).strip()
     if len(name) < 2:

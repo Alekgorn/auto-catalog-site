@@ -66,6 +66,37 @@ export const sendMissingFit = async (
   }
 };
 
+/** Где человек завершил подбор — по этому разрезу и смотрим статистику */
+export type PickPlace = 'home' | 'scenario' | 'catalog' | 'search';
+
+/**
+ * Завершённый подбор по машине.
+ *
+ * Шлём только когда выбор доведён до конца и нажата кнопка — на каждое
+ * движение в списке марок запрос бы означал тысячи вызовов в сутки.
+ *
+ * Ответ не ждём и ошибку глотаем: это статистика, она не должна
+ * задерживать переход человека к товарам и тем более ломать его.
+ */
+export const sendVehiclePick = (payload: {
+  brand: string;
+  model: string;
+  year?: number;
+  place: PickPlace;
+  scenario?: string;
+}): void => {
+  try {
+    void fetch(ORDERS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...payload, kind: 'vehicle-pick' }),
+      keepalive: true,
+    }).catch(() => undefined);
+  } catch {
+    /* статистика не важнее подбора — молчим */
+  }
+};
+
 export const ADMIN_TOKEN_KEY = 'shtatno.admin.token';
 
 export const getAdminToken = (): string => {

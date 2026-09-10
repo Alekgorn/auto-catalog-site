@@ -10,14 +10,31 @@
       "name": "Пустая заявка отклоняется",
       "method": "POST",
       "path": "/",
-      "body": {"name": "", "phone": ""},
+      "body": {
+        "name": "",
+        "phone": ""
+      },
       "expectedStatus": 400
     },
     {
       "name": "Короткий телефон отклоняется",
       "method": "POST",
       "path": "/",
-      "body": {"name": "Тест", "phone": "123"},
+      "body": {
+        "name": "Тест",
+        "phone": "123"
+      },
+      "expectedStatus": 400
+    },
+    {
+      "name": "Выбор авто без марки отклоняется",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "kind": "vehicle-pick",
+        "brand": "",
+        "model": ""
+      },
       "expectedStatus": 400
     }
   ]
