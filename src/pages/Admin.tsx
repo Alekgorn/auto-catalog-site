@@ -14,8 +14,6 @@ import GuideEditor, {
   AdminGuide,
   emptyGuide,
 } from "@/components/admin/GuideEditor";
-import SettingsPanel from "@/components/admin/SettingsPanel";
-import SupplierPanel from "@/components/admin/SupplierPanel";
 import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 import { auditProducts } from "@/lib/data-audit";
 import { ALL_MODELS } from "@/lib/fits-match";
@@ -583,15 +581,6 @@ const Admin = () => {
         )}
 
         {tab === "site" && <SitePanel onSaved={load} />}
-
-        {tab === "settings" && (
-          <>
-            <SettingsPanel onImported={load} />
-            <div className="border-t border-foreground">
-              <SupplierPanel categories={categories} />
-            </div>
-          </>
-        )}
 
         {tab === "products" && (
           <AdminProductsTab

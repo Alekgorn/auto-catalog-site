@@ -10,10 +10,11 @@ import {
   DEFAULT_SCENARIOS,
 } from '@/lib/scenario-settings';
 import { showcaseHref } from '@/lib/showcase';
-import ScenariosCheck from '@/components/admin/ScenariosCheck';
 import ImageOptimizer from '@/components/admin/ImageOptimizer';
 import ExternalImages from '@/components/admin/ExternalImages';
 import AnalyticsPanel from '@/components/admin/AnalyticsPanel';
+import SettingsPanel from '@/components/admin/SettingsPanel';
+import SupplierPanel from '@/components/admin/SupplierPanel';
 import {
   DEFAULT_CONTACTS,
   DEFAULT_FAQ,
@@ -51,7 +52,10 @@ const FIELDS: { key: keyof SiteContacts; label: string; hint: string }[] = [
 const input =
   'w-full border-b border-border bg-transparent py-2.5 text-[0.95rem] outline-none transition-colors focus:border-primary';
 
+type Section = 'settings' | 'hotspots' | 'scenarios' | 'showcase';
+
 const SitePanel = ({ onSaved }: Props) => {
+  const [section, setSection] = useState<Section>('settings');
   const { toast } = useToast();
   const [contacts, setContacts] = useState<SiteContacts>(DEFAULT_CONTACTS);
   const [faq, setFaq] = useState<FaqItem[]>(DEFAULT_FAQ);
@@ -123,11 +127,39 @@ const SitePanel = ({ onSaved }: Props) => {
       return next;
     });
 
+  /* Внутренние вкладки: раздел разросся до полотна в несколько экранов,
+     где настройки контактов соседствовали с редактором комплектов.
+     Теперь каждая задача на своей вкладке */
+  const SECTIONS: { id: Section; label: string }[] = [
+    { id: 'settings', label: 'Настройки' },
+    { id: 'hotspots', label: 'Активные точки на машине' },
+    { id: 'scenarios', label: 'Сценарии' },
+    { id: 'showcase', label: 'Что мы уже собрали' },
+  ];
+
   const toggleBlock = (key: FilterBlockKey) =>
     setBlocks((b) => (b.includes(key) ? b.filter((x) => x !== key) : [...b, key]));
 
   return (
-    <div className="py-8">
+    <div className="py-6">
+      <div className="flex flex-wrap gap-x-7 gap-y-2 border-b border-border pb-3">
+        {SECTIONS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setSection(t.id)}
+            className={`border-b-2 pb-1.5 text-[0.8rem] uppercase tracking-[0.1em] transition-colors ${
+              section === t.id
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {section === 'settings' && (
+      <div className="pt-8">
       <div className="mb-12 space-y-5">
         <ImageOptimizer />
         <ExternalImages />
@@ -266,30 +298,48 @@ const SitePanel = ({ onSaved }: Props) => {
         </div>
       </div>
 
-      <div className="mt-14 border-t border-foreground pt-10">
-        <HotspotsEditor value={hotspots} onChange={setHotspots} />
-      </div>
-
-      <div className="mt-14 border-t border-foreground pt-10">
-        <ScenariosEditor
-          value={scenarios}
-          onChange={setScenarios}
-          categories={categories}
-        />
-      </div>
-
-      <div className="mt-14 border-t border-foreground pt-10">
-        <ShowcaseEditor
-          value={showcase}
-          onChange={setShowcase}
-          products={products}
-        />
-      </div>
-
+      {/* Настройки каталога: карточка, импорт-экспорт, разбор прайса.
+          Раньше жили отдельной вкладкой верхнего уровня, хотя это те же
+          настройки сайта — искать их в двух местах было незачем */}
       <div className="mt-14 border-t border-foreground">
-        <ScenariosCheck />
+        <SettingsPanel onImported={onSaved} />
       </div>
 
+      <div className="border-t border-foreground">
+        <SupplierPanel categories={categories} />
+      </div>
+      </div>
+      )}
+
+      {section === 'hotspots' && (
+        <div className="pt-8">
+          <HotspotsEditor value={hotspots} onChange={setHotspots} />
+        </div>
+      )}
+
+      {section === 'scenarios' && (
+        <div className="pt-8">
+          <ScenariosEditor
+            value={scenarios}
+            onChange={setScenarios}
+            categories={categories}
+          />
+        </div>
+      )}
+
+      {section === 'showcase' && (
+        <div className="pt-8">
+          <ShowcaseEditor
+            value={showcase}
+            onChange={setShowcase}
+            products={products}
+          />
+        </div>
+      )}
+
+      {/* Кнопка общая для всех вкладок: настройки, точки, сценарии и
+          комплекты уходят на сервер одной записью. Прятать её на
+          соседних вкладках нельзя — правки бы потерялись при переходе */}
       <div className="sticky bottom-0 mt-10 border-t border-foreground bg-background py-5">
         <button
           onClick={save}

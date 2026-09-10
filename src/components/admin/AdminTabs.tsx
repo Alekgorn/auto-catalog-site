@@ -8,8 +8,7 @@ export type AdminTab =
   | "categories"
   | "audit"
   | "missing-fit"
-  | "site"
-  | "settings";
+  | "site";
 
 interface Props {
   tab: AdminTab;
@@ -67,7 +66,6 @@ const AdminTabs = ({
         ],
         ["dealers", "Дилеры"],
         ["site", "Сайт"],
-        ["settings", "Настройки"],
       ] as const
     ).map(([key, label]) => (
       <button
