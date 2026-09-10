@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import Selection from "@/components/Selection";
-import BuiltKits from "@/components/BuiltKits";
 import Installs from "@/components/Installs";
 import HowToBuy from "@/components/HowToBuy";
 import Faq from "@/components/Faq";
@@ -143,12 +142,11 @@ const Index = () => {
         {/* Подбор по машине — главное преимущество, поэтому идёт
             сразу под заголовком, до поиска и сценариев */}
         <Hero selection={<Selection {...selectorProps} />} />
-        {/* Выполненные работы вытесняют витрину комплектов: фотография
+        {/* Выполненные работы вместо витрины комплектов: фотография
             собранной панели отвечает на вопрос «как это будет у меня»,
-            а список товаров с ценой — нет. Пока установок не завели,
-            показываем прежний блок, чтобы место не пустовало */}
+            а опись товаров с ценой — нет. Два похожих блока подряд
+            только сбивали: человек дважды видел «что мы собрали» */}
         <Installs />
-        <BuiltKits />
         <HowToBuy />
         <Faq />
         <Contacts />

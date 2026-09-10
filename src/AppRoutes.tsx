@@ -10,6 +10,7 @@ import CategoryPage from './pages/CategoryPage';
 import BrandPage from './pages/BrandPage';
 import GuidePage from './pages/GuidePage';
 import InstallPage from './pages/InstallPage';
+import InstallsPage from './pages/Installs';
 import ScenarioPage from './pages/Scenario';
 import LegalPage from './pages/LegalPage';
 
@@ -72,6 +73,7 @@ const AppRoutes = () => (
     <Route path="/brand/:slug" element={<BrandPage />} />
     <Route path="/guides" element={<Guides />} />
     <Route path="/guides/:slug" element={<GuidePage />} />
+    <Route path="/installs" element={<InstallsPage />} />
     <Route path="/installs/:slug" element={<InstallPage />} />
     <Route path="/articles" element={<Articles />} />
     <Route path="/articles/:slug" element={<ArticlePage />} />

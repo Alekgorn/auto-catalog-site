@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import Icon from '@/components/ui/icon';
 import SectionHead from '@/components/SectionHead';
 import InstallCard from '@/components/InstallCard';
 import { useCatalog } from '@/context/CatalogContext';
@@ -57,6 +59,19 @@ const Installs = () => {
           <InstallCard key={it.slug} install={it} nameOf={nameOf} />
         ))}
       </div>
+
+      {/* Показали последние — за остальными на свою страницу */}
+      {(installs ?? []).length > SHOWN && (
+        <div className="pb-12">
+          <Link
+            to="/installs"
+            className="inline-flex items-center gap-2 border border-foreground px-6 py-4 font-head text-[0.85rem] font-medium uppercase tracking-[0.08em] transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"
+          >
+            Все установки — {(installs ?? []).length}
+            <Icon name="ArrowRight" size={16} />
+          </Link>
+        </div>
+      )}
     </section>
   );
 };

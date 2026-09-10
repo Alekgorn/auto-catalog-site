@@ -12,6 +12,10 @@ import { lockScroll } from '@/lib/scroll-lock';
 const NAV: { id: string; label: string; route?: string }[] = [
   { id: 'catalog', label: 'Каталог', route: '/catalog' },
   { id: 'select', label: 'Подбор' },
+  /* Одним словом: «Наши работы» в две строки ломало ряд меню и
+     раздвигало соседние пункты. Смысл тот же — это выполненные
+     установки, и рядом с «Подбором» читается однозначно */
+  { id: 'installs', label: 'Установки', route: '/installs' },
   { id: 'guides', label: 'Инструкции', route: '/guides' },
   { id: 'articles', label: 'Статьи', route: '/articles' },
   { id: 'faq', label: 'FAQ' },
