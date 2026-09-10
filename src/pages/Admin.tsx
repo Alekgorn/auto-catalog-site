@@ -19,7 +19,6 @@ import SupplierPanel from "@/components/admin/SupplierPanel";
 import DiagnosticsPanel from "@/components/admin/DiagnosticsPanel";
 import { auditProducts } from "@/lib/data-audit";
 import { ALL_MODELS } from "@/lib/fits-match";
-import StoragePanel from "@/components/admin/StoragePanel";
 import SitePanel from "@/components/admin/SitePanel";
 import CategoriesEditor from "@/components/admin/CategoriesEditor";
 import AdminLogin from "@/components/admin/AdminLogin";
@@ -584,8 +583,6 @@ const Admin = () => {
         )}
 
         {tab === "site" && <SitePanel onSaved={load} />}
-
-        {tab === "storage" && <StoragePanel />}
 
         {tab === "settings" && (
           <>
