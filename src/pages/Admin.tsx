@@ -331,6 +331,35 @@ const Admin = () => {
   };
 
   /**
+   * Правка наличия и метки прямо в списке, без захода в карточку.
+   *
+   * Отдельный обработчик, а не общий save: тот закрывает редактор и
+   * показывает всплывающее «Сохранено». При правке десятка остатков
+   * подряд это десять всплывающих подряд — поэтому сообщаем только об
+   * ошибке, а список молча обновляем на месте.
+   */
+  const saveQuick = async (product: AdminProduct) => {
+    const res = await adminFetch("", {
+      method: "PUT",
+      body: JSON.stringify(product),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast({
+        title: "Не сохранилось",
+        description: data.error ?? product.name,
+      });
+      /* Вернём список к тому, что реально в базе: иначе на экране
+         останется значение, которого на сайте нет */
+      load();
+      return;
+    }
+    setProducts((list) =>
+      list.map((it) => (it.id === product.id ? { ...it, ...product } : it)),
+    );
+  };
+
+  /**
    * Копия товара — заготовка для похожей позиции.
    *
    * Ничего не сохраняем сразу: открываем редактор с заполненными полями,
@@ -586,6 +615,7 @@ const Admin = () => {
             }
             onToggleOne={toggleOne}
             onToggleActive={toggleActive}
+            onQuickSave={saveQuick}
             onEdit={setEditing}
             onRemove={remove}
             onDuplicate={duplicate}

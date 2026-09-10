@@ -2,6 +2,7 @@ import Icon from "@/components/ui/icon";
 import { formatPrice } from "@/data/catalog";
 import { AdminProduct } from "@/components/admin/ProductEditor";
 import BulkBar from "@/components/admin/BulkBar";
+import QuickFields from "@/components/admin/QuickFields";
 
 interface Props {
   search: string;
@@ -15,6 +16,8 @@ interface Props {
   onToggleAll: () => void;
   onToggleOne: (id?: number) => void;
   onToggleActive: (product: AdminProduct) => void;
+  /** Сохранить правку наличия или метки прямо из списка */
+  onQuickSave: (product: AdminProduct) => void;
   onEdit: (product: AdminProduct) => void;
   onRemove: (product: AdminProduct) => void;
   /** Создать заготовку нового товара на основе этого */
@@ -47,6 +50,7 @@ const AdminProductsTab = ({
   onToggleAll,
   onToggleOne,
   onToggleActive,
+  onQuickSave,
   onEdit,
   onRemove,
   onDuplicate,
@@ -168,6 +172,7 @@ const AdminProductsTab = ({
             <div className="font-head text-lg font-bold">
               {formatPrice(p.price)}
             </div>
+            <QuickFields product={p} onSave={onQuickSave} />
             <button
               onClick={() => onToggleActive(p)}
               className={`px-3 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] transition-colors ${
