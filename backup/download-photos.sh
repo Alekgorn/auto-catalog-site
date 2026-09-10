@@ -1,45 +1,64 @@
 #!/bin/sh
-# Скачивает архив фотографий товаров и распаковывает его.
+# Скачивает все фотографии сайта по списку images-list.txt.
 #
 # Использование:
-#   sh download-photos.sh            # скачать и распаковать в ./photos
-#   sh download-photos.sh /путь/куда # распаковать в свою папку
+#   sh download-photos.sh             # скачать в ./photos
+#   sh download-photos.sh /путь/куда  # скачать в свою папку
 #
-# Нужен только curl и tar — есть в любой Linux/macOS системе.
+# Нужен только curl — он есть в любой Linux/macOS системе.
+#
+# Почему по списку, а не одним архивом (как было раньше): архив лежал
+# на хранилище платформы, и если доступа к ней не станет, качать будет
+# неоткуда — то есть страховка перестаёт работать ровно тогда, когда
+# нужна. Список — это просто адреса картинок, он не зависит от того,
+# жив ли архив.
+#
+# Файлы раскладываются по папкам так же, как в адресах. Поэтому папку
+# photos можно просто раздать своим сервером, а в базе заменить начало
+# адреса на своё — пути внутри совпадут.
 
 set -e
 
 DEST="${1:-photos}"
-LIST="$(dirname "$0")/photos-archive-parts.txt"
-TMP="$(mktemp -d)"
-MD5="1746fbe658632a3cb66e0cb23ac8cfc4"
+LIST="$(dirname "$0")/images-list.txt"
 
-echo "Скачиваю части архива (261 МБ)..."
-i=0
-total=$(wc -l < "$LIST" | tr -d ' ')
-while read -r url; do
-  i=$((i + 1))
-  name=$(basename "$url")
-  printf "\r  %s из %s" "$i" "$total"
-  curl -sS --max-time 120 --retry 3 -o "$TMP/$name" "$url"
-done < "$LIST"
-echo ""
-
-echo "Собираю архив..."
-cat "$TMP"/part-* > "$TMP/photos.tar.gz"
-
-echo "Проверяю целостность..."
-got=$(md5sum "$TMP/photos.tar.gz" 2>/dev/null | cut -d' ' -f1 \
-      || md5 -q "$TMP/photos.tar.gz")
-if [ "$got" != "$MD5" ]; then
-  echo "ОШИБКА: архив повреждён (ожидалось $MD5, получено $got)"
-  rm -rf "$TMP"
+if [ ! -f "$LIST" ]; then
+  echo "Не нашёл $LIST — качать нечего"
   exit 1
 fi
 
-echo "Распаковываю в $DEST ..."
 mkdir -p "$DEST"
-tar -xzf "$TMP/photos.tar.gz" -C "$DEST"
-rm -rf "$TMP"
 
-echo "Готово: $(find "$DEST" -type f | wc -l | tr -d ' ') фотографий в папке $DEST"
+total=$(grep -c '^https\?://' "$LIST" || true)
+echo "Скачиваю $total фотографий в $DEST ..."
+echo "Это займёт несколько минут."
+
+i=0
+grep '^https\?://' "$LIST" | while read -r url; do
+  i=$((i + 1))
+  # Путь внутри папки повторяет путь в адресе — так ничего не перезатрётся
+  rel=$(echo "$url" | sed -e 's#^https\?://##' -e 's#[?].*$##')
+  out="$DEST/$rel"
+  mkdir -p "$(dirname "$out")"
+
+  # Уже скачано — пропускаем: скрипт можно запускать повторно
+  if [ -s "$out" ]; then
+    continue
+  fi
+
+  if ! curl -sS --max-time 60 --retry 2 -o "$out" "$url"; then
+    echo ""
+    echo "  не скачалось: $url"
+    rm -f "$out"
+  fi
+
+  if [ $((i % 25)) -eq 0 ]; then
+    printf "\r  %s из %s" "$i" "$total"
+  fi
+done
+
+echo ""
+echo "Готово: $(find "$DEST" -type f | wc -l | tr -d ' ') файлов в папке $DEST"
+echo ""
+echo "Если часть фото не скачалась — запустите скрипт ещё раз,"
+echo "уже загруженное он пропустит."

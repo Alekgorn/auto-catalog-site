@@ -2777,6 +2777,34 @@ def handler(event: dict, context) -> dict:
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
 
+        # Полный слепок базы для страховочной копии: все таблицы как
+        # есть, со всеми полями. Обычный export отдаёт только товары и
+        # марки — для восстановления с нуля этого мало.
+        if action == 'backup-dump':
+            tables = [
+                'brands', 'categories', 'products', 'articles', 'guides',
+                'product_guides', 'dealers', 'orders', 'settings',
+                'vehicle_wiring', 'missing_fit_requests', 'vehicle_picks',
+            ]
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            out = {}
+            for t in tables:
+                try:
+                    cur.execute(f"SELECT * FROM {schema()}.{t}")
+                    rows = []
+                    for r in cur.fetchall():
+                        row = {}
+                        for k, v in dict(r).items():
+                            # Даты в текст: JSON их сам не умеет
+                            row[k] = v.isoformat() if hasattr(v, 'isoformat') else v
+                        rows.append(row)
+                    out[t] = rows
+                except Exception as e:
+                    out[t] = {'error': str(e)}
+                    conn.rollback()
+            cur.close()
+            return resp(200, {'tables': out})
+
         if action == 'export':
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(f"SELECT * FROM {schema()}.products ORDER BY sort_order, id")
