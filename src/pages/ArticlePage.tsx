@@ -83,7 +83,13 @@ const ArticlePage = () => {
         />
         <div className="rule" />
 
-        <div className="mx-auto max-w-[48em]">
+        {/* Ширина колонки задана в em, а не в пикселях: она считается от
+            размера шрифта, поэтому строка держит примерно одинаковое
+            число знаков. 60em — около 950 пикселей: поля по краям уже не
+            зияют, но строка ещё не становится такой длинной, чтобы глаз
+            терял начало следующей. Во всю ширину экрана текст читать
+            заметно труднее — потому и не растягиваем. */}
+        <div className="mx-auto max-w-[60em]">
         <header className="py-10">
           {article.publishedAt && (
             <div className="text-[0.72rem] uppercase tracking-[0.12em] text-muted-foreground">
@@ -115,7 +121,7 @@ const ArticlePage = () => {
         </div>
 
         {more.length > 0 && (
-          <section className="mx-auto mt-20 max-w-[48em] border-t border-foreground pt-8">
+          <section className="mx-auto mt-20 max-w-[60em] border-t border-foreground pt-8">
             <div className="eyebrow">Читайте также</div>
             <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-3">
               {more.map((a) => (
@@ -139,7 +145,7 @@ const ArticlePage = () => {
           </section>
         )}
 
-        <div className="mx-auto max-w-[48em] py-14">
+        <div className="mx-auto max-w-[60em] py-14">
           <Link
             to="/articles"
             className="inline-flex items-center gap-2 border border-foreground px-5 py-3 text-[0.78rem] uppercase tracking-[0.08em] transition-colors hover:bg-foreground hover:text-background"
