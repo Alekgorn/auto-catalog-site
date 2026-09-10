@@ -30,6 +30,11 @@ import ArticleEditor, {
 } from "@/components/admin/ArticleEditor";
 import AdminProductsTab from "@/components/admin/AdminProductsTab";
 import ClientChoicePanel from "@/components/admin/ClientChoicePanel";
+import AdminInstallsTab from "@/components/admin/AdminInstallsTab";
+import InstallEditor, {
+  AdminInstall,
+  emptyInstall,
+} from "@/components/admin/InstallEditor";
 
 const Admin = () => {
   const { toast } = useToast();
@@ -61,6 +66,8 @@ const Admin = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [guides, setGuides] = useState<AdminGuide[]>([]);
   const [editingGuide, setEditingGuide] = useState<AdminGuide | null>(null);
+  const [installs, setInstalls] = useState<AdminInstall[]>([]);
+  const [editingInstall, setEditingInstall] = useState<AdminInstall | null>(null);
   const [articles, setArticles] = useState<AdminArticle[]>([]);
   const [editingArticle, setEditingArticle] = useState<AdminArticle | null>(null);
 
@@ -69,6 +76,13 @@ const Admin = () => {
     if (!res.ok) return;
     const data = await res.json();
     setGuides(data.guides ?? []);
+  }, []);
+
+  const loadInstalls = useCallback(async () => {
+    const res = await adminFetch("?action=installs");
+    if (!res.ok) return;
+    const data = await res.json();
+    setInstalls(data.installs ?? []);
   }, []);
 
   const loadArticles = useCallback(async () => {
@@ -107,6 +121,7 @@ const Admin = () => {
       setNewOrders(data.newOrders ?? 0);
       setMissingFits(data.missingFits ?? 0);
       await loadGuides();
+      await loadInstalls();
       await loadArticles();
       await adminFetch("?action=categories")
         .then((r) => r.json())
@@ -141,7 +156,7 @@ const Admin = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadGuides, loadArticles, toast]);
+  }, [loadGuides, loadInstalls, loadArticles, toast]);
 
   /**
    * Точечно обновить проводки у рамок — без перезагрузки каталога.
@@ -224,6 +239,35 @@ const Admin = () => {
     await adminFetch(`?action=articles&id=${article.id}`, { method: "DELETE" });
     toast({ title: "Удалено" });
     loadArticles();
+  };
+
+  const saveInstall = async (install: AdminInstall) => {
+    const res = await adminFetch("?action=installs", {
+      method: install.id ? "PUT" : "POST",
+      body: JSON.stringify(install),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      toast({
+        title: "Ошибка",
+        description: data.error ?? "Не удалось сохранить",
+      });
+      return;
+    }
+    toast({
+      title: "Установка сохранена",
+      description: install.title || `${install.brand} ${install.model}`,
+    });
+    setEditingInstall(null);
+    loadInstalls();
+  };
+
+  const removeInstall = async (install: AdminInstall) => {
+    const name = install.title || `${install.brand} ${install.model}`;
+    if (!window.confirm(`Удалить установку «${name}»?`)) return;
+    await adminFetch(`?action=installs&id=${install.id}`, { method: "DELETE" });
+    toast({ title: "Удалено" });
+    loadInstalls();
   };
 
   const removeGuide = async (guide: AdminGuide) => {
@@ -528,6 +572,7 @@ const Admin = () => {
           newOrders={newOrders}
           productsCount={products.length}
           guidesCount={guides.length}
+          installsCount={installs.length}
           articlesCount={articles.length}
           brandsCount={brands.length}
           categoriesCount={categories.length}
@@ -556,6 +601,15 @@ const Admin = () => {
             onCreate={() => setEditingGuide(emptyGuide())}
             onEdit={setEditingGuide}
             onRemove={removeGuide}
+          />
+        )}
+
+        {tab === "installs" && (
+          <AdminInstallsTab
+            installs={installs}
+            onCreate={() => setEditingInstall(emptyInstall())}
+            onEdit={setEditingInstall}
+            onRemove={removeInstall}
           />
         )}
 
@@ -642,6 +696,16 @@ const Admin = () => {
           products={products}
           onClose={() => setEditingGuide(null)}
           onSave={saveGuide}
+        />
+      )}
+
+      {editingInstall && (
+        <InstallEditor
+          install={editingInstall}
+          products={products}
+          brands={brands}
+          onClose={() => setEditingInstall(null)}
+          onSave={saveInstall}
         />
       )}
 

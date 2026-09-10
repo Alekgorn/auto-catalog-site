@@ -133,6 +133,23 @@ def handler(event: dict, context) -> dict:
         )
         links = cur.fetchall()
 
+        # Установки: выполненные работы с фото «было/стало»
+        cur.execute(
+            f"SELECT id, slug, brand, model, year, title, excerpt, before_image, "
+            f"after_image, gallery, video, comment, created_at "
+            f"FROM {schema}.installs WHERE is_active = TRUE "
+            f"ORDER BY sort_order, id DESC"
+        )
+        install_rows = cur.fetchall()
+
+        cur.execute(
+            f"SELECT i.slug AS install_slug, p.slug AS product_slug "
+            f"FROM {schema}.install_products ip "
+            f"JOIN {schema}.installs i ON i.id = ip.install_id "
+            f"JOIN {schema}.products p ON p.id = ip.product_id"
+        )
+        install_links = cur.fetchall()
+
         cur.execute(
             f"SELECT slug, title, h1, meta_title, meta_description, excerpt, cover, "
             f"blocks, tags, published_at FROM {schema}.articles "
@@ -177,6 +194,37 @@ def handler(event: dict, context) -> dict:
         for g in guide_rows
     ]
 
+    # Установка знает свои товары, товар — свои установки: на странице
+    # рамки показываем работы, где она стояла
+    install_products: dict = {}
+    product_installs: dict = {}
+    for link in install_links:
+        install_products.setdefault(link['install_slug'], []).append(
+            link['product_slug']
+        )
+        product_installs.setdefault(link['product_slug'], []).append(
+            link['install_slug']
+        )
+
+    installs = [
+        {
+            'slug': i['slug'],
+            'brand': i['brand'],
+            'model': i['model'],
+            'year': i['year'],
+            'title': i['title'],
+            'excerpt': i['excerpt'],
+            'beforeImage': i['before_image'],
+            'afterImage': i['after_image'],
+            'gallery': i['gallery'],
+            'video': i['video'],
+            'comment': i['comment'],
+            'createdAt': i['created_at'].isoformat() if i['created_at'] else None,
+            'products': install_products.get(i['slug'], []),
+        }
+        for i in install_rows
+    ]
+
     articles = [
         {
             'slug': a['slug'],
@@ -195,6 +243,7 @@ def handler(event: dict, context) -> dict:
 
     for p in products:
         p['guides'] = product_guides.get(p['id'], [])
+        p['installs'] = product_installs.get(p['id'], [])
 
     payload = json.dumps(
         {
@@ -204,6 +253,7 @@ def handler(event: dict, context) -> dict:
             'categories': category_rows,
             'categorySpecs': category_specs,
             'guides': guides,
+            'installs': installs,
             'articles': articles,
             'settings': settings,
         },

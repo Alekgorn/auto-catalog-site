@@ -3,6 +3,7 @@ import {
   BRANDS as FALLBACK_BRANDS,
   Brand,
   Guide,
+  Install,
   Article,
   PRODUCTS as FALLBACK_PRODUCTS,
   Product,
@@ -40,6 +41,7 @@ export interface PrerenderData {
   categories?: string[];
   categorySpecs?: Record<string, string[]>;
   guides?: Guide[];
+  installs?: Install[];
   articles?: Article[];
   settings?: {
     wire_features?: WireFeature[];
@@ -72,6 +74,7 @@ interface CatalogValue {
   /** Настройки подбора проводки по машинам — из вкладки «Марки» */
   vehicleWiring: VehicleWiring[];
   guides: Guide[];
+  installs: Install[];
   /** Статьи раздела «Полезное» — SEO-тексты из админки */
   articles: Article[];
   categories: string[];
@@ -119,6 +122,7 @@ const expandImages = (data: PrerenderData): PrerenderData => {
       videoUrl: '',
       notes: [],
       guides: [],
+      installs: [],
       kit: [],
       ...p,
       // Список совместимости есть не у всех товаров (универсальные позиции),
@@ -224,6 +228,7 @@ export const CatalogProvider = ({
     seed?.vehicleWiring ?? [],
   );
   const [guides, setGuides] = useState<Guide[]>(seed?.guides ?? []);
+  const [installs, setInstalls] = useState<Install[]>(seed?.installs ?? []);
   const [articles, setArticles] = useState<Article[]>(seed?.articles ?? []);
   const [productLevels, setProductLevels] = useState<ProductLevel[]>(
     seed?.settings?.product_levels ?? [],
@@ -319,6 +324,9 @@ export const CatalogProvider = ({
               })),
           );
         }
+        if (Array.isArray(data.installs)) {
+          setInstalls(data.installs);
+        }
         if (Array.isArray(data.guides)) {
           setGuides(data.guides);
         }
@@ -402,6 +410,7 @@ export const CatalogProvider = ({
     brands,
     vehicleWiring,
     guides,
+    installs,
     articles,
     categories,
     categorySpecs,

@@ -171,6 +171,33 @@ export interface Guide {
   products: string[];
 }
 
+/**
+ * Выполненная работа: фото «было/стало», галерея и короткое видео.
+ *
+ * Живёт отдельно от товара, а показывается сразу на всех товарах, что
+ * в ней стояли: одна установка — это комплект из магнитолы, рамки и
+ * проводки, и дублировать её в каждой карточке незачем.
+ */
+export interface Install {
+  slug: string;
+  brand: string;
+  model: string;
+  year: number;
+  title: string;
+  excerpt: string;
+  /** Панель до работы. Пусто — показываем только результат */
+  beforeImage: string;
+  afterImage: string;
+  gallery: string[];
+  /** Вертикальный ролик: YouTube Shorts, Rutube или свой файл */
+  video: string;
+  /** Строка от мастера: что сохранилось, на что обратить внимание */
+  comment: string;
+  createdAt: string | null;
+  /** Адреса товаров, которые стояли в этой машине */
+  products: string[];
+}
+
 export interface Brand {
   name: string;
   models: string[];

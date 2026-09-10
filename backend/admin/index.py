@@ -569,6 +569,26 @@ def row_to_order(r: dict) -> dict:
     }
 
 
+def row_to_install(r: dict) -> dict:
+    """Строка таблицы установок — в объект для админки."""
+    return {
+        'id': r['id'],
+        'slug': r['slug'],
+        'brand': r['brand'],
+        'model': r['model'],
+        'year': r['year'],
+        'title': r['title'],
+        'excerpt': r['excerpt'],
+        'beforeImage': r['before_image'],
+        'afterImage': r['after_image'],
+        'gallery': r['gallery'],
+        'video': r['video'],
+        'comment': r['comment'],
+        'sortOrder': r['sort_order'],
+        'isActive': r['is_active'],
+    }
+
+
 def row_to_guide(r: dict) -> dict:
     return {
         'id': r['id'],
@@ -3241,6 +3261,108 @@ def handler(event: dict, context) -> dict:
                 out = row_to_article(row)
                 cur.close()
                 return resp(200, {'article': out})
+            cur.close()
+            return resp(400, {'error': 'Неизвестное действие'})
+
+        if action == 'installs':
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            if method == 'GET':
+                cur.execute(
+                    f"SELECT * FROM {schema()}.installs ORDER BY sort_order, id DESC"
+                )
+                installs = [row_to_install(r) for r in cur.fetchall()]
+                cur.execute(
+                    f"SELECT install_id AS iid, product_id AS pid "
+                    f"FROM {schema()}.install_products"
+                )
+                links: dict = {}
+                for row in cur.fetchall():
+                    links.setdefault(row['iid'], []).append(row['pid'])
+                for it in installs:
+                    it['productIds'] = links.get(it['id'], [])
+                cur.close()
+                return resp(200, {'installs': installs})
+
+            if method == 'DELETE':
+                iid = qint(params.get('id'))
+                cur.execute(
+                    f"DELETE FROM {schema()}.install_products WHERE install_id = {iid}"
+                )
+                cur.execute(f"DELETE FROM {schema()}.installs WHERE id = {iid}")
+                conn.commit()
+                cur.close()
+                return resp(200, {'ok': True})
+
+            if method in ('POST', 'PUT'):
+                brand = str(body.get('brand', '')).strip()
+                model = str(body.get('model', '')).strip()
+                if not brand or not model:
+                    cur.close()
+                    return resp(400, {'error': 'Укажите марку и модель'})
+                try:
+                    year = int(body.get('year') or 0)
+                except (TypeError, ValueError):
+                    year = 0
+                # Заголовок обычно и есть машина — не заставляем набирать
+                # его руками, но своё название разрешаем
+                title = str(body.get('title', '')).strip() or (
+                    f"{brand} {model}" + (f" {year}" if year else '')
+                )
+                slug = str(body.get('slug', '')).strip() or slugify(title)
+                fields = {
+                    'slug': q(slug),
+                    'brand': q(brand),
+                    'model': q(model),
+                    'year': str(year),
+                    'title': q(title),
+                    'excerpt': q(str(body.get('excerpt', ''))),
+                    'before_image': q(str(body.get('beforeImage', ''))),
+                    'after_image': q(str(body.get('afterImage', ''))),
+                    'gallery': qjson(body.get('gallery') or []),
+                    'video': q(str(body.get('video', ''))),
+                    'comment': q(str(body.get('comment', ''))),
+                    'sort_order': qint(body.get('sortOrder'), 100),
+                    'is_active': 'TRUE' if body.get('isActive', True) else 'FALSE',
+                }
+                if method == 'POST':
+                    cur.execute(
+                        f"INSERT INTO {schema()}.installs ({', '.join(fields.keys())}) "
+                        f"VALUES ({', '.join(fields.values())}) RETURNING *"
+                    )
+                else:
+                    iid = qint(body.get('id'))
+                    if iid == 'NULL':
+                        cur.close()
+                        return resp(400, {'error': 'Не указана установка'})
+                    sets = ', '.join(f"{k} = {v}" for k, v in fields.items())
+                    cur.execute(
+                        f"UPDATE {schema()}.installs SET {sets}, updated_at = NOW() "
+                        f"WHERE id = {iid} RETURNING *"
+                    )
+                row = cur.fetchone()
+                if not row:
+                    conn.rollback()
+                    cur.close()
+                    return resp(404, {'error': 'Установка не найдена'})
+                install_id = row['id']
+                cur.execute(
+                    f"DELETE FROM {schema()}.install_products "
+                    f"WHERE install_id = {install_id}"
+                )
+                for pid in body.get('productIds') or []:
+                    pid_sql = qint(pid)
+                    if pid_sql != 'NULL':
+                        cur.execute(
+                            f"INSERT INTO {schema()}.install_products "
+                            f"(install_id, product_id) VALUES "
+                            f"({install_id}, {pid_sql}) ON CONFLICT DO NOTHING"
+                        )
+                conn.commit()
+                out = row_to_install(row)
+                out['productIds'] = [int(p) for p in (body.get('productIds') or [])]
+                cur.close()
+                return resp(200, {'install': out})
+
             cur.close()
             return resp(400, {'error': 'Неизвестное действие'})
 

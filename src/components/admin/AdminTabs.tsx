@@ -1,6 +1,7 @@
 export type AdminTab =
   | "products"
   | "guides"
+  | "installs"
   | "articles"
   | "orders"
   | "dealers"
@@ -16,6 +17,8 @@ interface Props {
   newOrders: number;
   productsCount: number;
   guidesCount: number;
+  /** Сколько выполненных работ — цифра на вкладке */
+  installsCount: number;
   articlesCount: number;
   brandsCount: number;
   categoriesCount: number;
@@ -34,6 +37,7 @@ const AdminTabs = ({
   newOrders,
   productsCount,
   guidesCount,
+  installsCount,
   articlesCount,
   brandsCount,
   categoriesCount,
@@ -47,6 +51,10 @@ const AdminTabs = ({
         ["orders", newOrders > 0 ? `Заявки (${newOrders} новых)` : "Заявки"],
         ["products", `Товары (${productsCount})`],
         ["guides", `Инструкции (${guidesCount})`],
+        [
+          "installs",
+          installsCount > 0 ? `Установки (${installsCount})` : "Установки",
+        ],
         ["articles", `Статьи (${articlesCount})`],
         ["brands", `Марки (${brandsCount})`],
         ["categories", `Категории (${categoriesCount})`],
