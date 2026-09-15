@@ -717,11 +717,87 @@ const main = async () => {
 
   // Слепок того, что попало в статику. Админка сравнивает его с текущим
   // каталогом и подсказывает, когда страницы для поиска пора обновить.
+  // pageFingerprints ниже — тот же отпечаток, но по каждой странице
+  // отдельно. Пока не используется генерацией: она рендерит и пишет
+  // всё как раньше. Задел на следующий шаг — выборочную перезапись.
   const fingerprint = (list, pick) =>
     (list ?? [])
       .map(pick)
       .sort()
       .join('|');
+
+  /*
+   * Отпечаток товара: раньше в него входили только id, название и
+   * цена — правка описания или фото проходила незамеченной, и страница
+   * для поисковика оставалась старой, хотя админка бодро писала «всё
+   * актуально». Добавляем всё, что реально меняет отдаваемый HTML:
+   * описание и инструкцию по установке (идут в текст страницы),
+   * характеристики и совместимость (идут в текст и в семантику),
+   * обложку (идёт в og:image и в разметку товара).
+   *
+   * Порядок specs/fits важен для покупателя, но не всегда стабилен при
+   * сохранении в админке — сравниваем отсортированным, чтобы менявшийся
+   * только порядок полей не считался изменением.
+   */
+  const stableSpecs = (p) =>
+    [...(p.specs ?? [])]
+      .map(([k, v]) => `${k}:${v}`)
+      .sort()
+      .join(',');
+  const stableFits = (p) =>
+    Object.entries(p.fits ?? {})
+      .map(([brand, models]) => `${brand}=${[...(models ?? [])].sort().join(',')}`)
+      .sort()
+      .join(';');
+
+  const productKey = (p) =>
+    [
+      p.id,
+      p.name,
+      p.price,
+      p.oldPrice ?? '',
+      p.stock ?? '',
+      (p.description ?? []).join('\n'),
+      p.install ?? '',
+      stableSpecs(p),
+      stableFits(p),
+      (p.images ?? [])[0] ?? '',
+    ].join(':');
+
+  const installKey = (i) =>
+    [
+      i.slug,
+      i.title,
+      i.excerpt,
+      i.beforeImage,
+      i.afterImage,
+      (i.gallery ?? []).join(','),
+      i.video,
+      i.comment,
+      (i.products ?? []).join(','),
+    ].join(':');
+
+  const guideKey = (g) =>
+    [g.slug, g.title, g.excerpt, JSON.stringify(g.blocks ?? [])].join(':');
+
+  const articleKey = (a) =>
+    [
+      a.slug,
+      a.title,
+      a.metaTitle,
+      a.metaDescription,
+      a.excerpt,
+      JSON.stringify(a.blocks ?? []),
+    ].join(':');
+
+  // Отпечаток по каждой странице отдельно — нужен ниже, чтобы решить,
+  // перезаписывать ли конкретный файл на диске
+  const pageFingerprints = {
+    product: Object.fromEntries((data.products ?? []).map((p) => [p.id, productKey(p)])),
+    guide: Object.fromEntries((data.guides ?? []).map((g) => [g.slug, guideKey(g)])),
+    install: Object.fromEntries((data.installs ?? []).map((i) => [i.slug, installKey(i)])),
+    article: Object.fromEntries((data.articles ?? []).map((a) => [a.slug, articleKey(a)])),
+  };
 
   await fs.writeFile(
     path.join(PUBLIC, 'prerender-manifest.json'),
@@ -733,12 +809,9 @@ const main = async () => {
         guides: (data.guides ?? []).length,
         articles: (data.articles ?? []).length,
         signature: {
-          products: fingerprint(
-            data.products,
-            (p) => `${p.id}:${p.name}:${p.price}:${p.oldPrice ?? ''}`,
-          ),
-          guides: fingerprint(data.guides, (g) => `${g.slug}:${g.title}`),
-          articles: fingerprint(data.articles, (a) => `${a.slug}:${a.title}`),
+          products: fingerprint(data.products, productKey),
+          guides: fingerprint(data.guides, guideKey),
+          articles: fingerprint(data.articles, articleKey),
         },
       },
       null,

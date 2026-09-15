@@ -18,6 +18,50 @@ const REQUEST_TEXT =
 const fingerprint = <T,>(list: T[], pick: (item: T) => string) =>
   list.map(pick).sort().join('|');
 
+/*
+ * Отпечаток товара — должен слово в слово повторять тот, что складывает
+ * scripts/prerender.mjs (см. productKey там). Раньше сюда входили только
+ * id/название/цена, и правка описания или характеристик проходила
+ * незамеченной: панель писала «всё актуально», хотя страница для
+ * поисковика осталась со старым текстом.
+ */
+const stableSpecs = (p: { specs?: [string, string][] }) =>
+  [...(p.specs ?? [])]
+    .map(([k, v]) => `${k}:${v}`)
+    .sort()
+    .join(',');
+
+const stableFits = (p: { fits?: Record<string, string[]> }) =>
+  Object.entries(p.fits ?? {})
+    .map(([brand, models]) => `${brand}=${[...(models ?? [])].sort().join(',')}`)
+    .sort()
+    .join(';');
+
+const productKey = (p: {
+  id: string;
+  name: string;
+  price: number;
+  oldPrice?: number;
+  stock?: number;
+  description?: string[];
+  install?: string;
+  specs?: [string, string][];
+  fits?: Record<string, string[]>;
+  images?: string[];
+}) =>
+  [
+    p.id,
+    p.name,
+    p.price,
+    p.oldPrice ?? '',
+    p.stock ?? '',
+    (p.description ?? []).join('\n'),
+    p.install ?? '',
+    stableSpecs(p),
+    stableFits(p),
+    (p.images ?? [])[0] ?? '',
+  ].join(':');
+
 const formatDate = (iso: string) => {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '—';
@@ -47,12 +91,13 @@ const SearchPagesPanel = () => {
   useEffect(check, [check]);
 
   const current = {
-    products: fingerprint(
-      products,
-      (p) => `${p.id}:${p.name}:${p.price}:${p.oldPrice ?? ''}`,
+    products: fingerprint(products, productKey),
+    guides: fingerprint(guides, (g) => `${g.slug}:${g.title}:${g.excerpt}:${JSON.stringify(g.blocks ?? [])}`),
+    articles: fingerprint(
+      articles,
+      (a) =>
+        `${a.slug}:${a.title}:${a.metaTitle}:${a.metaDescription}:${a.excerpt}:${JSON.stringify(a.blocks ?? [])}`,
     ),
-    guides: fingerprint(guides, (g) => `${g.slug}:${g.title}`),
-    articles: fingerprint(articles, (a) => `${a.slug}:${a.title}`),
   };
 
   const stale =
