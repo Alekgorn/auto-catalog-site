@@ -12,6 +12,7 @@
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -20,6 +21,57 @@ const PUBLIC = path.join(ROOT, 'public');
 const SITE_URL = 'https://xn--80a0adnb7a.xn--p1ai';
 
 const readJson = async (file) => JSON.parse(await fs.readFile(file, 'utf-8'));
+
+/** Счётчики для итогового отчёта: что создали, что переписали, что не трогали. */
+const stats = { created: 0, changed: 0, skipped: 0, removed: 0 };
+
+/**
+ * Записывает файл, только если содержимое правда отличается.
+ *
+ * Зачем сравнивать, а не просто писать: fs.writeFile обновляет время
+ * правки файла даже когда байты те же. Система контроля версий смотрит
+ * не только на время, но пересборка всё равно получалась «все файлы
+ * изменены» из-за того, что генератор переписывал их поголовно. Для
+ * каталога на полторы тысячи товаров это полсотни мегабайт мусора в
+ * истории за один прогон, и чем больше каталог, тем хуже.
+ *
+ * Запись атомарная: сначала во временный файл рядом, потом переносим
+ * поверх цели. Перенос в пределах одной папки файловая система делает
+ * одним действием — оборвись процесс на середине, на диске останется
+ * либо старая версия целиком, либо новая, но не половина новой.
+ * Недописанный временный файл в этом случае просто удаляем.
+ */
+const writeIfChanged = async (target, content) => {
+  let existing = null;
+  try {
+    existing = await fs.readFile(target);
+  } catch {
+    /* файла нет — значит страница новая */
+  }
+
+  const next = Buffer.from(content, 'utf-8');
+  if (existing && existing.equals(next)) {
+    stats.skipped += 1;
+    return 'skipped';
+  }
+
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  const tmp = `${target}.tmp-${process.pid}`;
+  try {
+    await fs.writeFile(tmp, next);
+    await fs.rename(tmp, target);
+  } catch (err) {
+    await fs.rm(tmp, { force: true });
+    throw err;
+  }
+
+  if (existing) {
+    stats.changed += 1;
+    return 'changed';
+  }
+  stats.created += 1;
+  return 'created';
+};
 
 const SLUG_MAP = {
   а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'e', ж: 'zh',
@@ -388,11 +440,67 @@ const applySeoToHtml = (html, seo, url) => {
   return head;
 };
 
-/** Убираем ранее сгенерированные страницы, чтобы не копить мусор. */
-const cleanOld = async () => {
-  for (const dir of ['product', 'guides', 'installs', 'articles', 'catalog', 'brand', 'oferta', 'privacy']) {
-    await fs.rm(path.join(PUBLIC, dir), { recursive: true, force: true });
-  }
+const GENERATED_DIRS = [
+  'product',
+  'guides',
+  'installs',
+  'articles',
+  'catalog',
+  'brand',
+  'oferta',
+  'privacy',
+];
+
+/**
+ * Убираем страницы, которых больше нет в каталоге.
+ *
+ * Раньше здесь сносились целиком все папки со сгенерированными
+ * страницами, и дальше генератор писал их заново. Для системы контроля
+ * версий это выглядело так, будто изменились все полторы тысячи файлов
+ * разом — даже когда правился один товар. История росла на полсотни
+ * мегабайт за прогон.
+ *
+ * Теперь удаляем точечно: только те страницы, для которых в свежем
+ * каталоге не нашлось адреса. Остальные останутся на месте, а
+ * перезапишет их writeIfChanged — и только если содержимое правда
+ * поменялось.
+ */
+const cleanOld = async (routes) => {
+  const keep = new Set(routes.map((u) => u.replace(/^\//, '')));
+  let removed = 0;
+
+  const walk = async (dir) => {
+    const abs = path.join(PUBLIC, dir);
+    let entries;
+    try {
+      entries = await fs.readdir(abs, { withFileTypes: true });
+    } catch {
+      return; // папки ещё нет — первый запуск
+    }
+    for (const entry of entries) {
+      const rel = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(rel);
+        /* Каталог мог опустеть после удаления страницы — прибираем,
+           иначе в дереве остаются пустые папки от старых товаров */
+        try {
+          const left = await fs.readdir(path.join(PUBLIC, rel));
+          if (!left.length) await fs.rm(path.join(PUBLIC, rel), { recursive: true, force: true });
+        } catch {
+          /* уже удалена */
+        }
+        continue;
+      }
+      if (entry.name !== 'index.html') continue;
+      // public/product/foo/index.html → product/foo
+      if (keep.has(dir)) continue;
+      await fs.rm(path.join(PUBLIC, rel), { force: true });
+      removed += 1;
+    }
+  };
+
+  for (const dir of GENERATED_DIRS) await walk(dir);
+
   /* Файлы каталога со старым именем — с номером сборки внутри. Новые
      имена постоянные и перезаписываются на месте, но копии от прежних
      публикаций надо вымести, иначе так и лежат мёртвым грузом. */
@@ -401,6 +509,8 @@ const cleanOld = async () => {
       await fs.rm(path.join(PUBLIC, name), { force: true });
     }
   }
+
+  return removed;
 };
 
 /**
@@ -455,7 +565,11 @@ const resetShell = (html) =>
     // внутри (catalog-data-123.js), и нынешнее с номером в адресе —
     // иначе в файле остаются обе и каталог грузится дважды.
     .replace(
-      /\s*<script src="\/catalog-data(-\d+)?\.js(\?v=\d+)?"><\/script>/g,
+      /* Номер версии раньше был из цифр (время сборки), теперь это
+         буквенно-цифровая сумма содержимого. Правило ловит оба вида:
+         иначе старый тег не вычищается и с каждым прогоном в файле
+         копится ещё одна копия — за пять прогонов их стало шесть. */
+      /\s*<script src="\/catalog-data(-\d+)?\.js(\?v=[A-Za-z0-9]+)?"><\/script>/g,
       '',
     )
     /* Страховочный скрипт от прошлой сборки. Шаблон должен ловить любую
@@ -530,7 +644,7 @@ const main = async () => {
     ...(data.articles ?? []).map((a) => `/articles/${a.slug}`),
   ];
 
-  await cleanOld();
+  stats.removed = await cleanOld(routes);
 
   /**
    * Время сборки: по нему браузер понимает, насколько свежие вшитые данные.
@@ -554,28 +668,62 @@ const main = async () => {
    * распухла до сотен мегабайт. Браузер по-прежнему видит новый адрес
    * и старое из кеша не берёт.
    */
-  const catalogFile = `/catalog-data.js?v=${builtAt}`;
-  await fs.writeFile(
-    path.join(PUBLIC, 'catalog-data.js'),
-    `window.__CATALOG__=${safeJson(slimCatalog(data))};` +
-      `window.__CATALOG_AT__=${builtAt};` +
-      `window.__PHOTOS_AT__=${builtAt};` +
-      `window.__TEXTS_AT__=${builtAt};` +
-      `window.__INDEX_AT__=${builtAt};` +
-      `window.dispatchEvent(new Event('catalog-ready'))`,
-    'utf-8',
-  );
+  /*
+   * Номер в адресе — отпечаток содержимого, а не время запуска.
+   *
+   * Раньше здесь стояло время сборки, и оно попадало в КАЖДУЮ страницу.
+   * Любой прогон менял все полторы тысячи файлов, даже когда в каталоге
+   * не поменялось ровным счётом ничего, — сравнивать содержимое было
+   * бессмысленно. Считаем короткую сумму от самих данных: каталог тот
+   * же — адрес тот же — страницы не трогаем. Изменился хоть один товар,
+   * адрес станет другим, и браузер возьмёт свежий файл, а не из кеша.
+   */
+  const catalogJson = safeJson(slimCatalog(data));
+  const catalogHash = createHash('sha1').update(catalogJson).digest('hex').slice(0, 12);
+
+  /*
+   * Метка свежести тоже идёт от содержимого, а не от часов.
+   *
+   * Она вшита в сам файл каталога (2,2 МБ), и со временем запуска этот
+   * файл переписывался при каждом прогоне — даже когда ни один товар не
+   * менялся. Берём время последней правки данных: каталог не тронут —
+   * метка прежняя — файл на диске остаётся нетронутым. Смысл для
+   * браузера сохраняется: метка по-прежнему растёт, когда данные
+   * обновились, и по ней решается, идти ли за свежими с сервера.
+   */
+  const lastTouched = (list, pick) =>
+    (list ?? []).reduce((max, item) => {
+      const t = Date.parse(pick(item) ?? '');
+      return Number.isNaN(t) ? max : Math.max(max, t);
+    }, 0);
+
+  const dataAt =
+    Math.max(
+      lastTouched(data.products, (p) => p.createdAt),
+      lastTouched(data.articles, (a) => a.publishedAt),
+      lastTouched(data.installs, (i) => i.createdAt),
+    ) || builtAt;
+
+  const catalogBody =
+    `window.__CATALOG__=${catalogJson};` +
+    `window.__CATALOG_AT__=${dataAt};` +
+    `window.__PHOTOS_AT__=${dataAt};` +
+    `window.__TEXTS_AT__=${dataAt};` +
+    `window.__INDEX_AT__=${dataAt};` +
+    `window.dispatchEvent(new Event('catalog-ready'))`;
+
+  const catalogFile = `/catalog-data.js?v=${catalogHash}`;
+  await writeIfChanged(path.join(PUBLIC, 'catalog-data.js'), catalogBody);
 
   /*
    * Остальные фото — отдельным файлом. Номер сборки страница передаёт
    * в адресе, чтобы не подтянуть их от прошлой версии каталога.
    */
   const rest = photoRest(data);
-  await fs.writeFile(
+  await writeIfChanged(
     path.join(PUBLIC, 'catalog-photos.js'),
     `window.__PHOTOS__=${safeJson(rest)};` +
       `window.dispatchEvent(new Event('photos-ready'))`,
-    'utf-8',
   );
   console.log(
     `[prerender] галерея: ${Object.keys(rest).length} товаров с доп. фото`,
@@ -586,11 +734,10 @@ const main = async () => {
    * отдельный файл, свежесть задаётся номером сборки в адресе.
    */
   const texts = textRest(data);
-  await fs.writeFile(
+  await writeIfChanged(
     path.join(PUBLIC, 'catalog-texts.js'),
     `window.__TEXTS__=${safeJson(texts)};` +
       `window.dispatchEvent(new Event('texts-ready'))`,
-    'utf-8',
   );
   console.log(
     `[prerender] тексты: ${Object.keys(texts).length} товаров с описанием`,
@@ -601,11 +748,10 @@ const main = async () => {
    * начал искать, и это далеко не каждый визит.
    */
   const index = searchIndex(data);
-  await fs.writeFile(
+  await writeIfChanged(
     path.join(PUBLIC, 'catalog-index.js'),
     `window.__SEARCH_INDEX__=${safeJson(index)};` +
       `window.dispatchEvent(new Event('index-ready'))`,
-    'utf-8',
   );
   console.log(
     `[prerender] поиск: ${Object.keys(index.w).length} слов в индексе`,
@@ -643,6 +789,9 @@ const main = async () => {
   const selfHealScript = `<script>(function(){var d=document,done=false;function heal(){if(done)return;done=true;fetch('/?_='+Date.now()).then(function(r){return r.text()}).then(function(t){var m=t.match(/\\/assets\\/index-[A-Za-z0-9_-]+\\.js/);var c=t.match(/\\/assets\\/index-[A-Za-z0-9_-]+\\.css/);if(!m)return;if(c&&!d.querySelector('link[href=\"'+c[0]+'\"]')){var l=d.createElement('link');l.rel='stylesheet';l.href=c[0];d.head.appendChild(l)}if(d.querySelector('script[src=\"'+m[0]+'\"]'))return;var s=d.createElement('script');s.type='module';s.crossOrigin='';s.src=m[0];d.head.appendChild(s)}).catch(function(){})}d.querySelectorAll('script[src^=\"/assets/index-\"]').forEach(function(s){s.addEventListener('error',heal)})})()</script>`;
 
   const generated = [];
+  /* Адреса страниц, которые правда изменились на диске — по ним ниже
+     сдвигаем дату в карте сайта */
+  const touched = new Set();
 
   for (const url of routes) {
     if (url === '/') continue; // главную вшиваем отдельно, ниже
@@ -665,8 +814,8 @@ const main = async () => {
     );
 
     const target = path.join(PUBLIC, url.replace(/^\//, ''), 'index.html');
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(target, html, 'utf-8');
+    const state = await writeIfChanged(target, html);
+    if (state !== 'skipped') touched.add(url);
     generated.push(url);
   }
 
@@ -692,7 +841,8 @@ const main = async () => {
       EMPTY_ROOT,
       `<div id="root"><!--prerender-->${slimForBots(homeHtml)}<!--/prerender--></div>\n${bootScript}\n${selfHealScript}`,
     );
-    await fs.writeFile(source, root, 'utf-8');
+    const state = await writeIfChanged(source, root);
+    if (state !== 'skipped') touched.add('/');
     generated.push('/');
   } catch (err) {
     console.warn(`[prerender] главная: ${err.message}`);
@@ -799,25 +949,61 @@ const main = async () => {
     article: Object.fromEntries((data.articles ?? []).map((a) => [a.slug, articleKey(a)])),
   };
 
-  await fs.writeFile(
+  /*
+   * Даты изменения страниц для карты сайта.
+   *
+   * Раньше всем адресам проставлялось сегодняшнее число: карта менялась
+   * каждый прогон целиком, а поисковику это говорило «весь сайт обновлён»
+   * — и он переобходил полторы тысячи нетронутых страниц впустую.
+   * Теперь берём дату из прошлой карты и сдвигаем только там, где
+   * страница правда перезаписалась.
+   */
+  const prevManifest = await readJson(
+    path.join(PUBLIC, 'prerender-manifest.json'),
+  ).catch(() => null);
+  const prevDates = prevManifest?.lastmod ?? {};
+  const prevSignature = prevManifest?.signature ?? {};
+
+  const lastmod = {};
+  for (const url of routes) {
+    // touched — страницы, которые writeIfChanged создал или переписал
+    lastmod[url] = touched.has(url) ? today : (prevDates[url] ?? today);
+  }
+
+  const signature = {
+    products: fingerprint(data.products, productKey),
+    guides: fingerprint(data.guides, guideKey),
+    articles: fingerprint(data.articles, articleKey),
+  };
+
+  /* Время генерации обновляем, только если что-то реально поменялось.
+     Иначе манифест (он тоже в репозитории) переписывался бы при каждом
+     холостом прогоне — ровно та болезнь, которую лечим. */
+  const contentSame =
+    prevManifest &&
+    prevSignature.products === signature.products &&
+    prevSignature.guides === signature.guides &&
+    prevSignature.articles === signature.articles &&
+    !touched.size &&
+    !stats.removed;
+
+  await writeIfChanged(
     path.join(PUBLIC, 'prerender-manifest.json'),
     JSON.stringify(
       {
-        generatedAt: new Date().toISOString(),
+        generatedAt: contentSame
+          ? prevManifest.generatedAt
+          : new Date().toISOString(),
         pages: routes.length,
         products: (data.products ?? []).length,
         guides: (data.guides ?? []).length,
         articles: (data.articles ?? []).length,
-        signature: {
-          products: fingerprint(data.products, productKey),
-          guides: fingerprint(data.guides, guideKey),
-          articles: fingerprint(data.articles, articleKey),
-        },
+        signature,
+        lastmod,
       },
       null,
       2,
     ),
-    'utf-8',
   );
 
   const sitemap =
@@ -826,21 +1012,31 @@ const main = async () => {
     routes
       .map(
         (u) =>
-          `  <url>\n    <loc>${SITE_URL}${u}</loc>\n    <lastmod>${today}</lastmod>\n` +
+          `  <url>\n    <loc>${SITE_URL}${u}</loc>\n    <lastmod>${lastmod[u]}</lastmod>\n` +
           `    <changefreq>${freq(u)}</changefreq>\n    <priority>${priority(
             u,
           )}</priority>\n  </url>`,
       )
       .join('\n') +
     '\n</urlset>\n';
-  await fs.writeFile(path.join(PUBLIC, 'sitemap.xml'), sitemap, 'utf-8');
-  // Карта строится после сборки, поэтому в dist лежала бы версия с прошлой
-  // публикации — новые товары попадали в поиск только через раз. Пишем в обе
-  // папки сразу: в public для следующей сборки, в dist для текущей.
-  await fs.writeFile(path.join(DIST, 'sitemap.xml'), sitemap, 'utf-8');
+  await writeIfChanged(path.join(PUBLIC, 'sitemap.xml'), sitemap);
+  /* Карта строится после сборки, поэтому в dist лежала бы версия с прошлой
+     публикации — новые товары попадали в поиск только через раз. Пишем в обе
+     папки сразу: в public для следующей сборки, в dist для текущей.
+     dist в репозиторий не идёт, но пишем тоже через сравнение — лишняя
+     запись здесь ничего не даёт. */
+  await writeIfChanged(path.join(DIST, 'sitemap.xml'), sitemap);
 
   console.log(
     `[prerender] готово: ${generated.length} страниц, карта сайта на ${routes.length} адресов`,
+  );
+  /* Главная цифра прогона — сколько файлов правда тронули. Пока она
+     близка к нулю, система контроля версий не пухнет; если вдруг
+     «изменено» подскочило на весь каталог, значит что-то снова попало
+     в каждую страницу (номер сборки, дата) и это надо ловить сразу */
+  console.log(
+    `[prerender] файлы — новых: ${stats.created}, изменено: ${stats.changed}, ` +
+      `пропущено без записи: ${stats.skipped}, удалено устаревших: ${stats.removed}`,
   );
 };
 
