@@ -961,8 +961,34 @@ const main = async () => {
   const prevManifest = await readJson(
     path.join(PUBLIC, 'prerender-manifest.json'),
   ).catch(() => null);
-  const prevDates = prevManifest?.lastmod ?? {};
   const prevSignature = prevManifest?.signature ?? {};
+
+  /*
+   * Запасной источник дат — прошлая карта сайта.
+   *
+   * Даты хранятся в манифесте, но он один-единственный файл: пропадёт
+   * (а файлы из репозитория уже случалось убирать и возвращать) — и все
+   * полторы тысячи адресов разом получат сегодняшнее число. Для
+   * поисковика это сигнал «сайт обновился целиком», он пойдёт
+   * переобходить нетронутые страницы. Карта лежит рядом и содержит те
+   * же даты, поэтому читаем их оттуда, когда манифеста нет.
+   */
+  const datesFromSitemap = async () => {
+    const out = {};
+    try {
+      const xml = await fs.readFile(path.join(PUBLIC, 'sitemap.xml'), 'utf-8');
+      const re = /<loc>([^<]*)<\/loc>\s*<lastmod>([^<]*)<\/lastmod>/g;
+      let m;
+      while ((m = re.exec(xml))) {
+        out[m[1].replace(SITE_URL, '')] = m[2];
+      }
+    } catch {
+      /* карты тоже нет — значит первый запуск */
+    }
+    return out;
+  };
+
+  const prevDates = prevManifest?.lastmod ?? (await datesFromSitemap());
 
   const lastmod = {};
   for (const url of routes) {
