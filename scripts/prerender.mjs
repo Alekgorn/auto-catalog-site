@@ -865,16 +865,35 @@ const main = async () => {
     return 'monthly';
   };
 
-  // Слепок того, что попало в статику. Админка сравнивает его с текущим
-  // каталогом и подсказывает, когда страницы для поиска пора обновить.
-  // pageFingerprints ниже — тот же отпечаток, но по каждой странице
-  // отдельно. Пока не используется генерацией: она рендерит и пишет
-  // всё как раньше. Задел на следующий шаг — выборочную перезапись.
+  /*
+   * Слепок того, что попало в статику. Админка сравнивает его с текущим
+   * каталогом и показывает, какие товары ушли вперёд собранных страниц.
+   *
+   * ВАЖНО: правила отпечатка продублированы в src/lib/pageKeys.ts —
+   * оттуда их читает админка, а сюда импортировать нельзя, сборщик
+   * запускается обычным Node и TypeScript не понимает. Менять эти два
+   * файла нужно только вместе: разойдутся — админка начнёт считать
+   * свежие страницы устаревшими (или наоборот, что хуже).
+   */
   const fingerprint = (list, pick) =>
     (list ?? [])
       .map(pick)
       .sort()
       .join('|');
+
+  /* Короткая сумма строки — копия pageHash из src/lib/pageHash.ts */
+  const pageHash = (input) => {
+    let h1 = 0xdeadbeef;
+    let h2 = 0x41c6ce57;
+    for (let i = 0; i < input.length; i += 1) {
+      const ch = input.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
+  };
 
   /*
    * Отпечаток товара: раньше в него входили только id, название и
@@ -940,13 +959,21 @@ const main = async () => {
       JSON.stringify(a.blocks ?? []),
     ].join(':');
 
-  // Отпечаток по каждой странице отдельно — нужен ниже, чтобы решить,
-  // перезаписывать ли конкретный файл на диске
+  /*
+   * Отпечаток по каждой странице отдельно — из него админка узнаёт, КАКИЕ
+   * именно товары разошлись со статикой, а не только сам факт «что-то
+   * поменялось». Храним не сами склеенные описания, а короткие суммы:
+   * сырые строки занимали почти два мегабайта, и файл переписывался
+   * целиком от правки одной цены.
+   */
+  const hashesOf = (list, pick, id) =>
+    Object.fromEntries((list ?? []).map((item) => [id(item), pageHash(pick(item))]));
+
   const pageFingerprints = {
-    product: Object.fromEntries((data.products ?? []).map((p) => [p.id, productKey(p)])),
-    guide: Object.fromEntries((data.guides ?? []).map((g) => [g.slug, guideKey(g)])),
-    install: Object.fromEntries((data.installs ?? []).map((i) => [i.slug, installKey(i)])),
-    article: Object.fromEntries((data.articles ?? []).map((a) => [a.slug, articleKey(a)])),
+    product: hashesOf(data.products, productKey, (p) => p.id),
+    guide: hashesOf(data.guides, guideKey, (g) => g.slug),
+    install: hashesOf(data.installs, installKey, (i) => i.slug),
+    article: hashesOf(data.articles, articleKey, (a) => a.slug),
   };
 
   /*
@@ -996,10 +1023,15 @@ const main = async () => {
     lastmod[url] = touched.has(url) ? today : (prevDates[url] ?? today);
   }
 
+  /* Общая сумма по разделу — быстрый ответ на вопрос «есть ли вообще
+     расхождения». Раньше тут лежали сами склеенные описания всех
+     товаров: почти два мегабайта в файле, который правится при каждой
+     смене цены. Сумма занимает десяток символов и отвечает на тот же
+     вопрос. */
   const signature = {
-    products: fingerprint(data.products, productKey),
-    guides: fingerprint(data.guides, guideKey),
-    articles: fingerprint(data.articles, articleKey),
+    products: pageHash(fingerprint(data.products, productKey)),
+    guides: pageHash(fingerprint(data.guides, guideKey)),
+    articles: pageHash(fingerprint(data.articles, articleKey)),
   };
 
   /* Время генерации обновляем, только если что-то реально поменялось.
@@ -1025,6 +1057,9 @@ const main = async () => {
         guides: (data.guides ?? []).length,
         articles: (data.articles ?? []).length,
         signature,
+        /* Отпечатки по каждой странице: админка по ним показывает, какие
+           именно товары изменились с последней сборки */
+        pages_hash: pageFingerprints,
         lastmod,
       },
       null,
