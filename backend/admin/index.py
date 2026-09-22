@@ -2541,8 +2541,18 @@ def handler(event: dict, context) -> dict:
                 return resp(200, {'items': items})
 
             if method == 'DELETE':
-                # Чистка всей истории — когда накопился мусор от тестов
-                cur.execute(f"DELETE FROM {schema()}.vehicle_picks")
+                # Без номера — чистка всей истории (мусор от тестов),
+                # с номером — одна строка, как в «нет решения»
+                rid = params.get('id', '')
+                if rid:
+                    if not str(rid).isdigit():
+                        cur.close()
+                        return resp(400, {'error': 'Не указана запись'})
+                    cur.execute(
+                        f"DELETE FROM {schema()}.vehicle_picks WHERE id = {int(rid)}"
+                    )
+                else:
+                    cur.execute(f"DELETE FROM {schema()}.vehicle_picks")
                 conn.commit()
                 cur.close()
                 return resp(200, {'ok': True})

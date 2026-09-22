@@ -25,6 +25,18 @@
       "path": "/?action=supplier-scan",
       "body": {"file": ""},
       "expectedStatus": 401
+    },
+    {
+      "name": "Удаление подбора закрыто без входа",
+      "method": "DELETE",
+      "path": "/?action=vehicle-picks&id=1",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Полная чистка подбора закрыта без входа",
+      "method": "DELETE",
+      "path": "/?action=vehicle-picks",
+      "expectedStatus": 401
     }
   ]
 }

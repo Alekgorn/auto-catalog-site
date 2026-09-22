@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { adminFetch } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface PickRow {
   id: number;
@@ -53,11 +54,14 @@ const fmtDate = (iso: string | null): string => {
  * сохранялись, и восстановить прошлое неоткуда.
  */
 const VehiclePicksPanel = () => {
+  const { toast } = useToast();
   const [rows, setRows] = useState<PickRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [place, setPlace] = useState('');
   /** Свернуть до марок — когда моделей уже много и нужен общий срез */
   const [byBrand, setByBrand] = useState(false);
+  /** Строка, у которой нажали «удалить» — ждём подтверждения */
+  const [confirmId, setConfirmId] = useState<number | null>(null);
 
   useEffect(() => {
     adminFetch('?action=vehicle-picks')
@@ -66,6 +70,26 @@ const VehiclePicksPanel = () => {
       .catch(() => setRows([]))
       .finally(() => setLoading(false));
   }, []);
+
+  /*
+   * Удаление одной записи. Строка — это счётчик: сколько раз выбирали
+   * эту машину. Удаляем всю строку целиком вместе со счётчиком, поэтому
+   * спрашиваем подтверждение прямо в строке — вернуть будет неоткуда.
+   */
+  const remove = async (row: PickRow) => {
+    const res = await adminFetch(`?action=vehicle-picks&id=${row.id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) {
+      toast({ title: 'Ошибка', description: 'Не удалось удалить запись' });
+      return;
+    }
+    setRows((list) => list.filter((r) => r.id !== row.id));
+    setConfirmId(null);
+    toast({
+      title: `${row.brand} ${row.model} — запись удалена`,
+    });
+  };
 
   const list = useMemo(
     () => (place ? rows.filter((r) => r.place === place) : rows),
@@ -197,9 +221,37 @@ const VehiclePicksPanel = () => {
                       {r.lastAt ? ` · ${fmtDate(r.lastAt)}` : ''}
                     </div>
                   </div>
-                  <span className="font-head text-[1rem] font-bold">
-                    {r.hits}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-head text-[1rem] font-bold">
+                      {r.hits}
+                    </span>
+
+                    {confirmId === r.id ? (
+                      <span className="flex items-center gap-2">
+                        <button
+                          onClick={() => remove(r)}
+                          className="border border-primary bg-primary px-2.5 py-1 text-[0.7rem] uppercase tracking-[0.08em] text-primary-foreground transition-colors hover:bg-foreground hover:border-foreground"
+                        >
+                          Удалить
+                        </button>
+                        <button
+                          onClick={() => setConfirmId(null)}
+                          className="px-1 text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          Отмена
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmId(r.id)}
+                        aria-label={`Удалить ${r.brand} ${r.model}`}
+                        title="Удалить запись"
+                        className="text-muted-foreground transition-colors hover:text-primary"
+                      >
+                        <Icon name="Trash2" size={15} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
