@@ -16,9 +16,12 @@ import {
   CONCEPTS,
   PRICE_HINTS,
   STOP_WORDS,
+  TERM_ALIASES,
+  WIRE_FEATURE_WORDS,
 } from '@/data/search-terms';
 import { idsWithWord } from '@/lib/search-index';
 import { withoutAllMark } from '@/lib/fits-match';
+import { screenSize } from '@/lib/kit-filter';
 
 /* ---------- подготовка текста ---------- */
 
@@ -99,8 +102,11 @@ const isLatinTerm = (word: string): boolean => !!latinTerms?.has(word);
 /** Отрезаем русские окончания: «камеру», «камеры» → «камер». */
 export const stem = (word: string): string => {
   if (word.length <= 4) return word;
+  /* «яя», «ее», «юю», «ую» — окончания прилагательных: без них «задняя»
+     не сходилась с «заднего», «переднее» — с «переднего» */
   const endings = [
-    'ами', 'ями', 'ого', 'ему', 'ому', 'ыми', 'ими', 'ей', 'ой', 'ая', 'ое',
+    'ами', 'ями', 'ого', 'его', 'ему', 'ому', 'ыми', 'ими', 'яя', 'ее', 'юю',
+    'ую', 'ей', 'ой', 'ая', 'ое',
     'ые', 'ый', 'ий', 'ам', 'ям', 'ах', 'ях', 'ов', 'ев', 'ью', 'ия', 'ии',
     'ах', 'ом', 'ем', 'у', 'ю', 'а', 'я', 'ы', 'и', 'е', 'о', 'ь',
   ];
@@ -322,6 +328,24 @@ const sameModel = (word: string, model: string): boolean => {
   return a === b;
 };
 
+/** Латиница → кириллица по одной букве, для запросов вроде «ramka» */
+const LATIN_RU: Record<string, string> = {
+  a: 'а', b: 'б', v: 'в', g: 'г', d: 'д', e: 'е', z: 'з', i: 'и', y: 'ы',
+  k: 'к', l: 'л', m: 'м', n: 'н', o: 'о', p: 'п', r: 'р', s: 'с', t: 'т',
+  u: 'у', f: 'ф', h: 'х', c: 'ц', j: 'й', w: 'в', x: 'кс', q: 'к',
+};
+
+/** Все слова смысловых групп — собираем один раз */
+let conceptWordSet: Set<string> | null = null;
+const conceptWords = (): Set<string> => {
+  if (!conceptWordSet) {
+    conceptWordSet = new Set(
+      CONCEPTS.flatMap((c) => [...c.words, ...(c.narrow ?? [])]).map(normalize),
+    );
+  }
+  return conceptWordSet;
+};
+
 /* ---------- разбор запроса ---------- */
 
 export interface ParsedQuery {
@@ -355,6 +379,10 @@ export interface ParsedQuery {
   indexHits?: Map<string, Set<string>>;
   /** Год из запроса: «камри 2015». Без него год выбирает покупатель */
   year?: number;
+  /** Диагональ экрана: «магнитола 10 дюймов», «рамка 12,3», «9″» */
+  screen?: number;
+  /** Что должна подключать проводка: руль, усилитель, CAN */
+  wireFeatures?: string[];
 }
 
 /** Разбирает «магнитола хонда подешевле» на сущности и намерение. */
@@ -375,19 +403,45 @@ export const parseQuery = (
     latinTerms = buildLatinTerms(products, brandBook);
   }
 
+  /*
+   * Русское слово, набранное латиницей: «ramka», «magnitola». В каталоге
+   * такого латинского слова нет, а переводом раскладки его не спасти —
+   * это не промах клавиатуры, а транслит: «ramka» превращалась в «кфьлф».
+   * Возвращаем в кириллицу, но только если вышло слово из словаря
+   * смысловых групп — случайный латинский набор так не пострадает.
+   */
+  const fromTranslit = (w: string): string => {
+    if (!/^[a-z]{4,}$/.test(w) || isLatinTerm(w)) return w;
+    const ru = w
+      .replace(/sch/g, 'щ')
+      .replace(/zh/g, 'ж')
+      .replace(/ch/g, 'ч')
+      .replace(/sh/g, 'ш')
+      .replace(/yu/g, 'ю')
+      .replace(/ya/g, 'я')
+      .replace(/[a-z]/g, (ch) => LATIN_RU[ch] ?? ch);
+    return conceptWords().has(ru) ? ru : w;
+  };
+
+  /* Народные написания из каталога: «топвей» → topway, «карплей» → carplay */
+  const rawWords = cleanedRaw
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => TERM_ALIASES[w] ?? fromTranslit(w));
+  const prepared = rawWords.join(' ');
+
   // Кириллицы нет вовсе, но и осмысленной латиницы тоже — пробуем раскладку
   // Артикулы и коды (есть цифры или дефис) раскладкой не трогаем
-  const codeLike = /\d|-/.test(cleanedRaw);
+  const codeLike = /\d|-/.test(prepared);
   const looksLatin =
-    !codeLike && /^[a-z\s]+$/.test(cleanedRaw) && cleanedRaw.length > 2;
-  const swapped = normalize(fixLayout(cleanedRaw));
+    !codeLike && /^[a-z\s]+$/.test(prepared) && prepared.length > 2;
+  const swapped = normalize(fixLayout(prepared));
   /* Слово есть в каталоге на латинице — значит, это настоящий запрос
      («camry», «venza»), а не набранный не в той раскладке. Раньше здесь
      был список марок вручную, и любая модель вне его превращалась
      в бессмыслицу: «camry» → «сфькн», и поиск не находил ничего */
-  const knownLatin =
-    looksLatin && cleanedRaw.split(' ').filter(Boolean).some(isLatinTerm);
-  const cleaned = looksLatin && !knownLatin ? swapped : cleanedRaw;
+  const knownLatin = looksLatin && rawWords.some(isLatinTerm);
+  const cleaned = looksLatin && !knownLatin ? swapped : prepared;
 
   const allWords = cleaned.split(' ').filter(Boolean);
   const words = allWords.filter((w) => !STOP_WORDS.has(w));
@@ -438,8 +492,25 @@ export const parseQuery = (
         }),
       ),
     );
+    /* Марки, названные в запросе, — нужны для коротких и цифровых
+       моделей ниже: без марки «6» и «2110» слишком легко перепутать */
+    const namedBrands = new Set(brands);
+
     known.forEach((m) => {
       const mn = normalize(m);
+      /*
+       * Модель из одной-двух цифр или цифра с пояснением: «6 (Atenza)»,
+       * «3 (Axela)», «2110». Ищем её числом из запроса, но только если
+       * названа марка этой модели — «мазда 6», «ваз 2110». Раньше такие
+       * названия отбрасывались как слишком короткие или как год, и по
+       * «рамка мазда 6» шли все рамки Mazda подряд, от Demio до CX-7.
+       */
+      const base = normalize(m.split(' (')[0]);
+      const owner = modelBrand.get(m);
+      if (/^\d{1,4}$/.test(base) && owner && namedBrands.has(owner)) {
+        if (allWords.includes(base)) models.push(m);
+        return;
+      }
       if (mn.length < 2) return;
       // Чисто числовое «название» — это год из запроса, а не модель
       if (/^\d{4}$/.test(mn)) return;
@@ -523,13 +594,41 @@ export const parseQuery = (
   /* год выпуска: «рио 2019», «камри 2015 года» */
   let year: number | undefined;
   const now = new Date().getFullYear();
+  /* Число, которое уже опознано как модель («пежо 2008», «ваз 2110»), —
+     не год: иначе «рамка пежо 2008» отбирала рамки по 2008 году выпуска */
+  const modelNumbers = new Set(
+    models.map((m) => normalize(m.split(' (')[0])),
+  );
   for (const w of allWords) {
     const n = Number(w);
+    if (modelNumbers.has(w)) continue;
     // Разумные рамки: раньше 1980 машин в каталоге нет, будущее тоже отсекаем
     if (Number.isInteger(n) && n >= 1980 && n <= now + 1) {
       year = n;
       break;
     }
+  }
+
+  /*
+   * Диагональ экрана. Раньше «10 дюймов» искалось как два обычных слова:
+   * «дюймов» есть у всех магнитол и рамок, и по запросу «магнитола 10
+   * дюймов» 9-дюймовые шли вперемешку с 10-дюймовыми.
+   *
+   * Число считаем диагональю, только когда рядом есть «дюйм» или знак
+   * дюйма — либо когда это одно из ходовых значений (7, 9, 10, 12,3) и
+   * в запросе речь о магнитоле или рамке. Иначе «ваз 2110» или «4 64»
+   * превратились бы в размер экрана.
+   */
+  let screen: number | undefined;
+  const rawText = String(query).toLowerCase().replace(/ё/g, 'е');
+  const inch = rawText.match(/(\d{1,2}(?:[.,]\d)?)\s*(?:"|″|''|дюйм|inch)/);
+  const screenTopic =
+    concepts.includes('headunit') || concepts.includes('frame');
+  const bare = rawText.match(/(?:^|\s)(7|9|10|12[.,][13])(?=\s|$)/);
+  const size = inch?.[1] ?? (screenTopic ? bare?.[1] : undefined);
+  if (size) {
+    const n = parseFloat(size.replace(',', '.'));
+    if (n >= 6 && n <= 16) screen = n;
   }
 
   /* намёк на цену */
@@ -538,7 +637,9 @@ export const parseQuery = (
     if (
       hint.words.some((w) => {
         const wn = normalize(w);
-        return cleaned.includes(wn) || fuzzyHit(wn, words);
+        /* Только целым словом: подстрокой «топ» находился в «топливный»
+           и «топвей», и выдача молча пересортировывалась по цене */
+        return words.includes(wn) || fuzzyHit(wn, words);
       })
     ) {
       priceOrder = hint.order;
@@ -557,6 +658,10 @@ export const parseQuery = (
     categories,
     priceOrder,
     year,
+    screen,
+    wireFeatures: WIRE_FEATURE_WORDS.filter((f) =>
+      f.words.some((w) => cleaned.includes(normalize(w))),
+    ).map((f) => f.feature),
   };
 };
 
@@ -626,6 +731,14 @@ const buildIndex = (products: Product[]): Indexed[] => {
 export interface SearchHit {
   product: Product;
   score: number;
+  /**
+   * Запрос прямо назван в названии товара: либо все слова запроса стоят
+   * в названии, либо там есть сам вид товара из запроса («камер» у
+   * переходника «с камерой» по запросу «камера заднего вида»)
+   */
+  inName?: boolean;
+  /** Товар подошёл именно по модели из запроса, а не только по марке */
+  byModel?: boolean;
   /** Почему товар найден — для подписи в выдаче */
   reason: string;
 }
@@ -640,6 +753,7 @@ const CONCEPT_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
 const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
   let score = 0;
   const reasons: string[] = [];
+  let byModel = false;
 
   /* --- 1. Артикул: точное совпадение важнее всего --- */
   if (q.words.length && item.sku) {
@@ -747,7 +861,22 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
       .flatMap((list) => withoutAllMark(list));
     if (q.models.some((m) => models.includes(m))) {
       score += 200;
+      byModel = true;
       reasons.push('Подходит по модели');
+      /*
+       * Модель названа прямо в названии товара — он сделан именно под
+       * неё. По запросу «камри» раньше первыми шли разъёмы «для Toyota»,
+       * которые числятся за всеми моделями марки, а рамки для Camry
+       * оказывались ниже.
+       */
+      const named = q.models.some((m) => {
+        const base = normalize(m.split(' (')[0]);
+        return (
+          base.length >= 2 &&
+          new RegExp(`(^|\\s)${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|\\s)`).test(item.name)
+        );
+      });
+      if (named) score += 150;
     } else if (item.universal) {
       // Универсальный товар подойдёт и этой машине, но показываем его ниже
       score -= 60;
@@ -790,6 +919,35 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
         score += 160;
         reasons.push(`Подходит для ${q.year} года`);
       }
+    }
+  }
+
+  /*
+   * --- 4в. Диагональ экрана ---
+   *
+   * Отсеиваем только товары, у которых размер известен и другой: у
+   * проводки или камеры диагонали нет, их размер экрана не касается.
+   * Допуск в полдюйма — производители округляют 12,3 и 12,1 по-разному.
+   */
+  if (q.screen) {
+    const size = screenSize(item.product);
+    /* Только отсев, без бонуса: бонус поднимал рамки нужного размера
+       над магнитолами в запросе «магнитола 9″» */
+    if (size && Math.abs(size - q.screen) > 0.5) return null;
+  }
+
+  /*
+   * --- 4г. Функции проводки ---
+   *
+   * Отсеиваем только переходники, у которых функции размечены и нужной
+   * среди них нет. Неразмеченные и товары других разделов не трогаем —
+   * о них мы просто не знаем.
+   */
+  if (q.wireFeatures?.length) {
+    const has = item.product.wireFeatures;
+    if (has?.length) {
+      if (!q.wireFeatures.every((f) => has.includes(f))) return null;
+      score += 80;
     }
   }
 
@@ -867,6 +1025,14 @@ const scoreProduct = (item: Indexed, q: ParsedQuery): SearchHit | null => {
   return {
     product: item.product,
     score,
+    byModel,
+    inName:
+      (nameHits > 0 && nameHits === q.words.length) ||
+      q.concepts.some((id) =>
+        (CONCEPT_BY_ID.get(id)?.keywords ?? []).some((k) =>
+          item.name.includes(normalize(k)),
+        ),
+      ),
     reason: Array.from(new Set(reasons)).slice(0, 2).join(' · '),
   };
 };
@@ -906,12 +1072,30 @@ export const smartSearch = (
   q.indexHits = indexHits;
 
   const index = buildIndex(products);
-  const hits: SearchHit[] = [];
+  const collect = (query: ParsedQuery): SearchHit[] => {
+    const out: SearchHit[] = [];
+    index.forEach((item) => {
+      const hit = scoreProduct(item, query);
+      if (hit) out.push(hit);
+    });
+    return out;
+  };
 
-  index.forEach((item) => {
-    const hit = scoreProduct(item, q);
-    if (hit) hits.push(hit);
-  });
+  let hits = collect(q);
+  /*
+   * Под названную модель не нашлось ничего («рамка ваз 2107») — лучше
+   * показать товары марки, чем пустую страницу. Так поиск вёл себя
+   * раньше для всех моделей, которые он не умел распознать.
+   */
+  /* Считаем только товары из раздела, о котором запрос: универсальный
+     переходник, где 2107 числится среди всех моделей Лады, рамку для
+     2107 не заменяет */
+  const matchedModel = q.categories.length
+    ? hits.some((h) => q.categories.includes(h.product.category))
+    : hits.some((h) => h.byModel);
+  if (!matchedModel && q.models.length && q.brands.length) {
+    hits = collect({ ...q, models: [] });
+  }
 
   hits.sort((a, b) => b.score - a.score);
 
@@ -961,7 +1145,24 @@ export const smartSearch = (
     const best = result[0].score;
     const floor = Math.max(best * 0.18, 40);
     const strong = result.filter((h) => h.score >= floor);
-    if (strong.length >= 3) result = strong;
+    if (strong.length >= 3) {
+      /*
+       * Товар, у которого слова запроса стоят прямо в названии, — не
+       * случайное совпадение, даже если он из соседнего раздела. По
+       * «камеру» это переходник для камеры и разъём камеры: раздел камер
+       * забирает верх, но и они нужны. Возвращаем их в конец выдачи,
+       * если таких горстка. Сотни совпадений («магнитолы» в названии
+       * каждого переходника) — это уже шум, их по-прежнему отсекаем.
+       */
+      /* Когда в запросе названа машина, хвост не нужен: товары под неё
+         уже отобраны по совместимости, а «разъём» в названии чужого
+         товара — это не про эту машину */
+      const named =
+        q.brands.length || q.models.length
+          ? []
+          : result.filter((h) => h.score < floor && h.inName);
+      result = named.length <= 30 ? [...strong, ...named] : strong;
+    }
   }
 
   // Пожелание по цене переставляет только товары, близкие по смыслу к запросу.
@@ -998,6 +1199,7 @@ export const describeQuery = (q: ParsedQuery): string => {
     const c = CONCEPT_BY_ID.get(id);
     if (c?.categories?.length) parts.push(c.categories[0]);
   });
+  if (q.screen) parts.push(`экран ${String(q.screen).replace('.', ',')}″`);
   if (q.priceOrder === 'asc') parts.push('сначала дешёвые');
   if (q.priceOrder === 'desc') parts.push('сначала дорогие');
   return Array.from(new Set(parts)).join(' · ');
