@@ -26,8 +26,10 @@ interface Props {
   hasDealer: boolean;
 }
 
+/* На телефоне шрифт полей не меньше 16px — иначе iPhone при фокусе
+   увеличивает страницу и окно «уезжает» */
 const input =
-  'w-full border border-border bg-transparent px-3 py-2 text-[0.85rem] outline-none transition-colors focus:border-primary';
+  'w-full min-w-0 border border-border bg-transparent px-3 py-2 text-base outline-none transition-colors focus:border-primary sm:text-[0.85rem]';
 
 /**
  * Смета для клиента: свои цены, свои работы, без нашего имени.
@@ -130,17 +132,18 @@ const QuoteTab = ({ items, vehicle, dealerPriceOf, hasDealer }: Props) => {
 
       <div>
         <span className="eyebrow">Наценка на товары</span>
-        <div className="mt-1.5 flex items-center gap-2">
-          <div className="flex flex-1 items-center border border-border">
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          <div className="flex min-w-[6.5rem] flex-1 items-center border border-border focus-within:border-primary">
             <input
               type="number"
+              inputMode="numeric"
               value={markup}
               min={0}
               max={300}
               onChange={(e) =>
                 setMarkup(Math.max(0, Math.min(300, Number(e.target.value) || 0)))
               }
-              className="w-full bg-transparent px-3 py-2 text-[0.9rem] outline-none"
+              className="w-full min-w-0 bg-transparent px-3 py-2 text-base outline-none sm:text-[0.9rem]"
             />
             <span className="px-3 text-[0.85rem] text-muted-foreground">%</span>
           </div>
@@ -148,7 +151,8 @@ const QuoteTab = ({ items, vehicle, dealerPriceOf, hasDealer }: Props) => {
             <button
               key={v}
               onClick={() => setMarkup(v)}
-              className={`border px-2.5 py-2 text-[0.78rem] transition-colors ${
+              type="button"
+              className={`flex-none border px-2.5 py-2 text-[0.78rem] transition-colors ${
                 markup === v
                   ? 'border-foreground bg-foreground text-background'
                   : 'border-border hover:border-foreground'
@@ -181,6 +185,7 @@ const QuoteTab = ({ items, vehicle, dealerPriceOf, hasDealer }: Props) => {
               />
               <input
                 type="number"
+                inputMode="numeric"
                 value={e.price}
                 onChange={(ev) =>
                   setExtra((prev) =>
@@ -190,7 +195,7 @@ const QuoteTab = ({ items, vehicle, dealerPriceOf, hasDealer }: Props) => {
                   )
                 }
                 placeholder="6000"
-                className="w-28 flex-none border border-border bg-transparent px-3 py-2 text-[0.85rem] outline-none transition-colors focus:border-primary"
+                className="w-24 flex-none border border-border bg-transparent px-3 py-2 text-base outline-none transition-colors focus:border-primary sm:w-28 sm:text-[0.85rem]"
               />
               <button
                 onClick={() =>

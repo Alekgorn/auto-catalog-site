@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import Icon from '@/components/ui/icon';
 import { Vehicle, formatPrice } from '@/data/catalog';
 import { isVehicle } from '@/lib/vehicle';
@@ -44,23 +44,13 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
     setCanSystem(typeof navigator !== 'undefined' && !!navigator.share);
   }, []);
 
+  /* Каждый раз окно открывается с чистого листа */
   useEffect(() => {
     if (!open) return;
     setCopied(false);
     setMode('link');
     setHint('');
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      /* Esc закрывает только это окно: корзина под ним ловит ту же
-         клавишу и иначе схлопнулась бы вместе с ним */
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-      e.preventDefault();
-      onClose();
-    };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -138,37 +128,29 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
     : '';
 
   /*
-   * Через портал в body: окно открывают из боковой корзины, а она гасит
-   * нажатия по всему, что лежит внутри неё. Рядом с ней — не внутри.
+   * Окно — настоящий вложенный диалог Radix, а не просто портал.
+   * Корзина — модальная панель: она удерживает фокус и прокрутку внутри
+   * себя. Простой портал рядом с ней оказывался «чужим» — поля ввода
+   * тут же теряли фокус, а на телефоне не листалось содержимое, поэтому
+   * в смете почти ничего нельзя было выбрать. Вложенный диалог Radix
+   * встаёт поверх корзины отдельным слоем, и она его не трогает;
+   * Esc и клик мимо закрывают только это окно.
    */
-  return createPortal(
-    <div
-      /*
-       * pointer-events-auto обязателен: боковая корзина на время своего
-       * показа глушит нажатия по всему, что лежит вне её, — а наше окно
-       * лежит как раз вне. Без этого ни одна кнопка тут не срабатывала:
-       * ни копирование ссылки, ни мессенджеры.
-       */
-      className="pointer-events-auto fixed inset-0 z-[80] flex items-end justify-center sm:items-center sm:p-4"
-      /* Корзина закрывается по клику мимо себя — нажатия по нашему окну
-         до неё доходить не должны, иначе исчезнут оба */
-      onPointerDown={(e) => e.stopPropagation()}
-      onMouseDown={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-    >
-      <button
-        aria-label="Закрыть"
-        onClick={onClose}
-        className="fixed inset-0 bg-foreground/50 backdrop-blur-[2px]"
-      />
-
-      <div className="relative flex max-h-[92vh] w-full max-w-md flex-col bg-surface shadow-panel sm:max-h-[88vh]">
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogPrimitive.Portal>
+      <DialogPrimitive.Overlay className="fixed inset-0 z-[80] bg-foreground/50 backdrop-blur-[2px]" />
+      <DialogPrimitive.Content
+        aria-describedby={undefined}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="fixed inset-x-0 bottom-0 z-[81] mx-auto flex max-h-[92dvh] w-full max-w-md flex-col bg-surface shadow-panel outline-none sm:bottom-auto sm:top-1/2 sm:max-h-[88vh] sm:-translate-y-1/2"
+      >
         <div className="flex flex-none items-start justify-between gap-4 border-b border-border px-5 py-4">
           <div className="min-w-0">
             <div className="eyebrow">Поделиться</div>
-            <h2 className="mt-0.5 font-head text-lg font-bold uppercase leading-tight tracking-tight">
+            <DialogPrimitive.Title className="mt-0.5 font-head text-lg font-bold uppercase leading-tight tracking-tight">
               {count === 1 ? 'Ваш выбор' : 'Ваша сборка'}
-            </h2>
+            </DialogPrimitive.Title>
           </div>
           <button
             onClick={onClose}
@@ -204,7 +186,7 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {dealer && mode === 'quote' ? (
           <QuoteTab
             items={items}
@@ -323,9 +305,9 @@ const ShareKitDialog = ({ open, onClose, url, total, vehicle, items }: Props) =>
           </>
         )}
         </div>
-      </div>
-    </div>,
-    document.body,
+      </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 };
 
