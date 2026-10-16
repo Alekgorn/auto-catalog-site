@@ -37,6 +37,7 @@ import { slugify } from "@/lib/slug";
 import { useSeo } from "@/hooks/use-seo";
 import { useCart } from "@/context/CartContext";
 import PriceBlock from "@/components/PriceBlock";
+import { isReadyKitFrame, readyKitPath } from "@/lib/ready-kit";
 import StockLine from "@/components/StockLine";
 import MarketButtons from "@/components/MarketButtons";
 import { useCatalog } from "@/context/CatalogContext";
@@ -373,6 +374,18 @@ const Product = () => {
                   <Icon name={chosen ? "Check" : "Plus"} size={18} />
                 </button>
               </div>
+
+              {/* Для рамки с готовым комплектом — путь «всё сразу»:
+                  магнитола и проводка уже подобраны под эту машину */}
+              {isReadyKitFrame(product.id) && (
+                <Link
+                  to={readyKitPath(product.id)}
+                  className="mt-3 flex items-center justify-between border-2 border-primary px-6 py-4 font-head text-[0.9rem] font-bold uppercase tracking-[0.02em] text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
+                  Купить комплектом с магнитолой
+                  <Icon name="ArrowRight" size={18} />
+                </Link>
+              )}
 
               {/* Одна кнопка вместо трёх: «В корзину» выше — основное
                   действие, звонок — запасной путь для сомневающихся */}

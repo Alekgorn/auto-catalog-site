@@ -13,6 +13,7 @@ import InstallPage from './pages/InstallPage';
 import InstallsPage from './pages/Installs';
 import ScenarioPage from './pages/Scenario';
 import LegalPage from './pages/LegalPage';
+import ReadyKitPage from './pages/ReadyKit';
 
 /**
  * Админка и поиск грузятся отдельно, по требованию.
@@ -64,6 +65,8 @@ const AppRoutes = () => (
         </Suspense>
       }
     />
+    {/* Готовый комплект «под ключ»: рамка + магнитола + проводка */}
+    <Route path="/komplekt/:frameId" element={<ReadyKitPage />} />
     <Route path="/scenario/:slug" element={<ScenarioPage />} />
     {/* Короткий адрес каталога — та же страница подбора по машине.
         Прежний /scenario/vse-po-mashine продолжает работать: по нему
